@@ -14,6 +14,10 @@ These two documents are binding for the current milestone. If the architecture c
 
 [`STATUS.md`](STATUS.md) records what is actually implemented, what has been verified, and what experiment is next. Unlike versioned architecture snapshots, `STATUS.md` is intentionally updated in place as evidence changes.
 
+## Research notes and donor audits
+
+[`DONOR_AUDIT_v0.1.md`](DONOR_AUDIT_v0.1.md) surveys earlier experiments and adjacent repositories for mechanisms that may become useful. It is explicitly nonbinding. A donor entry does not authorize a subsystem to enter DUCK; current behavioral evidence and acceptance tests still control architecture changes.
+
 ## Context and provenance
 
 [`PROVENANCE.md`](PROVENANCE.md) records the relationship between this repository and earlier research.

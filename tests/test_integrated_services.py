@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 from duck.evaluation import run_all
@@ -25,9 +26,10 @@ def test_model_semantics_is_bounded_and_cannot_invent_world_facts():
     assert event.intensity == 1.0
     assert event.world_facts == ()
     assert port.messages is not None
-    serialized = repr(port.messages)
-    assert "trust" not in serialized
-    assert "memory" in serialized.lower()  # appears only in prohibition text, not subject state
+    user_packet = json.loads(port.messages[-1]["content"])
+    assert user_packet == {"source": "Morgan", "utterance": "Get away from me!"}
+    assert "trust" not in repr(port.messages)
+    assert "affect" not in repr(port.messages).lower()
 
 
 def test_model_semantics_falls_back_when_output_is_invalid():

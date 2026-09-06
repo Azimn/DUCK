@@ -47,4 +47,16 @@ python -m pip install -e '.[test]'
 python -m pytest
 ```
 
-See `docs/ARCHITECTURE_v0.1.md` and `docs/MILESTONE_0_1.md` for the binding design and acceptance criteria.
+## Documentation authority
+
+The current binding architecture is `docs/ARCHITECTURE_v0.1.md`.
+
+The current executable milestone is `docs/MILESTONE_0_1.md`.
+
+`docs/INDEX.md` defines documentation authority and explicitly separates current DUCK from historical donor documents. `docs/STATUS.md` records what is actually implemented and verified.
+
+Run the documentation/scope guard directly with:
+
+```bash
+python tools/check_docs.py
+```

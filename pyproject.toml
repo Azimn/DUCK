@@ -4,13 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "duck-subjective-simulator"
-version = "0.1.0"
-description = "A minimal persistent-subject simulation architecture centered on first-person access rather than raw model state."
+version = "0.5.0"
+description = "A persistent computational subject simulator with bounded first-person access, memory, continuity, learning, agency, and optional language-model cognition."
 requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+
+[project.scripts]
+duck = "duck.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

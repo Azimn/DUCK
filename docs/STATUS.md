@@ -1,54 +1,39 @@
 # DUCK Current Status
 
-Current architecture: `docs/ARCHITECTURE_v0.1.md`
+Current architecture candidate: `docs/ARCHITECTURE_v0.5.md`
 
-Current milestone: `docs/MILESTONE_0_1.md`
+Current milestone candidate: `docs/MILESTONE_0_5.md`
 
-## Implemented
+Branch: `franken-duck`
 
-Milestone 0.1 implements the smallest executable Subjective Moment kernel. Developer-visible mechanistic state is projected through `SubjectAccessFirewall` into a bounded subject-accessible representation. Private cognition consumes that representation rather than raw psychological telemetry. Inner speech is optional, and developer diagnostics remain separate from subject-accessible state.
+## Integrated implementation
 
-The active implementation is intentionally limited to `duck/mechanics.py`, `duck/access.py`, `duck/subjective.py`, `duck/cognition.py`, and `duck/runtime.py`, plus focused tests.
+The branch contains the original Subjective Moment kernel plus a clean-room integrated organism in `duck/living.py`, bounded model interfaces in `duck/language.py`, optional bounded semantic interpretation in `duck/semantics.py`, explicit temporal representation in `duck/temporal.py`, a persistent host in `duck/host.py`, an integrated evaluation harness in `duck/evaluation.py`, and an interactive CLI in `duck/cli.py`.
 
-No memory database, persistence architecture, model-provider integration, camera, microphone, synthetic vision subsystem, synthetic audio subsystem, robotics layer, XR embodiment, cartridge system, or portability framework is part of Milestone 0.1.
+The integrated organism now contains persistent subject identity, affect and homeostatic needs, relationship trajectories, autobiographical memory with provenance, objective world facts separated from subject beliefs, commitments, decaying lived-consequence residue, action selection, action/outcome separation, outcome-dependent learned affordances, a small path-dependent adaptive latent trace, endogenous heartbeat, optional first-person inner cognition, optional bounded model-assisted semantic appraisal, optional model-backed expression, deterministic fallbacks, atomic JSON state persistence, an append-only JSONL host journal, UTC timestamps, and Swatch Internet Time / Beat Time stamps.
+
+The subject-access firewall remains mandatory. Model-backed private cognition and expression are constructed exclusively from qualitative first-person state. The semantic model sees only the current utterance and source and can propose only schema-bounded tags, valence, and intensity. Raw mechanistic numbers remain developer diagnostics.
+
+## Donor synthesis
+
+`docs/DONOR_AUDIT_v0.1.md` remains the donor map. The integrated build uses design lessons from Digital Subject causal continuity, TinyPersonaEngine first-person authority boundaries, Gelatinblob path-dependent learning and action/outcome separation, and Wayfarer/Ensemble subject authority, provenance, commitments, and model firewalls. Alice, Moemate, rho, Omnicore, and AIML remain useful for later presentation, proactivity, and evaluation work.
+
+No donor package is a runtime dependency.
 
 ## Verified evidence
 
-The milestone commit `592dc7e090511962503a19b3ec222bc1ea669b71` passed the complete repository test suite in GitHub Actions on Python 3.11 and Python 3.12 in workflow run `34008547707`.
+Integrated commit `51bab647c5d781a862e83649b56a32d1d67e3d7d` passed GitHub Actions workflow `34012675711` on Python 3.11 and Python 3.12. The documentation authority guard passed, the full repository suite reported `22 passed`, and `python -m duck.evaluation` passed all three current architecture probes.
 
-The acceptance tests verify that raw float-valued psychological telemetry does not reach private cognition, qualitative experience changes when underlying mechanistic magnitude changes, uncertainty remains ordinary first-person uncertainty rather than a numeric confidence report, hidden causes can remain introspectively unavailable, developer diagnostics remain separate, and behavior can be influenced without generated inner prose.
+The paired-history evaluation produced the same present event after two different histories. The neutral subject selected `ask`; the previously threatened subject selected `step_back`, reported first-person fear/unease/suspicion, and retrieved its prior encounter and outcome. The language-lesion evaluation demonstrated action selection and outcome learning with inner language disabled. The persistence evaluation reopened the same subject identity with its state intact.
 
-The repository also has a documentation/scope guard in normal CI so stale architecture authority and accidental sensory-scope expansion fail automatically.
+The regression suite additionally verifies raw-float exclusion from `SubjectiveMoment`, world-fact versus belief separation, broken-commitment causal effect, positive outcome learning, endogenous heartbeat initiative, model-facing packet isolation, bounded semantic-model proposals, deterministic semantic fallback, and deterministic Beat Time conversion.
 
-## Donor survey
+## Current interpretation
 
-`docs/DONOR_AUDIT_v0.1.md` records a nonbinding survey of earlier experiments and adjacent repositories.
+This is now a coherent integrated cognitive-organism prototype rather than a one-mechanism research kernel. It is appropriate for end-to-end simulation, ablation, transcript studies, model-assisted conversation experiments, and further product hardening. The passing tests establish authority boundaries and causal behavior, not phenomenal consciousness or human-equivalent cognition.
 
-The strongest immediate donor for the next experiment is `Azimn/Persona-and-Jelly-Sandwich-`, specifically its paired-history causal-continuity tests and bounded history-influence pattern. `Azimn/TinyPersonaEngine` is a close architectural cross-check for first-person access and authority separation. Gelatinblob is reserved as a later donor for path-dependent latent plasticity if explicit state carryover proves insufficient.
+## Deliberately unfinished surfaces
 
-Wayfarer/Ensemble, Alice, Moemate, rho, Omnicore, and AIML experiments remain scoped donor sources rather than inherited architecture.
+Real camera/audio sensing, robotics, XR embodiment, avatar animation, voice interruption, wall-clock catch-up scheduling, long-duration human evaluation, and a polished desktop/mobile shell remain future product surfaces. The integrated cognitive core does not depend on those surfaces.
 
-## Next experiment
-
-The next research question is continuity of consequence:
-
-> Does something that happens to the subject alter the subject who encounters the next moment?
-
-The experiment should first demonstrate the failure with the current minimal kernel. It will use a paired-history design adapted from the older Digital Subject experiment:
-
-```text
-History A: no disturbing event
-History B: disturbing event occurs
-
-then give both runs the same neutral present input
-```
-
-Milestone 0.1 is expected to collapse both runs to the same present state because `MechanisticSnapshot` inputs are independent. That expected failure should be recorded before a Milestone 0.2 mechanism is selected.
-
-A small explicit consequence residue is the first candidate mechanism. Lived autobiographical memory, commitments, temporal persistence, world/belief separation, Gelatinblob-style latent plasticity, and proactivity remain candidates rather than pre-approved architecture.
-
-## Scope status
-
-The older `Azimn/persona_engine_PYTHONX` repository remains a donor archive. Its broad DUCK v0.3 specification and other Wayfarer-era documents are not current architecture for this repository.
-
-Vision, audio, touch, proprioception, vestibular sensing, interoception, avatars, robotics, XR, body transfer, and multimodal binding remain nonbinding future scope. The only retained cross-modal rule is that future machine representations must cross the subject-access boundary before they become available to the simulated subject.
+The earlier v0.1 documentation remains preserved as history. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.

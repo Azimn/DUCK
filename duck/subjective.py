@@ -43,9 +43,15 @@ class AccessibleTendency:
 class SubjectiveMoment:
     """What is currently available to the simulated subject.
 
-    A SubjectiveMoment is not the canonical mechanistic state and is not a debug
-    packet. It is a bounded first-person projection of that state.
+    A SubjectiveMoment is not canonical mechanistic state and is not a debug
+    packet. It is a bounded first-person projection. All fields intentionally use
+    qualitative language rather than implementation telemetry.
     """
 
     impressions: tuple[FirstPersonImpression, ...] = ()
     tendencies: tuple[AccessibleTendency, ...] = ()
+    recollections: tuple[str, ...] = ()
+    beliefs: tuple[str, ...] = ()
+    concerns: tuple[str, ...] = ()
+    temporal_context: tuple[str, ...] = ()
+    self_context: tuple[str, ...] = ()

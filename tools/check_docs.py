@@ -1,18 +1,11 @@
-"""Fail fast when DUCK's current documentation authority drifts.
-
-This guard is intentionally small. It does not try to decide architecture.
-It makes the current binding files explicit and catches the specific failure mode
-where historical donor documents or future-scope plans quietly become current.
-"""
-
+"""Fail fast when DUCK's documentation authority drifts."""
 from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.1.md"
-CURRENT_MILESTONE = "docs/MILESTONE_0_1.md"
+CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.5.md"
+CURRENT_MILESTONE = "docs/MILESTONE_0_5.md"
 CURRENT_INDEX = "docs/INDEX.md"
 CURRENT_STATUS = "docs/STATUS.md"
 REQUIRED = (
@@ -22,6 +15,7 @@ REQUIRED = (
     CURRENT_INDEX,
     CURRENT_STATUS,
     "docs/PROVENANCE.md",
+    "docs/DONOR_AUDIT_v0.1.md",
 )
 
 
@@ -31,11 +25,9 @@ def _read(path: str) -> str:
 
 def check() -> list[str]:
     errors: list[str] = []
-
     for relative in REQUIRED:
         if not (ROOT / relative).is_file():
             errors.append(f"missing required documentation file: {relative}")
-
     if errors:
         return errors
 
@@ -49,20 +41,39 @@ def check() -> list[str]:
         if path not in readme:
             errors.append(f"README.md must point to current authority file: {path}")
 
+    if "ARCHITECTURE_v0.1.md" not in index or "historical" not in index.lower():
+        errors.append("docs/INDEX.md must preserve v0.1 as historical architecture")
     if "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3" not in index:
         errors.append("docs/INDEX.md must explicitly classify the older broad v0.3 document")
     if "not the current architecture" not in index:
-        errors.append("docs/INDEX.md must state that donor-era architecture is non-current")
+        errors.append("docs/INDEX.md must state that donor-era v0.3 is non-current")
 
-    if "Future scope, explicitly nonbinding" not in architecture:
-        errors.append("current architecture must preserve an explicit nonbinding future-scope section")
-    if "No modality-specific schema should be added until" not in architecture:
-        errors.append("current architecture must preserve evidence-before-modality scope discipline")
+    required_architecture_phrases = (
+        "The machinery may know numbers. The subject does not.",
+        "What happens to the subject must be able to change the subject who encounters the next moment.",
+        "Inner speech is optional.",
+        "world facts",
+        "subject beliefs",
+        "Language model boundary",
+    )
+    for phrase in required_architecture_phrases:
+        if phrase not in architecture:
+            errors.append(f"current architecture is missing invariant text: {phrase}")
 
-    if "cameras, microphones" not in milestone:
-        errors.append("current milestone must explicitly exclude camera/microphone integration")
-    if "synthetic vision subsystem" not in status or "synthetic audio subsystem" not in status:
-        errors.append("STATUS.md must explicitly state that synthetic vision/audio are not current milestone subsystems")
+    required_milestone_phrases = (
+        "paired-history divergence",
+        "language-lesion survival",
+        "endogenous heartbeat",
+        "Vision, audio, robotics, XR",
+    )
+    for phrase in required_milestone_phrases:
+        if phrase not in milestone:
+            errors.append(f"current milestone is missing acceptance/scope text: {phrase}")
+
+    if "subject-access firewall remains mandatory" not in status.lower():
+        errors.append("STATUS.md must preserve the subject-access firewall as mandatory")
+    if "No donor package is a runtime dependency." not in status:
+        errors.append("STATUS.md must state that donor packages are not runtime dependencies")
 
     legacy_roots = (
         ROOT / "docs" / "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3.md",
@@ -70,11 +81,7 @@ def check() -> list[str]:
     )
     for legacy in legacy_roots:
         if legacy.exists():
-            errors.append(
-                f"legacy broad/draft document is in the active docs root: {legacy.relative_to(ROOT)}; "
-                "move historical material under an explicitly nonbinding history area instead"
-            )
-
+            errors.append(f"legacy donor/draft document is in active docs root: {legacy.relative_to(ROOT)}")
     return errors
 
 

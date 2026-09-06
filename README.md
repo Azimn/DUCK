@@ -1,62 +1,80 @@
 # DUCK
 
-DUCK is a clean experimental implementation of a persistent human-like subject simulation.
+DUCK is an experimental persistent human-like subject simulator.
 
-The project does not attempt to prove or claim phenomenal consciousness. Its current engineering goal is narrower and testable: construct a believable continuing individual whose cognition is constrained by a first-person point of access rather than by omniscient access to implementation state.
+It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, and learning rather than on a language model pretending to contain all of those things inside one prompt.
 
-## Milestone 0.1: The Subjective Moment
-
-The first invariant is simple:
+The two governing rules are:
 
 > The machinery may know numbers. The subject does not.
 
-Raw mechanistic state is projected through a `SubjectAccessFirewall` into a bounded `SubjectiveMoment`. Private cognition receives the SubjectiveMoment, never raw psychological telemetry.
+> What happens to me changes the me who encounters what happens next.
+
+## Integrated v0.5 candidate
+
+The `franken-duck` integration candidate deliberately combines the strongest mechanisms from several earlier experiments into one runnable organism:
 
 ```text
-mechanistic state
-      |
-      v
+world / user / time
+        |
+        v
+mechanistic subject
+        |
+        v
+memory + appraisal + motivation + continuity + adaptive state
+        |
+        v
+action selection
+        |
+        v
 subject-access firewall
-      |
-      v
-first-person subjective moment
-      |
-      v
+        |
+        v
+first-person SubjectiveMoment
+        |
+        v
 optional inner cognition
-      |
-      v
-choice / action
+        |
+        v
+expression / action
+        |
+        v
+outcome
+        |
+        v
+learning + memory + changed next subject
 ```
 
-Example:
+The LLM is optional. When enabled, it can participate in private first-person cognition and expression, but it only receives approved subject-accessible state. It never receives raw trust floats, affect magnitudes, memory retrieval scores, latent vectors, or other developer telemetry.
 
-```text
-developer state:
-    recognition confidence = 0.64
-
-subject access:
-    "I think that's Sarah."
-```
-
-The current code is intentionally small. The older `Azimn/persona_engine_PYTHONX` repository remains a donor and research archive rather than a dependency.
-
-## Run tests
+## Run
 
 ```bash
 python -m pip install -e '.[test]'
 python -m pytest
+
+duck --root ./duck_state status
+duck --root ./duck_state chat
+duck --root ./demo_state demo
 ```
+
+For any OpenAI-compatible chat-completions provider:
+
+```bash
+export DUCK_LLM_ENDPOINT="https://provider.example/v1"
+export DUCK_LLM_MODEL="model-name"
+export DUCK_LLM_API_KEY="optional-key"
+duck --root ./duck_state --llm chat
+```
+
+This is provider-neutral. Local/offline interoperability remains possible but is not the current research priority.
 
 ## Documentation authority
 
-The current binding architecture is `docs/ARCHITECTURE_v0.1.md`.
+The current integrated architecture candidate is `docs/ARCHITECTURE_v0.5.md`.
 
-The current executable milestone is `docs/MILESTONE_0_1.md`.
+The current integrated milestone is `docs/MILESTONE_0_5.md`.
 
-`docs/INDEX.md` defines documentation authority and explicitly separates current DUCK from historical donor documents. `docs/STATUS.md` records what is actually implemented and verified.
+`docs/INDEX.md` defines document authority, `docs/STATUS.md` records implementation evidence, and `docs/DONOR_AUDIT_v0.1.md` records the nonbinding donor survey.
 
-Run the documentation/scope guard directly with:
-
-```bash
-python tools/check_docs.py
-```
+Earlier architecture documents remain preserved as history rather than silently rewritten.

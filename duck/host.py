@@ -9,6 +9,7 @@ from typing import Any
 
 from .language import ApprovedLanguagePacket, DeterministicExpression, ExpressionProvider
 from .living import LivingDuck, LivingStep, RuleEventInterpreter, SubjectState, WorldEvent
+from .temporal import stamp
 
 
 @dataclass(frozen=True)
@@ -22,10 +23,10 @@ class InteractionResult:
 
 
 class PersistentDuckHost:
-    """Owns durable state, event journaling, and user-facing interaction.
+    """Owns durable state, event journaling, wall time, and user interaction.
 
-    Persistence is intentionally boring JSON plus append-only JSONL. The character
-    never reads these files directly; they are host authority.
+    Persistence and wall-clock time are host authority. The simulated subject does
+    not read its state file or clock implementation as introspection.
     """
 
     def __init__(
@@ -34,7 +35,7 @@ class PersistentDuckHost:
         duck: LivingDuck,
         *,
         expression: ExpressionProvider | None = None,
-        interpreter: RuleEventInterpreter | None = None,
+        interpreter=None,
     ) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
@@ -53,6 +54,7 @@ class PersistentDuckHost:
         subject_id: str | None = None,
         cognition=None,
         expression: ExpressionProvider | None = None,
+        interpreter=None,
     ) -> "PersistentDuckHost":
         root_path = Path(root)
         state_path = root_path / "subject.json"
@@ -60,7 +62,12 @@ class PersistentDuckHost:
             state = SubjectState.from_dict(json.loads(state_path.read_text(encoding="utf-8")))
         else:
             state = SubjectState.create(name=name, subject_id=subject_id)
-        return cls(root_path, LivingDuck(state, cognition=cognition), expression=expression)
+        return cls(
+            root_path,
+            LivingDuck(state, cognition=cognition),
+            expression=expression,
+            interpreter=interpreter,
+        )
 
     def save(self) -> None:
         payload = json.dumps(self.duck.state.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
@@ -71,8 +78,10 @@ class PersistentDuckHost:
         Path(temp_name).replace(self.state_path)
 
     def _append_journal(self, event: dict[str, Any]) -> None:
+        record = dict(event)
+        record["time"] = asdict(stamp(int(record.get("tick", self.duck.state.tick))))
         with self.journal_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
     @staticmethod
     def _subjective_lines(step: LivingStep) -> tuple[str, ...]:
@@ -175,10 +184,13 @@ class PersistentDuckHost:
 
     def status(self) -> dict[str, Any]:
         state = self.duck.state
+        temporal = stamp(state.tick)
         return {
             "subject_id": state.subject_id,
             "name": state.name,
             "tick": state.tick,
+            "beat_time": temporal.beat_label,
+            "bmt_date": temporal.bmt_date,
             "memory_count": len(state.memories),
             "belief_count": len(state.beliefs),
             "commitment_count": len(state.commitments),

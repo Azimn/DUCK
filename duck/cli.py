@@ -5,24 +5,33 @@ import argparse
 import json
 from pathlib import Path
 
+from .evaluation import run_all
 from .host import PersistentDuckHost
 from .language import ModelExpression, ModelInnerVoice, OpenAICompatiblePort
 from .living import BeliefStance, WorldEvent
+from .semantics import ModelEventInterpreter
 
 
 def _host(args) -> PersistentDuckHost:
     cognition = None
     expression = None
+    interpreter = None
     if getattr(args, "llm", False):
         port = OpenAICompatiblePort.from_env()
         cognition = ModelInnerVoice(port)
         expression = ModelExpression(port)
-    return PersistentDuckHost.open(args.root, name=getattr(args, "name", "Duck"), cognition=cognition, expression=expression)
+        interpreter = ModelEventInterpreter(port)
+    return PersistentDuckHost.open(
+        args.root,
+        name=getattr(args, "name", "Duck"),
+        cognition=cognition,
+        expression=expression,
+        interpreter=interpreter,
+    )
 
 
 def cmd_status(args) -> int:
-    host = _host(args)
-    print(json.dumps(host.status(), indent=2))
+    print(json.dumps(_host(args).status(), indent=2))
     return 0
 
 
@@ -58,8 +67,7 @@ def cmd_chat(args) -> int:
 
 def cmd_tick(args) -> int:
     host = _host(args)
-    steps = host.heartbeat(args.count)
-    for step in steps:
+    for step in host.heartbeat(args.count):
         print(json.dumps({"tick": step.tick, "action": step.selected_action, "thought": step.inner_cognition.thought}, ensure_ascii=False))
     return 0
 
@@ -72,12 +80,19 @@ def cmd_demo(args) -> int:
         host.heartbeat()
     later = host.interact("Hey, it's Morgan. I'm back.", speaker="Morgan")
     print("subject:", host.duck.state.subject_id)
+    print("beat:", host.status()["beat_time"])
     print("response:", later.response_text)
     print("private thought:", later.private_thought)
     print("subjective state:")
     for line in later.subjective_state:
         print("  ", line)
     return 0
+
+
+def cmd_eval(args) -> int:
+    report = run_all()
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 0 if report["passed"] else 1
 
 
 def cmd_commit(args) -> int:
@@ -114,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="duck", description="DUCK persistent subject simulator")
     parser.add_argument("--root", type=Path, default=Path("./duck_state"))
     parser.add_argument("--name", default="Duck")
-    parser.add_argument("--llm", action="store_true", help="use DUCK_LLM_* environment variables for inner cognition and expression")
+    parser.add_argument("--llm", action="store_true", help="use DUCK_LLM_* environment variables for semantic interpretation, inner cognition, and expression")
     sub = parser.add_subparsers(dest="command", required=True)
 
     status = sub.add_parser("status")
@@ -126,6 +141,8 @@ def build_parser() -> argparse.ArgumentParser:
     tick.set_defaults(func=cmd_tick)
     demo = sub.add_parser("demo")
     demo.set_defaults(func=cmd_demo)
+    evaluate = sub.add_parser("eval")
+    evaluate.set_defaults(func=cmd_eval)
 
     commit = sub.add_parser("commit")
     commit.add_argument("actor")

@@ -48,12 +48,13 @@ def opportunity_survives_restart() -> dict:
 def no_opportunity_no_false_goal() -> dict:
     duck = LivingDuck(SubjectState.create(name="Aster", subject_id="agency-control"))
     steps = [duck.heartbeat(allow_inner_speech=False) for _ in range(8)]
-    fabricated = any("opportunity_active" in row for step in steps for row in [tuple(step.developer_trace.get("mechanistic_snapshot", {}).keys())])
-    opportunity_memories = [memory for memory in duck.state.memories if "opportunity" in memory.tags]
+    opportunity_memories = [memory.memory_id for memory in duck.state.memories if "opportunity" in memory.tags]
+    pending_opportunity = duck._pending_opportunity()
     return {
         "name": "no_opportunity_no_false_goal",
-        "passed": not fabricated and not opportunity_memories,
+        "passed": not opportunity_memories and pending_opportunity is None,
         "actions": [step.selected_action for step in steps],
+        "opportunity_memories": opportunity_memories,
     }
 
 

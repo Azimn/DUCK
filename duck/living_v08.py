@@ -168,6 +168,7 @@ class LivingDuck(LifeSimLivingDuck):
             urgency=max(0.45, record.importance * 0.70),
             preferred_action=preferred_action,
             due_in=due_in,
+            not_before_in=due_in,
             min_energy=0.18,
             blocked_tags=("threat",),
             source="self",
@@ -375,13 +376,13 @@ class LivingDuck(LifeSimLivingDuck):
         for candidate in rows:
             utility = candidate.utility
             if candidate.name == concern.preferred_action:
-                utility += 0.28 + 0.30 * concern.priority + 0.14 * concern.urgency
+                # A selected prospective concern should normally shape intention,
+                # while rest and safety remain free to win when the organism needs
+                # them. This is stronger than a cosmetic dialogue preference.
+                utility += 0.50 + 0.36 * concern.priority + 0.16 * concern.urgency
                 repeats = sum(1 for action in recent[-3:] if action == candidate.name)
-                utility -= min(0.15, repeats * 0.05)
+                utility -= min(0.18, repeats * 0.06)
             elif candidate.name == "wait":
                 utility -= 0.10 * concern.priority
-            elif candidate.name in {"rest", "step_back"}:
-                # Physiological/safety actions remain legitimate competitors.
-                utility += 0.0
             adjusted.append(ActionCandidate(candidate.name, utility, candidate.reasons))
         return adjusted

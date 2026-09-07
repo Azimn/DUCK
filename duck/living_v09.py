@@ -15,11 +15,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .living import MemoryProvenance, MemoryRecord, WorldEvent, _clamp
-from .living_v08 import LivingDuck as AgencyLivingDuck, ProspectiveConcern
+from .living import MemoryProvenance, MemoryRecord, PendingAction, WorldEvent, _clamp
+from .living_v08 import LivingDuck as AgencyLivingDuck
 
 
 _PLAN_PREFIX = "pl_"
+_CONTROL_TAGS = frozenset({
+    "idle",
+    "time_passed",
+    "opportunity",
+    "prospective",
+    "opportunity_active",
+    "opportunity_acted",
+    "plan_step",
+    "planning",
+})
+_CONTROL_PREFIXES = ("pc_", "pl_", "concern_id:", "preferred_action:", "opportunity_")
 
 
 def _tag_value(tags: Iterable[str], prefix: str, default: str = "") -> str:
@@ -34,6 +45,24 @@ def _replace_tag(tags: tuple[str, ...], prefix: str, value: str) -> tuple[str, .
     if value:
         kept.append(f"{prefix}{value}")
     return tuple(dict.fromkeys(kept))
+
+
+def _semantic_action_tags(tags: Iterable[str]) -> tuple[str, ...]:
+    """Strip executive bookkeeping before action tags become learned outcome tags.
+
+    v0.8 encodes prospective state in memory tags and carries those tags through the
+    endogenous action event. They are useful while selecting an action, but they are
+    not properties of the resulting world outcome. Persisting them on OUTCOME memory
+    can make an outcome look like a fresh prospective concern. v0.9 therefore keeps
+    only semantic/environmental tags when an action is resolved.
+    """
+    rows: list[str] = []
+    for raw in tags:
+        tag = str(raw).lower()
+        if tag in _CONTROL_TAGS or any(tag.startswith(prefix) for prefix in _CONTROL_PREFIXES):
+            continue
+        rows.append(tag)
+    return tuple(dict.fromkeys(rows))
 
 
 @dataclass(frozen=True)
@@ -141,6 +170,24 @@ class LivingDuck(AgencyLivingDuck):
     def _set_plan_field(memory: MemoryRecord, field: str, value: str | int | None) -> None:
         memory.tags = _replace_tag(memory.tags, f"{_PLAN_PREFIX}{field}:", "" if value is None else str(value))
 
+    def _plan_step_memories(self, plan_id: str, *, status: str | None = None) -> list[MemoryRecord]:
+        rows: list[MemoryRecord] = []
+        for concern in self.concerns(status=status):
+            memory = self._concern_memory(concern.concern_id)
+            if memory.provenance is not MemoryProvenance.SELF_REFLECTION:
+                continue
+            if "plan_step" not in memory.tags:
+                continue
+            if _tag_value(memory.tags, f"{_PLAN_PREFIX}plan:") == plan_id:
+                rows.append(memory)
+        return rows
+
+    def _retire_open_plan_steps(self, plan_id: str) -> None:
+        """Enforce zero live child intentions once a plan branch is no longer active."""
+        for memory in self._plan_step_memories(plan_id, status="open"):
+            self._set_status(memory, "abandoned")
+            memory.tags = tuple(dict.fromkeys((*memory.tags, "opportunity_abandoned", "plan_step_retired")))
+
     def _route_score(self, kind: str, route: str) -> float:
         fear = self.state.affect.get("fear", 0.0)
         curiosity = self.state.needs.get("curiosity", 0.35)
@@ -225,6 +272,16 @@ class LivingDuck(AgencyLivingDuck):
             return None
 
         current = steps[plan.step_index]
+        for existing in self._plan_step_memories(plan.plan_id, status="open"):
+            if (
+                _tag_value(existing.tags, f"{_PLAN_PREFIX}step:") == str(plan.step_index)
+                and _tag_value(existing.tags, f"{_PLAN_PREFIX}route:") == (plan.current_route or "")
+            ):
+                self._set_plan_field(root, "pending_concern", existing.memory_id)
+                self._set_plan_field(root, "pending_action", None)
+                return existing
+        self._retire_open_plan_steps(plan.plan_id)
+
         concern = self.register_concern(
             current.text,
             tags=(
@@ -248,6 +305,8 @@ class LivingDuck(AgencyLivingDuck):
         return concern
 
     def _complete_plan(self, root: MemoryRecord) -> GoalPlan:
+        plan_id = root.memory_id
+        self._retire_open_plan_steps(plan_id)
         self._set_plan_field(root, "status", "completed")
         self._set_plan_field(root, "pending_concern", None)
         self._set_plan_field(root, "pending_action", None)
@@ -264,6 +323,8 @@ class LivingDuck(AgencyLivingDuck):
         return self._plan_from_memory(root)
 
     def _abandon_plan(self, root: MemoryRecord, reason: str) -> GoalPlan:
+        plan_id = root.memory_id
+        self._retire_open_plan_steps(plan_id)
         self._set_plan_field(root, "status", "abandoned")
         self._set_plan_field(root, "pending_concern", None)
         self._set_plan_field(root, "pending_action", None)
@@ -283,6 +344,8 @@ class LivingDuck(AgencyLivingDuck):
         try:
             concern_memory = self._concern_memory(concern_id)
         except KeyError:
+            return None
+        if concern_memory.provenance is not MemoryProvenance.SELF_REFLECTION or "plan_step" not in concern_memory.tags:
             return None
         plan_id = _tag_value(concern_memory.tags, f"{_PLAN_PREFIX}plan:")
         if not plan_id:
@@ -334,7 +397,21 @@ class LivingDuck(AgencyLivingDuck):
     ) -> None:
         linked = self._plan_for_pending_action(action_id)
         success_value = _clamp(success)
-        super().resolve_outcome(action_id, success=success, valence=valence, description=description, tags=tags)
+        pending = self.state.pending_action
+        original_pending = pending
+        if pending is not None and pending.action_id == action_id:
+            self.state.pending_action = PendingAction(
+                pending.action_id,
+                pending.name,
+                _semantic_action_tags(pending.tags),
+                pending.tick,
+                pending.predicted_valence,
+            )
+        try:
+            super().resolve_outcome(action_id, success=success, valence=valence, description=description, tags=tags)
+        except Exception:
+            self.state.pending_action = original_pending
+            raise
         if linked is None:
             return
 

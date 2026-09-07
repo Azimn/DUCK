@@ -50,9 +50,11 @@ Every long-horizon `SubjectiveMoment` is checked for raw floats and private plan
 
 The v0.8 merge commit `42e6e7dd86f09f9cec3152d5bd24b9dd98607447` passed post-merge `main` workflow `34168398759` on Python 3.11 and Python 3.12, including all v0.8 and prior regression gates.
 
-The v0.9 planning core at head `759f69a7e60a8a0bbb0dc234f8294e14d98155e4` passed workflow `34169181283` on Python 3.11 and Python 3.12. The focused v0.9 planning evaluation, complete pytest suite, original architecture evaluation, v0.6 regulation evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, v0.8 focused agency evaluation, v0.8 long-horizon agency simulation, and v0.9 long-horizon planning simulation all passed.
+The v0.9 planning core at head `759f69a7e60a8a0bbb0dc234f8294e14d98155e4` first passed workflow `34169181283` on Python 3.11 and Python 3.12 after the outcome-tag contamination defect was corrected.
 
-The documentation, package-version, public-export, and persistent-host wiring in the current candidate commit require their own branch-head CI before promotion. No promotion claim should be made until that exact head passes both Python versions.
+The fully wired v0.9 candidate at head `4a39912fb4f4e1ee9ed395d7ed5e3dc7bf556dcf` passed workflow `34169543177` on Python 3.11 and Python 3.12. The documentation contract, focused v0.9 planning evaluation, complete pytest suite, original architecture evaluation, v0.6 regulation evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, v0.8 focused agency evaluation, v0.8 long-horizon agency simulation, and v0.9 long-horizon planning simulation all passed. The persistent host and top-level public package were both exercised against the v0.9 candidate, including a regression test proving learned `OUTCOME` memories cannot become ghost prospective concerns through inherited planning metadata.
+
+The current branch therefore satisfies the v0.9 implementation and integration gates and is eligible for promotion review. This establishes the tested functional behavior only, not phenomenal consciousness or human-equivalent planning.
 
 ## Relationship to earlier phases
 

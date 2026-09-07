@@ -9,7 +9,7 @@ from typing import Any
 
 from .language import ApprovedLanguagePacket, DeterministicExpression, ExpressionProvider
 from .living import LivingStep, RuleEventInterpreter, SubjectState, WorldEvent
-from .living_v06 import LivingDuck
+from .living_v07 import LivingDuck
 from .temporal import stamp
 
 

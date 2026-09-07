@@ -2,7 +2,7 @@
 
 DUCK is an experimental persistent human-like subject simulator.
 
-It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, and recovery rather than on a language model pretending to contain all of those things inside one prompt.
+It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, recovery, and reinterpretation rather than on a language model pretending to contain all of those things inside one prompt.
 
 The two governing rules are:
 
@@ -10,21 +10,21 @@ The two governing rules are:
 
 > What happens to me changes the me who encounters what happens next.
 
-## Integrated v0.6 candidate
+## Life-simulation v0.7 candidate
 
-Version 0.6 keeps the whole-organism FrankenDUCK integration and adds long-horizon regulation discovered through simulation testing.
+Version 0.7 keeps the regulated v0.6 whole-organism architecture and adds refinements discovered by running one persistent subject through a deterministic thirty-day simulated life.
 
 ```text
 world / user / time
         |
         v
-mechanistic subject
+persistent mechanistic subject
         |
         v
 memory + appraisal + motivation + continuity + adaptive state
         |
         v
-regulated action ecology
+contextual action ecology
         |
         v
 subject-access firewall
@@ -42,15 +42,15 @@ expression / action
 outcome
         |
         v
-learning + residue + recovery
+learning + relationship change + recovery
         |
         v
-changed next subject
+reinterpretation + changed next subject
 ```
 
 The LLM is optional. When enabled, it can participate in private first-person cognition and expression, but it only receives approved subject-accessible state. It never receives raw trust floats, affect magnitudes, memory retrieval scores, latent vectors, or other developer telemetry.
 
-The current simulation work specifically tests whether history remains causal without causing permanent emotional saturation, whether quiet-time drives remain bounded, whether memory affects the present without explicit recall requests, whether relationships can be damaged and partially repaired, whether the same subject survives restart, and whether cognition/action continue with inner language disabled.
+The v0.7 life simulation specifically tests recurring relationships, promises and disappointment, later repair, hidden world truth versus subjective belief, false testimony followed by direct contradictory evidence, repeated action/outcome learning, long quiet periods, multiple process restarts, bounded homeostasis, and first-person reinterpretation of mixed relationship history.
 
 ## Run
 
@@ -60,6 +60,7 @@ python -m pytest
 python -m duck.evaluation
 python -m duck.regulation_evaluation
 python -m duck.simulation_lab_v06 --out-dir simulation_results/v06
+python -m duck.life_simulation --out-dir simulation_results/life-v07
 
 duck --root ./duck_state status
 duck --root ./duck_state chat
@@ -75,13 +76,13 @@ export DUCK_LLM_API_KEY="optional-key"
 duck --root ./duck_state --llm chat
 ```
 
-Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation.
+Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation and believable persistent subjectivity.
 
 ## Documentation authority
 
-The current integrated architecture candidate is `docs/ARCHITECTURE_v0.6.md`.
+The current architecture candidate is `docs/ARCHITECTURE_v0.7.md`.
 
-The current integrated milestone is `docs/MILESTONE_0_6.md`.
+The current milestone candidate is `docs/MILESTONE_0_7.md`.
 
 `docs/INDEX.md` defines document authority, `docs/STATUS.md` records implementation evidence, and `docs/DONOR_AUDIT_v0.1.md` records the nonbinding donor survey.
 

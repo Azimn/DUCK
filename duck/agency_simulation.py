@@ -89,11 +89,14 @@ def run_agency_simulation() -> dict[str, Any]:
             required_tags=("garden",),
             min_energy=0.30,
         )
+        # This is deliberately delayed but still meaningfully motivated once its
+        # not-before boundary passes. The test is about interruption/resumption,
+        # not whether a weak whim should overcome low curiosity.
         map_goal = host.duck.register_concern(
             "I want to review the old map when I have enough time.",
             tags=("map", "project"),
-            priority=0.58,
-            urgency=0.30,
+            priority=0.68,
+            urgency=0.40,
             preferred_action="explore",
             not_before_in=14,
             min_energy=0.28,

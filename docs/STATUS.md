@@ -1,14 +1,14 @@
 # DUCK Current Status
 
-Current architecture candidate: `docs/ARCHITECTURE_v0.6.md`
+Current architecture candidate: `docs/ARCHITECTURE_v0.7.md`
 
-Current milestone candidate: `docs/MILESTONE_0_6.md`
+Current milestone candidate: `docs/MILESTONE_0_7.md`
 
-Branch: `simulation-lab-v0.6`
+Branch: `life-sim-v0.7`
 
 ## Integrated implementation
 
-DUCK retains the v0.5 whole-organism implementation and adds a regulated v0.6 candidate in `duck/living_v06.py`. The public package and persistent host use the regulated candidate on this branch while `duck/living.py` remains preserved as the v0.5 baseline implementation for direct comparison.
+DUCK v0.7 retains the v0.6 regulated whole-organism architecture and adds a life-simulation refinement layer in `duck/living_v07.py`. The public package and persistent host use the v0.7 candidate on this branch. `duck/living_v06.py` remains the regulated v0.6 baseline and `duck/living.py` remains the earlier integrated baseline.
 
 The organism contains persistent subject identity, affect and homeostatic needs, relationship trajectories, autobiographical memory with provenance, objective world facts separated from subject beliefs, commitments, lived-consequence residue, action selection, action/outcome separation, outcome-dependent learned affordances, a small path-dependent adaptive latent trace, endogenous heartbeat, optional first-person inner cognition, optional bounded model-assisted semantic appraisal, optional model-backed expression, deterministic fallbacks, atomic JSON state persistence, an append-only JSONL host journal, UTC timestamps, and Swatch Internet Time / Beat Time stamps.
 
@@ -16,46 +16,46 @@ The subject-access firewall remains mandatory. Model-backed private cognition an
 
 No donor package is a runtime dependency.
 
-## Simulation infrastructure
+## Thirty-day longitudinal simulation
 
-`duck/simulation_lab.py` preserves the original v0.5 long-horizon scenarios and report format. `duck/simulation_lab_v06.py` runs those same scenarios against the regulated v0.6 organism. `duck/regulation_evaluation.py` contains focused checks for affective recovery, quiet-time regulation, and relationship repair after broken commitments.
+`duck/life_simulation.py` runs one persistent Aster through a deterministic thirty-day simulated life. The scenario includes recurring people, a helpful first encounter, a prospective commitment, an overdue commitment, a broken promise, hidden host truth, false testimony, direct contradictory evidence, ordinary social contact, apology, a second kept promise, repeated novel threat encounters with outcome learning, long quiet periods, and process restarts on simulated Days 10, 21, and 29.
 
-The simulation set exercises paired-history divergence, hidden world truth versus subject belief, commitment consequences, memory influence without explicit recall prompting, adaptive-core ablation, long language-lesion runs, 500-cycle quiet-time behavior, and a multi-day relationship scenario with process restart.
+The life-simulation gate checks subject-access isolation, restart integrity, spontaneous salience of an overdue commitment, later recall of a broken promise, causal relationship trajectories, causal epistemic revision, adaptive-core contribution under ablation, bounded quiet-time behavior, bounded numeric state, bounded memory/buffers, and persistent history for a recurring person.
 
-## Failures found by simulation
+## v0.7 corrections discovered by simulated life
 
-The first v0.5 long-horizon run passed its original broad assertions but exposed three important behavioral pathologies. A single residual negative event could be re-added as fresh affect every heartbeat, important negative memories could repeatedly increase unease and guardedness during idle recall, and homeostatic variables saturated because heartbeat actions did not regulate the needs that selected them.
+The first thirty-day run against v0.6 remained bounded but exposed subtler artificiality. Benign social encounters were too often resolved as `ask`, safety could remain chronically depleted after danger had passed, competence could saturate at 1.0, and a relationship containing a broken commitment could retain a permanent undifferentiated wariness even after later apology and reliable follow-through.
 
-The 500-cycle v0.5 baseline ended with energy at 0.0, affiliation at 1.0, curiosity at 1.0, and `seek_connection` selected 459 times. A 60-cycle language-lesion run selected `step_back` 59 times. These were treated as simulation failures even though the earlier loose assertions technically passed.
+Version 0.7 adds slow safety recovery toward a conservative baseline and slow competence normalization. Social action selection now uses event context: questions and supportive contact favor ordinary response, explicit repair can create a repair affordance, and recent repeated questioning receives bounded inhibition. These rules modify intention selection below the language layer rather than asking an LLM to cosmetically vary dialogue.
 
-## v0.6 corrections
-
-Version 0.6 treats lived-consequence residue as decaying activation rather than fresh injury on every cycle. Idle retrieval of a negative autobiographical memory no longer creates a new permanent guardedness increment or a fresh unease increment. Endogenous actions can partially regulate the drives that selected them, and recent-action inhibition discourages active-intention perseveration. Waiting is treated as healthy silence and does not restore energy.
-
-Repair is directional rather than amnesic: an apology can raise trust and lower guardedness while the subject still remembers the prior broken commitment.
+Relationship reinterpretation is also evidence-sensitive. A broken commitment remains autobiographical history, but later kept commitments can change its current first-person meaning. Under sufficient later evidence the subject can represent the mixed history as `They let me down before, but they've followed through since.` rather than remaining indefinitely in the same warning state.
 
 ## Verified evidence
 
-Branch head `7ea54b1fc967b3cd308a62c7de8e7bbdf1d3930f` passed GitHub Actions workflow `34118784081` on Python 3.11 and Python 3.12. The documentation guard passed, the full pytest suite reported `26 passed`, the original architectural evaluation passed, the preserved baseline simulation passed its historical gates, and the regulated v0.6 simulation suite completed successfully.
+Implementation head `50c7c49f0028e6a7f6436996ca1943f392111f84` passed GitHub Actions workflow `34119932720` on Python 3.11 and Python 3.12. The documentation guard, full repository tests, original architecture evaluation, v0.6 regulation evaluation, preserved baseline simulations, and the v0.7 thirty-day life simulation all completed successfully. Subsequent commits formalize the v0.7 milestone, documentation authority, focused regression tests, and consistent use of the v0.7 candidate inside the ablation probe; those commits require their own branch-head CI before promotion.
 
-The focused recovery test began after an adverse event with fear 0.380 and unease 0.437. After 40 quiet cycles, fear recovered to 0.042 and unease to 0.042 while the autobiographical event remained available. The final 20 actions were 18 `wait`, one `rest`, and one `seek_connection`, rather than continued defensive perseveration.
+In the verified thirty-day run, all eleven life-simulation gates passed. The three process restarts preserved subject identity, tick, memory count, and commitment count. No float reached `SubjectiveMoment`.
 
-In 500 quiet v0.6 heartbeat cycles, `wait` occurred 436 times, `rest` 25 times, `seek_connection` 26 times, `explore` 11 times, and `ask` twice. The connection-seeking ratio was 5.2 percent rather than the v0.5 baseline's 91.8 percent. Energy finished at 0.85, affiliation at 0.59, and curiosity at 0.43 instead of saturating at their bounds.
+Across 121 quiet heartbeat cycles, Aster selected `wait` 84 times, `step_back` 25 times, `rest` seven times, `ask` four times, and `explore` once, with no `seek_connection` behavior. The final affect state was near baseline rather than chronically escalated.
 
-The regulated 60-cycle language-lesion run produced 32 `step_back`, 22 `wait`, two `ask`, two `rest`, and two `seek_connection` actions while preserving learned threat-action association and using no inner language.
+Safety recovered to approximately 0.716 after the later threat sequence rather than remaining near the earlier depleted value, while competence finished near 0.929 rather than saturating at 1.0. Energy finished near 0.81, affiliation near 0.31, and curiosity near 0.45. The final state contained 36 memories, one belief, two resolved commitments, and no active residue.
 
-The long paired-history test still differentiates subjects after identical present input. A neutral history responds to Morgan, a previously threatened history steps back and recalls the threat, and a supportive history responds with lower suspicion. The threat-conditioned subject's unease in the same-present probe is approximately 0.305 rather than the v0.5 baseline's saturated 1.0.
+The epistemic sequence remained causal. Host truth placed the garden key in the blue box without giving the subject access. Riley's false testimony produced a remembered red-box statement and a red-box belief. Direct observation later revised the belief to blue box while preserving the fact that Riley had said red box. The corrected blue-box belief survived to Day 30.
 
-The multi-day persistent scenario preserves subject identity across restart, recalls Morgan's broken promise on a later return, steps back on the unresolved return, and later shifts to `ask` when Morgan attempts repair. Focused repair evaluation moved trust from 0.356 to 0.389 and guardedness from 0.362 to 0.296 without erasing the broken-promise memory.
+The relationship sequence also remained causal. Morgan's initial support produced trust near 0.564 and guardedness near 0.160. The broken promise moved trust to 0.420 and guardedness to 0.322. Before explicit repair, trust fell further to 0.342 and guardedness rose to 0.426. An apology moved those values in the repair direction, and a later kept promise raised trust to 0.511. By the final Morgan encounter trust was near 0.543 while the earlier failure remained part of autobiographical history.
+
+The first-person interpretation changed with that evidence. Before repair Aster could represent the relationship as `I'm still wary because they let me down before.` After the later kept promise the simulation produced `They let me down before, but they've followed through since.` The adverse event was not deleted.
+
+Repeated successful glorp encounters increased the selected defensive action utility from approximately 0.532 to 0.964 to 1.261. In the later adaptive-core comparison, the learned candidate utility was approximately 1.358 with the adaptive state present versus 0.862 after ablation.
 
 ## Current interpretation
 
-DUCK v0.6 is a stronger whole-organism simulation candidate because longitudinal testing now constrains how its mechanisms compose over time. The result is not merely more features: the same memory, affect, relationship, motivation, and heartbeat mechanisms now demonstrate recovery, boundedness, persistence, causal history sensitivity, and nonverbal operation over longer runs.
+DUCK v0.7 is a life-simulation candidate rather than merely a conversation architecture. Its present value is that memory, belief, affect, relationships, motivation, learning, recovery, and restart continuity are tested as one interacting system over an extended synthetic history.
 
-Passing these tests establishes behavior under the tested scenarios. It does not establish phenomenal consciousness, human-equivalent cognition, or psychological validity outside those regimes.
+The central evaluation question is what remains obviously fake when linguistic fluency is not allowed to conceal the architecture. Passing the current tests establishes bounded causal behavior under the tested scenarios. It does not establish phenomenal consciousness, human-equivalent cognition, or general psychological validity.
 
 ## Deliberately unfinished surfaces
 
 Model swapping is not a current priority. Real camera/audio sensing, robotics, XR embodiment, avatar animation, voice interruption, richer wall-clock scheduling, long-duration human evaluation, and a polished desktop/mobile shell remain future product surfaces.
 
-The v0.5 and v0.1 documents remain preserved as history. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.
+The v0.6, v0.5, and v0.1 documents remain preserved as historical architecture. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.

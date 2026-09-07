@@ -2,55 +2,56 @@
 
 DUCK is an experimental persistent human-like subject simulator.
 
-It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, recovery, and reinterpretation rather than on a language model pretending to contain all of those things inside one prompt.
+It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, recovery, reinterpretation, and unfinished intentions rather than on a language model pretending to contain all of those things inside one prompt.
 
-The two governing rules are:
+The governing rules are:
 
 > The machinery may know numbers. The subject does not.
 
 > What happens to me changes the me who encounters what happens next.
 
-## Life-simulation v0.7 candidate
+> An intention may persist without continuously occupying attention, and may later influence action without being reissued as an external instruction.
 
-Version 0.7 keeps the regulated v0.6 whole-organism architecture and adds refinements discovered by running one persistent subject through a deterministic thirty-day simulated life.
+## Motivated prospective agency v0.8 candidate
+
+Version 0.8 keeps the v0.7 thirty-day life-simulation organism and adds a persistent field of unfinished intentions. Prospective concerns can coexist, compete, defer under low energy or threat, wait for relevant context, survive interruption and restart, resume later, link to commitments, and eventually be satisfied or abandoned.
 
 ```text
-world / user / time
-        |
-        v
-persistent mechanistic subject
-        |
-        v
-memory + appraisal + motivation + continuity + adaptive state
-        |
-        v
-contextual action ecology
-        |
-        v
-subject-access firewall
-        |
-        v
-first-person SubjectiveMoment
-        |
-        v
-optional inner cognition
-        |
-        v
-expression / action
-        |
-        v
-outcome
-        |
-        v
-learning + relationship change + recovery
-        |
-        v
-reinterpretation + changed next subject
+lived experience / self-reflection / commitment
+                    |
+                    v
+          unfinished intentions
+                    |
+       time + context + motivation
+       safety + energy + competition
+                    |
+                    v
+             motivated salience
+                    |
+          defer / pursue / abandon
+                    |
+                    v
+             selected intention
+                    |
+                    v
+          subject-access firewall
+                    |
+                    v
+        first-person SubjectiveMoment
+                    |
+                    v
+         optional inner cognition
+                    |
+                    v
+               action / outcome
+                    |
+                    v
+        learning + resolution + next subject
 ```
 
-The LLM is optional. When enabled, it can participate in private first-person cognition and expression, but it only receives approved subject-accessible state. It never receives raw trust floats, affect magnitudes, memory retrieval scores, latent vectors, or other developer telemetry.
+The LLM remains optional. It may participate in bounded private cognition and expression, but it does not own the prospective concern field and never receives raw priority values, urgency values, internal concern IDs, trust floats, affect magnitudes, memory retrieval scores, latent vectors, or other developer telemetry.
 
-The v0.7 life simulation specifically tests recurring relationships, promises and disappointment, later repair, hidden world truth versus subjective belief, false testimony followed by direct contradictory evidence, repeated action/outcome learning, long quiet periods, multiple process restarts, bounded homeostasis, and first-person reinterpretation of mixed relationship history.
+The v0.8 tests distinguish motivated prospective agency from reminder scheduling. Time can affect salience, but time does not directly execute a task. Current energy, safety, motivation, context, competing concerns, prior attempts, and commitment state can all change whether an unfinished intention becomes actionable.
 
 ## Run
 
@@ -61,6 +62,8 @@ python -m duck.evaluation
 python -m duck.regulation_evaluation
 python -m duck.simulation_lab_v06 --out-dir simulation_results/v06
 python -m duck.life_simulation --out-dir simulation_results/life-v07
+python -m duck.agency_evaluation
+python -m duck.agency_simulation --out-dir simulation_results/agency-v08
 
 duck --root ./duck_state status
 duck --root ./duck_state chat
@@ -76,13 +79,13 @@ export DUCK_LLM_API_KEY="optional-key"
 duck --root ./duck_state --llm chat
 ```
 
-Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation and believable persistent subjectivity.
+Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation, motivated endogenous agency, and believable persistent subjectivity.
 
 ## Documentation authority
 
-The current architecture candidate is `docs/ARCHITECTURE_v0.7.md`.
+The current architecture candidate is `docs/ARCHITECTURE_v0.8.md`.
 
-The current milestone candidate is `docs/MILESTONE_0_7.md`.
+The current milestone candidate is `docs/MILESTONE_0_8.md`.
 
 `docs/INDEX.md` defines document authority, `docs/STATUS.md` records implementation evidence, and `docs/DONOR_AUDIT_v0.1.md` records the nonbinding donor survey.
 

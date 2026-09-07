@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.6.md"
-CURRENT_MILESTONE = "docs/MILESTONE_0_6.md"
+CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.7.md"
+CURRENT_MILESTONE = "docs/MILESTONE_0_7.md"
 CURRENT_INDEX = "docs/INDEX.md"
 CURRENT_STATUS = "docs/STATUS.md"
 REQUIRED = (
@@ -41,10 +41,11 @@ def check() -> list[str]:
         if path not in readme:
             errors.append(f"README.md must point to current authority file: {path}")
 
-    if "ARCHITECTURE_v0.5.md" not in index or "historical" not in index.lower():
-        errors.append("docs/INDEX.md must preserve v0.5 as historical architecture")
-    if "ARCHITECTURE_v0.1.md" not in index:
-        errors.append("docs/INDEX.md must preserve v0.1 as historical architecture")
+    for historical in ("ARCHITECTURE_v0.6.md", "ARCHITECTURE_v0.5.md", "ARCHITECTURE_v0.1.md"):
+        if historical not in index:
+            errors.append(f"docs/INDEX.md must preserve {historical} as historical architecture")
+    if "historical" not in index.lower():
+        errors.append("docs/INDEX.md must explicitly classify older architecture as historical")
     if "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3" not in index:
         errors.append("docs/INDEX.md must explicitly classify the older broad v0.3 document")
     if "not the current architecture" not in index:
@@ -56,20 +57,22 @@ def check() -> list[str]:
         "Inner speech is optional.",
         "world facts",
         "subject beliefs",
-        "Language model boundary",
-        "Residual affect and recovery",
-        "Endogenous regulation",
+        "Long-horizon homeostasis",
+        "Contextual social action",
+        "Relationship reinterpretation",
+        "thirty-day",
     )
     for phrase in required_architecture_phrases:
         if phrase not in architecture:
             errors.append(f"current architecture is missing invariant text: {phrase}")
 
     required_milestone_phrases = (
-        "paired-history divergence",
-        "language-lesion survival",
-        "endogenous heartbeat",
-        "affective recovery",
-        "Vision, audio, robotics, XR",
+        "thirty-day",
+        "false testimony",
+        "process restarts",
+        "Safety",
+        "Competence",
+        "subject-access firewall",
     )
     for phrase in required_milestone_phrases:
         if phrase not in milestone:
@@ -79,8 +82,8 @@ def check() -> list[str]:
         errors.append("STATUS.md must preserve the subject-access firewall as mandatory")
     if "No donor package is a runtime dependency." not in status:
         errors.append("STATUS.md must state that donor packages are not runtime dependencies")
-    if "longitudinal" not in status.lower():
-        errors.append("STATUS.md must record longitudinal simulation evidence")
+    if "thirty-day" not in status.lower() or "longitudinal" not in status.lower():
+        errors.append("STATUS.md must record thirty-day longitudinal simulation evidence")
 
     legacy_roots = (
         ROOT / "docs" / "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3.md",

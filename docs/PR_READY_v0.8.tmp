@@ -1,0 +1,1 @@
+v0.8 candidate ready for promotion after green Python 3.11/3.12 branch CI. This temporary marker exists only to avoid stale-head ambiguity during PR creation and can be removed before merge.

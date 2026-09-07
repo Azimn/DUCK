@@ -95,9 +95,10 @@ def run_agency_simulation() -> dict[str, Any]:
             priority=0.58,
             urgency=0.30,
             preferred_action="explore",
-            not_before_in=8,
+            not_before_in=14,
             min_energy=0.28,
         )
+        map_not_before = host.duck._concern_from_memory(map_goal).not_before_tick
         tunnel = host.duck.register_concern(
             "I want to investigate the old tunnel if it becomes accessible.",
             tags=("tunnel",),
@@ -162,7 +163,7 @@ def run_agency_simulation() -> dict[str, Any]:
             WorldEvent("message", "Jay", "Before you do anything else, can you help me check this note?", ("social", "question"), 0.0, 0.35),
         )
         map_still_open_after_interrupt = any(row.concern_id == map_goal.memory_id for row in host.duck.concerns(status="open"))
-        while host.duck.state.tick < 8:
+        while map_not_before is not None and host.duck.state.tick < map_not_before:
             heartbeat("map_waits_until_later")
         map_step = heartbeat("map_goal_resumes")
         map_resumed = map_step.developer_trace.get("agency", {}).get("selected_concern_id") == map_goal.memory_id and map_step.selected_action == "explore"

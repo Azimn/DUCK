@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.7.md"
-CURRENT_MILESTONE = "docs/MILESTONE_0_7.md"
+CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.8.md"
+CURRENT_MILESTONE = "docs/MILESTONE_0_8.md"
 CURRENT_INDEX = "docs/INDEX.md"
 CURRENT_STATUS = "docs/STATUS.md"
 REQUIRED = (
@@ -41,7 +41,7 @@ def check() -> list[str]:
         if path not in readme:
             errors.append(f"README.md must point to current authority file: {path}")
 
-    for historical in ("ARCHITECTURE_v0.6.md", "ARCHITECTURE_v0.5.md", "ARCHITECTURE_v0.1.md"):
+    for historical in ("ARCHITECTURE_v0.7.md", "ARCHITECTURE_v0.6.md", "ARCHITECTURE_v0.5.md", "ARCHITECTURE_v0.1.md"):
         if historical not in index:
             errors.append(f"docs/INDEX.md must preserve {historical} as historical architecture")
     if "historical" not in index.lower():
@@ -54,25 +54,29 @@ def check() -> list[str]:
     required_architecture_phrases = (
         "The machinery may know numbers. The subject does not.",
         "What happens to the subject must be able to change the subject who encounters the next moment.",
+        "An intention may persist without continuously occupying attention",
+        "Motivated salience instead of reminder scheduling",
+        "Competition and interruption",
+        "Deferral, resumption, satisfaction, and abandonment",
+        "subject-access firewall remains mandatory",
         "Inner speech is optional.",
-        "world facts",
-        "subject beliefs",
-        "Long-horizon homeostasis",
-        "Contextual social action",
-        "Relationship reinterpretation",
-        "thirty-day",
+        "The LLM remains an organ, not the organism.",
     )
     for phrase in required_architecture_phrases:
         if phrase not in architecture:
             errors.append(f"current architecture is missing invariant text: {phrase}")
 
     required_milestone_phrases = (
-        "thirty-day",
-        "false testimony",
-        "process restarts",
-        "Safety",
-        "Competence",
+        "multiple prospective concerns",
+        "low energy",
+        "Elevated fear",
+        "interruption",
+        "satisfied concern",
+        "impossible concern",
+        "process restart",
         "subject-access firewall",
+        "python -m duck.agency_evaluation",
+        "python -m duck.agency_simulation",
     )
     for phrase in required_milestone_phrases:
         if phrase not in milestone:
@@ -82,8 +86,10 @@ def check() -> list[str]:
         errors.append("STATUS.md must preserve the subject-access firewall as mandatory")
     if "No donor package is a runtime dependency." not in status:
         errors.append("STATUS.md must state that donor packages are not runtime dependencies")
+    if "motivated prospective agency" not in status.lower():
+        errors.append("STATUS.md must record the v0.8 motivated prospective-agency phase")
     if "thirty-day" not in status.lower() or "longitudinal" not in status.lower():
-        errors.append("STATUS.md must record thirty-day longitudinal simulation evidence")
+        errors.append("STATUS.md must preserve prior longitudinal simulation evidence")
 
     legacy_roots = (
         ROOT / "docs" / "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3.md",

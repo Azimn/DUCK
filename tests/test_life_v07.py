@@ -26,4 +26,6 @@ def test_v07_reinterprets_repaired_relationship_without_erasing_failure():
     final_morgan = next(row for row in report["timeline"] if row["label"] == "final_morgan")
     subjective = " ".join(final_morgan["subjective"])
     assert "They let me down before, but they've followed through since." in subjective
-    assert any("missed meeting" in row.lower() or "never" in row.lower() for row in final_morgan["subjective"] + [m for m in final_morgan.get("subjective", [])]) or report["gates"]["broken_promise_remembered_on_return"]
+    assert report["gates"]["broken_promise_remembered_on_return"]
+    assert report["relationships"]["after_broken_promise"]["trust"] < report["relationships"]["after_support"]["trust"]
+    assert report["relationships"]["after_kept_promise"]["trust"] > report["relationships"]["after_broken_promise"]["trust"]

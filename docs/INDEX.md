@@ -10,6 +10,8 @@ This file defines which documents govern the current repository.
 
 `STATUS.md` records what is actually implemented and what CI has verified.
 
+`AGENCY_PHASE_v0.8_NOTES.md` records supporting engineering observations from the phase. It is nonbinding and cannot override the architecture or milestone.
+
 `DONOR_AUDIT_v0.1.md` is nonbinding research context. Donor mechanisms do not become DUCK requirements merely because they appear in that document.
 
 ## Historical architecture

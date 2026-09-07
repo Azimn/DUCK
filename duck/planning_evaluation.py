@@ -21,6 +21,24 @@ def _subjective_lines(step) -> list[str]:
     return [row for row in dict.fromkeys(rows) if row]
 
 
+def _plan_step_rows(duck: LivingDuck) -> list[dict]:
+    rows: list[dict] = []
+    for concern in duck.concerns(status=None):
+        memory = duck._concern_memory(concern.concern_id)
+        if "plan_step" not in memory.tags:
+            continue
+        rows.append(
+            {
+                "concern_id": concern.concern_id,
+                "status": concern.status,
+                "text": concern.text,
+                "preferred_action": concern.preferred_action,
+                "plan_tags": [tag for tag in memory.tags if tag.startswith("pl_")],
+            }
+        )
+    return rows
+
+
 def experience_forms_goal_without_instruction() -> dict:
     duck = LivingDuck(SubjectState.create(name="Aster", subject_id="planning-formation"))
     duck.state.needs["curiosity"] = 0.78
@@ -68,6 +86,8 @@ def hierarchical_plan_advances_through_subgoals() -> dict:
     second = duck.heartbeat(allow_inner_speech=False)
     duck.resolve_outcome(second.action_id, success=0.91, valence=0.28, description="The instrument was inspected successfully.")
     completed = duck.plans(status="completed")
+    lifecycle = _plan_step_rows(duck)
+    open_plan_steps = [row for row in lifecycle if row["status"] == "open"]
     return {
         "name": "hierarchical_plan_advances_through_subgoals",
         "passed": (
@@ -76,12 +96,14 @@ def hierarchical_plan_advances_through_subgoals() -> dict:
             and middle.step_index == 1
             and second.selected_action == "explore"
             and len(completed) == 1
-            and not [row for row in duck.concerns(status="open") if "plan_step" in duck._concern_memory(row.concern_id).tags]
+            and not open_plan_steps
         ),
         "first_action": first.selected_action,
         "middle_step": middle.step_index,
         "second_action": second.selected_action,
         "completed": len(completed),
+        "plan_step_lifecycle": lifecycle,
+        "open_plan_steps": open_plan_steps,
     }
 
 

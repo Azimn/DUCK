@@ -18,6 +18,14 @@ from .host import PersistentDuckHost
 from .living import AdaptiveSelfCore, LivingDuck, SubjectState, WorldEvent
 
 
+def _json_default(value: Any):
+    if isinstance(value, (set, frozenset, tuple)):
+        return list(value)
+    if hasattr(value, "value"):
+        return value.value
+    return str(value)
+
+
 def _lines(step) -> list[str]:
     moment = step.subjective_moment
     rows = [item.content for item in moment.impressions]
@@ -77,7 +85,7 @@ def paired_history_long_horizon() -> dict[str, Any]:
 
 
 def _freeze(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, ensure_ascii=False)
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, default=_json_default)
 
 
 def epistemic_integrity() -> dict[str, Any]:
@@ -298,7 +306,7 @@ def _markdown(report: dict[str, Any]) -> str:
         elif result["name"] == "simulated_week_with_restart":
             lines.append(f"Restart preserved subject: {result['restart_preserved_subject']}. Broken-promise history was recalled on later return: {result['remembered_broken_promise_on_return']}.")
         elif "action_counts" in result:
-            lines.append(f"Action counts: `{json.dumps(result['action_counts'], sort_keys=True)}`")
+            lines.append(f"Action counts: `{json.dumps(result['action_counts'], sort_keys=True, default=_json_default)}`")
         lines.append("")
     lines.append("Architectural interpretation: passing this suite demonstrates longitudinal causal continuity, bounded state evolution, epistemic separation, persistence, language-independent action/learning, and measurable contribution from the adaptive substrate. It does not demonstrate phenomenal consciousness or human equivalence.")
     return "\n".join(lines) + "\n"
@@ -309,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-dir", type=Path, default=None)
     args = parser.parse_args(argv)
     report = run_all()
-    rendered = json.dumps(report, indent=2, ensure_ascii=False)
+    rendered = json.dumps(report, indent=2, ensure_ascii=False, default=_json_default)
     print(rendered)
     if args.out_dir is not None:
         args.out_dir.mkdir(parents=True, exist_ok=True)

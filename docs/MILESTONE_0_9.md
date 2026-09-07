@@ -2,7 +2,7 @@
 
 This milestone expands v0.8 prospective agency from carrying explicit unfinished intentions into forming selected goals from lived experience and pursuing those goals through revisable multi-step plans.
 
-The milestone is complete when DUCK can encounter a goal-relevant event without receiving an explicit task command, form a persistent qualitative goal because that event matters to the current subject, compare more than one candidate route, activate one current subgoal through the existing motivated-agency layer, use action outcome to advance or invalidate the route, and preserve the plan across restart.
+The milestone is complete when DUCK can encounter a goal-relevant event without receiving an explicit task command, form a persistent qualitative goal because that event matters to the current subject, compare more than one candidate route, activate one current subgoal through the existing motivated-agency layer, use action outcome to advance or invalidate the route, and preserve the plan across process restart.
 
 The implementation must remain subject-authoritative and language-optional. The subject-access firewall remains mandatory. Private cognition may receive qualitative goal and concern content, but it may not receive raw route scores, route indexes, subgoal indexes, internal plan IDs, concern IDs, private persistence tags, need values, affect values, retrieval scores, or developer telemetry.
 
@@ -16,7 +16,7 @@ The phase must demonstrate outcome-driven replanning. A failed route must not be
 
 The phase must demonstrate that outcome memory does not become executive state. Plan-control and prospective-control tags must be stripped before learned action tags are persisted to an `OUTCOME` memory. An outcome record must not be misclassified as a fresh prospective concern or ghost goal.
 
-The phase must demonstrate persistence. An active plan must survive full `SubjectState` serialization and reconstruction. The long-horizon simulation must also restart the persistent host while an active plan exists and then continue the same plan under the same subject identity.
+The phase must demonstrate persistence. An active plan must survive full `SubjectState` serialization and reconstruction. The long-horizon simulation must also perform a process restart of the persistent host while an active plan exists and then continue the same plan under the same subject identity.
 
 The phase must demonstrate boundedness. Once test plans are completed or abandoned, an ordinary control event and extended quiet time must not cause indefinite goal manufacture or residual plan execution.
 

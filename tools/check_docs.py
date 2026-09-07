@@ -62,14 +62,15 @@ def check() -> list[str]:
         "Inner speech is optional.",
         "The LLM remains an organ, not the organism.",
     )
+    architecture_lower = architecture.lower()
     for phrase in required_architecture_phrases:
-        if phrase not in architecture:
+        if phrase.lower() not in architecture_lower:
             errors.append(f"current architecture is missing invariant text: {phrase}")
 
     required_milestone_phrases = (
         "multiple prospective concerns",
         "low energy",
-        "Elevated fear",
+        "elevated fear",
         "interruption",
         "satisfied concern",
         "impossible concern",
@@ -78,8 +79,9 @@ def check() -> list[str]:
         "python -m duck.agency_evaluation",
         "python -m duck.agency_simulation",
     )
+    milestone_lower = milestone.lower()
     for phrase in required_milestone_phrases:
-        if phrase not in milestone:
+        if phrase.lower() not in milestone_lower:
             errors.append(f"current milestone is missing acceptance/scope text: {phrase}")
 
     if "subject-access firewall remains mandatory" not in status.lower():

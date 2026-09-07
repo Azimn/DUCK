@@ -216,20 +216,26 @@ def bounded_multi_concern_field() -> dict:
     steps = [duck.heartbeat(allow_inner_speech=False) for _ in range(24)]
     actions = [step.selected_action for step in steps]
     active = [action for action in actions if action not in {"wait", "rest", "step_back"}]
-    max_run = 0
+    distinct_active = set(active)
+    max_active_run = 0
     current = 0
     previous = None
     for action in actions:
+        if action in {"wait", "rest", "step_back"}:
+            current = 0
+            previous = None
+            continue
         current = current + 1 if action == previous else 1
         previous = action
-        max_run = max(max_run, current)
+        max_active_run = max(max_active_run, current)
     attempted = sum(row.attempts for row in duck.concerns(status="open"))
     return {
         "name": "bounded_multi_concern_field",
-        "passed": len(active) >= 2 and max_run <= 6 and attempted <= 24,
+        "passed": len(active) >= 3 and len(distinct_active) >= 2 and max_active_run <= 3 and attempted <= 24,
         "actions": actions,
         "active_count": len(active),
-        "max_run": max_run,
+        "distinct_active": sorted(distinct_active),
+        "max_active_run": max_active_run,
         "attempts": attempted,
     }
 

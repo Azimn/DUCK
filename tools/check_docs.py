@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.5.md"
-CURRENT_MILESTONE = "docs/MILESTONE_0_5.md"
+CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.6.md"
+CURRENT_MILESTONE = "docs/MILESTONE_0_6.md"
 CURRENT_INDEX = "docs/INDEX.md"
 CURRENT_STATUS = "docs/STATUS.md"
 REQUIRED = (
@@ -41,7 +41,9 @@ def check() -> list[str]:
         if path not in readme:
             errors.append(f"README.md must point to current authority file: {path}")
 
-    if "ARCHITECTURE_v0.1.md" not in index or "historical" not in index.lower():
+    if "ARCHITECTURE_v0.5.md" not in index or "historical" not in index.lower():
+        errors.append("docs/INDEX.md must preserve v0.5 as historical architecture")
+    if "ARCHITECTURE_v0.1.md" not in index:
         errors.append("docs/INDEX.md must preserve v0.1 as historical architecture")
     if "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3" not in index:
         errors.append("docs/INDEX.md must explicitly classify the older broad v0.3 document")
@@ -55,6 +57,8 @@ def check() -> list[str]:
         "world facts",
         "subject beliefs",
         "Language model boundary",
+        "Residual affect and recovery",
+        "Endogenous regulation",
     )
     for phrase in required_architecture_phrases:
         if phrase not in architecture:
@@ -64,6 +68,7 @@ def check() -> list[str]:
         "paired-history divergence",
         "language-lesion survival",
         "endogenous heartbeat",
+        "affective recovery",
         "Vision, audio, robotics, XR",
     )
     for phrase in required_milestone_phrases:
@@ -74,6 +79,8 @@ def check() -> list[str]:
         errors.append("STATUS.md must preserve the subject-access firewall as mandatory")
     if "No donor package is a runtime dependency." not in status:
         errors.append("STATUS.md must state that donor packages are not runtime dependencies")
+    if "longitudinal" not in status.lower():
+        errors.append("STATUS.md must record longitudinal simulation evidence")
 
     legacy_roots = (
         ROOT / "docs" / "DUCK_Unified_Subject_Architecture_Design_Spec_v0.3.md",

@@ -1,61 +1,61 @@
 # DUCK Current Status
 
-Current architecture candidate: `docs/ARCHITECTURE_v0.7.md`
+Current architecture candidate: `docs/ARCHITECTURE_v0.8.md`
 
-Current milestone candidate: `docs/MILESTONE_0_7.md`
+Current milestone candidate: `docs/MILESTONE_0_8.md`
 
-Branch: `life-sim-v0.7`
+Branch: `agency-lab-v0.8`
 
 ## Integrated implementation
 
-DUCK v0.7 retains the v0.6 regulated whole-organism architecture and adds a life-simulation refinement layer in `duck/living_v07.py`. The public package and persistent host use the v0.7 candidate on this branch. `duck/living_v06.py` remains the regulated v0.6 baseline and `duck/living.py` remains the earlier integrated baseline.
+DUCK v0.8 retains the v0.7 life-simulation organism and adds motivated prospective agency in `duck/living_v08.py`. The persistent host uses the v0.8 candidate on this branch while `duck/living_v07.py`, `duck/living_v06.py`, and `duck/living.py` remain preserved historical implementation layers.
 
 The organism contains persistent subject identity, affect and homeostatic needs, relationship trajectories, autobiographical memory with provenance, objective world facts separated from subject beliefs, commitments, lived-consequence residue, action selection, action/outcome separation, outcome-dependent learned affordances, a small path-dependent adaptive latent trace, endogenous heartbeat, optional first-person inner cognition, optional bounded model-assisted semantic appraisal, optional model-backed expression, deterministic fallbacks, atomic JSON state persistence, an append-only JSONL host journal, UTC timestamps, and Swatch Internet Time / Beat Time stamps.
 
-The subject-access firewall remains mandatory. Model-backed private cognition and expression are constructed exclusively from qualitative first-person state. Raw mechanistic numbers remain developer diagnostics.
+Version 0.8 adds a persistent field of prospective concerns. Multiple unfinished intentions can coexist, compete, wait until a later time, require relevant context, defer under low energy or threat, survive interruption and state restart, resume later, link to existing commitments, and stop competing when satisfied or abandoned.
+
+The subject-access firewall remains mandatory. Model-backed private cognition and expression are constructed exclusively from qualitative first-person state. Raw mechanistic numbers, prospective priority/urgency metadata, internal concern identifiers, cooldowns, and private persistence tags remain developer diagnostics.
 
 No donor package is a runtime dependency.
 
-## Thirty-day longitudinal simulation
+## Prospective concern implementation
 
-`duck/life_simulation.py` runs one persistent Aster through a deterministic thirty-day simulated life. The scenario includes recurring people, a helpful first encounter, a prospective commitment, an overdue commitment, a broken promise, hidden host truth, false testimony, direct contradictory evidence, ordinary social contact, apology, a second kept promise, repeated novel threat encounters with outcome learning, long quiet periods, and process restarts on simulated Days 10, 21, and 29.
+The current prototype deliberately encodes prospective metadata on provenance-bearing `SELF_REFLECTION` memory records instead of introducing a second canonical goal store. This preserves one subject authority and lets the existing serialization path carry prospective state across restart. The encoding is provisional and should not be mistaken for a psychological claim or permanent storage format.
 
-The life-simulation gate checks subject-access isolation, restart integrity, spontaneous salience of an overdue commitment, later recall of a broken promise, causal relationship trajectories, causal epistemic revision, adaptive-core contribution under ablation, bounded quiet-time behavior, bounded numeric state, bounded memory/buffers, and persistent history for a recurring person.
+A concern can carry a preferred action, priority, urgency, due point, not-before point, minimum energy, required context, blocking context, attempt/deferral history, short cooldown, lifecycle state, and optional commitment link. Those fields influence mechanistic salience but are not introspectively exposed.
 
-## v0.7 corrections discovered by simulated life
+Selection is motivational rather than FIFO. Due time can increase salience but does not itself execute the task. Current curiosity, affiliation, energy, fear, context, competing concerns, prior deferrals, and prior attempts can alter whether the concern becomes actionable.
 
-The first thirty-day run against v0.6 remained bounded but exposed subtler artificiality. Benign social encounters were too often resolved as `ask`, safety could remain chronically depleted after danger had passed, competence could saturate at 1.0, and a relationship containing a broken commitment could retain a permanent undifferentiated wariness even after later apology and reliable follow-through.
+## Focused agency evaluation
 
-Version 0.7 adds slow safety recovery toward a conservative baseline and slow competence normalization. Social action selection now uses event context: questions and supportive contact favor ordinary response, explicit repair can create a repair affordance, and recent repeated questioning receives bounded inhibition. These rules modify intention selection below the language layer rather than asking an LLM to cosmetically vary dialogue.
+`duck/agency_evaluation.py` exercises spontaneous pursuit without a new prompt, state-roundtrip persistence, competition between weak and strong concerns, low-energy deferral and later resumption, safety override, context gating, interruption, satisfaction, abandonment, commitment follow-up, false-goal controls, and multi-concern boundedness. All focused probes run with private inner language disabled.
 
-Relationship reinterpretation is also evidence-sensitive. A broken commitment remains autobiographical history, but later kept commitments can change its current first-person meaning. Under sufficient later evidence the subject can represent the mixed history as `They let me down before, but they've followed through since.` rather than remaining indefinitely in the same warning state.
+The multi-concern test deliberately treats silence as healthy. Long runs of `wait` are not classified as pathological perseveration. The boundedness test instead looks for repetitive active behavior while requiring that more than one active intention type can emerge when several concerns compete.
+
+## Long-horizon agency simulation
+
+`duck/agency_simulation.py` runs one persistent Aster through an extended motivated-agency scenario. The subject begins with several unrelated unfinished intentions plus a social commitment. A garden goal is blocked by threat and later resumes when the environment is safe. A delayed map intention survives an interruption and remains dormant until its not-before boundary passes. A commitment-linked follow-up becomes endogenous around the due period and retires when Morgan follows through. An impossible tunnel goal is abandoned. A greenhouse goal is deferred under low energy, survives process restart, and resumes after recovery. Later, a high-priority social concern competes against a low-priority curiosity. After all concerns are resolved, the simulation continues for 60 quiet cycles to check for runaway residual agency.
+
+The entire scenario runs with inner speech disabled. It checks every generated `SubjectiveMoment` for numeric telemetry and private concern metadata. The simulated subject can therefore maintain and act on unfinished intentions without an LLM narrating or owning the executive process.
 
 ## Verified evidence
 
-Implementation head `50c7c49f0028e6a7f6436996ca1943f392111f84` passed GitHub Actions workflow `34119932720` on Python 3.11 and Python 3.12. The documentation guard, full repository tests, original architecture evaluation, v0.6 regulation evaluation, preserved baseline simulations, and the v0.7 thirty-day life simulation all completed successfully. Subsequent commits formalize the v0.7 milestone, documentation authority, focused regression tests, and consistent use of the v0.7 candidate inside the ablation probe; those commits require their own branch-head CI before promotion.
+Candidate head `a362d5ace1dcf071eba16ad0219f9b035f1fd60f` passed GitHub Actions workflow `34156617143` on Python 3.11 and Python 3.12. The documentation contract, full pytest suite, v0.6 regulation evaluation, original architectural evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, focused v0.8 agency evaluation, and long-horizon v0.8 agency simulation all passed.
 
-In the verified thirty-day run, all eleven life-simulation gates passed. The three process restarts preserved subject identity, tick, memory count, and commitment count. No float reached `SubjectiveMoment`.
+The green v0.8 implementation demonstrates that a prospective concern can become actionable without a new user prompt, can survive serialization/reconstruction, can lose to a more motivated concern, can be deferred by insufficient energy or safety pressure, can wait for context, can survive an interruption, can be satisfied or abandoned, and can be retired automatically when its linked commitment resolves.
 
-Across 121 quiet heartbeat cycles, Aster selected `wait` 84 times, `step_back` 25 times, `rest` seven times, `ask` four times, and `explore` once, with no `seek_connection` behavior. The final affect state was near baseline rather than chronically escalated.
+During development, the expanded tests exposed useful failures. A weak delayed map intention originally failed to resume because its motivation no longer cleared the salience threshold after many quiet cycles. Rather than lowering the global threshold simply to make the scenario pass, the simulation was corrected so the map represented a meaningfully motivated delayed intention. Earlier versions also allowed a linked commitment follow-up to remain open while cooling down after the underlying commitment had already resolved; lifecycle resolution was moved ahead of cooldown gating.
 
-Safety recovered to approximately 0.716 after the later threat sequence rather than remaining near the earlier depleted value, while competence finished near 0.929 rather than saturating at 1.0. Energy finished near 0.81, affiliation near 0.31, and curiosity near 0.45. The final state contained 36 memories, one belief, two resolved commitments, and no active residue.
+## Relationship to v0.7
 
-The epistemic sequence remained causal. Host truth placed the garden key in the blue box without giving the subject access. Riley's false testimony produced a remembered red-box statement and a red-box belief. Direct observation later revised the belief to blue box while preserving the fact that Riley had said red box. The corrected blue-box belief survived to Day 30.
+The v0.7 thirty-day longitudinal life simulation remains a mandatory regression gate. v0.8 does not replace relationship development, epistemic integrity, homeostatic recovery, adaptive action learning, or first-person reinterpretation. It adds a new temporal dimension: the same continuing subject can now be organized partly by things it has not finished yet.
 
-The relationship sequence also remained causal. Morgan's initial support produced trust near 0.564 and guardedness near 0.160. The broken promise moved trust to 0.420 and guardedness to 0.322. Before explicit repair, trust fell further to 0.342 and guardedness rose to 0.426. An apology moved those values in the repair direction, and a later kept promise raised trust to 0.511. By the final Morgan encounter trust was near 0.543 while the earlier failure remained part of autobiographical history.
+The central research question remains what is obviously fake when language fluency is not allowed to hide the architecture. For v0.8 the specific question is whether DUCK behaves like a subject carrying unfinished intentions, rather than a chatbot waiting for the next message or a reminder scheduler executing a queue.
 
-The first-person interpretation changed with that evidence. Before repair Aster could represent the relationship as `I'm still wary because they let me down before.` After the later kept promise the simulation produced `They let me down before, but they've followed through since.` The adverse event was not deleted.
-
-Repeated successful glorp encounters increased the selected defensive action utility from approximately 0.532 to 0.964 to 1.261. In the later adaptive-core comparison, the learned candidate utility was approximately 1.358 with the adaptive state present versus 0.862 after ablation.
-
-## Current interpretation
-
-DUCK v0.7 is a life-simulation candidate rather than merely a conversation architecture. Its present value is that memory, belief, affect, relationships, motivation, learning, recovery, and restart continuity are tested as one interacting system over an extended synthetic history.
-
-The central evaluation question is what remains obviously fake when linguistic fluency is not allowed to conceal the architecture. Passing the current tests establishes bounded causal behavior under the tested scenarios. It does not establish phenomenal consciousness, human-equivalent cognition, or general psychological validity.
+Passing the current tests establishes bounded motivated prospective agency under the tested scenarios. It does not establish phenomenal consciousness, human-equivalent executive function, unrestricted autonomy, or general psychological validity.
 
 ## Deliberately unfinished surfaces
 
-Model swapping is not a current priority. Real camera/audio sensing, robotics, XR embodiment, avatar animation, voice interruption, richer wall-clock scheduling, long-duration human evaluation, and a polished desktop/mobile shell remain future product surfaces.
+Automatic high-level goal formation from unconstrained natural experience, hierarchical planning, counterfactual imagination, theory-of-mind planning, habits, skill composition, richer real-time opportunity detection, model swapping, real camera/audio sensing, robotics, XR embodiment, avatar animation, voice interruption, long-duration human evaluation, and a polished desktop/mobile shell remain future work.
 
-The v0.6, v0.5, and v0.1 documents remain preserved as historical architecture. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.
+The v0.7, v0.6, v0.5, and v0.1 documents remain preserved as historical architecture. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.

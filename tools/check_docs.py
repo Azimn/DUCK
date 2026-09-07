@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.8.md"
-CURRENT_MILESTONE = "docs/MILESTONE_0_8.md"
+CURRENT_ARCHITECTURE = "docs/ARCHITECTURE_v0.9.md"
+CURRENT_MILESTONE = "docs/MILESTONE_0_9.md"
 CURRENT_INDEX = "docs/INDEX.md"
 CURRENT_STATUS = "docs/STATUS.md"
 REQUIRED = (
@@ -14,6 +14,7 @@ REQUIRED = (
     CURRENT_MILESTONE,
     CURRENT_INDEX,
     CURRENT_STATUS,
+    "docs/PLANNING_PHASE_v0.9_NOTES.md",
     "docs/PROVENANCE.md",
     "docs/DONOR_AUDIT_v0.1.md",
 )
@@ -41,7 +42,7 @@ def check() -> list[str]:
         if path not in readme:
             errors.append(f"README.md must point to current authority file: {path}")
 
-    for historical in ("ARCHITECTURE_v0.7.md", "ARCHITECTURE_v0.6.md", "ARCHITECTURE_v0.5.md", "ARCHITECTURE_v0.1.md"):
+    for historical in ("ARCHITECTURE_v0.8.md", "ARCHITECTURE_v0.7.md", "ARCHITECTURE_v0.6.md", "ARCHITECTURE_v0.5.md", "ARCHITECTURE_v0.1.md"):
         if historical not in index:
             errors.append(f"docs/INDEX.md must preserve {historical} as historical architecture")
     if "historical" not in index.lower():
@@ -55,9 +56,11 @@ def check() -> list[str]:
         "The machinery may know numbers. The subject does not.",
         "What happens to the subject must be able to change the subject who encounters the next moment.",
         "An intention may persist without continuously occupying attention",
-        "Motivated salience instead of reminder scheduling",
-        "Competition and interruption",
-        "Deferral, resumption, satisfaction, and abandonment",
+        "A goal may arise from lived experience rather than from an external instruction.",
+        "Plans are hypotheses, not scripts.",
+        "Counterfactual route selection",
+        "Hierarchical subgoals",
+        "Outcome-driven replanning",
         "subject-access firewall remains mandatory",
         "Inner speech is optional.",
         "The LLM remains an organ, not the organism.",
@@ -68,29 +71,32 @@ def check() -> list[str]:
             errors.append(f"current architecture is missing invariant text: {phrase}")
 
     required_milestone_phrases = (
-        "multiple prospective concerns",
-        "low energy",
-        "elevated fear",
-        "interruption",
-        "satisfied concern",
-        "impossible concern",
+        "endogenous goal formation",
+        "counterfactual route",
+        "hierarchical subgoals",
+        "failed route",
+        "outcome memory",
         "process restart",
+        "ordinary experience",
         "subject-access firewall",
-        "python -m duck.agency_evaluation",
-        "python -m duck.agency_simulation",
+        "python -m duck.planning_evaluation",
+        "python -m duck.planning_simulation",
     )
     milestone_lower = milestone.lower()
     for phrase in required_milestone_phrases:
         if phrase.lower() not in milestone_lower:
             errors.append(f"current milestone is missing acceptance/scope text: {phrase}")
 
-    if "subject-access firewall remains mandatory" not in status.lower():
+    status_lower = status.lower()
+    if "subject-access firewall remains mandatory" not in status_lower:
         errors.append("STATUS.md must preserve the subject-access firewall as mandatory")
     if "No donor package is a runtime dependency." not in status:
         errors.append("STATUS.md must state that donor packages are not runtime dependencies")
-    if "motivated prospective agency" not in status.lower():
-        errors.append("STATUS.md must record the v0.8 motivated prospective-agency phase")
-    if "thirty-day" not in status.lower() or "longitudinal" not in status.lower():
+    if "endogenous goal formation" not in status_lower or "counterfactual" not in status_lower:
+        errors.append("STATUS.md must record the v0.9 endogenous-planning phase")
+    if "motivated prospective agency" not in status_lower:
+        errors.append("STATUS.md must preserve v0.8 motivated prospective-agency evidence")
+    if "thirty-day" not in status_lower or "longitudinal" not in status_lower:
         errors.append("STATUS.md must preserve prior longitudinal simulation evidence")
 
     legacy_roots = (

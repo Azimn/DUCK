@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "duck-subjective-simulator"
-version = "0.8.0"
-description = "A persistent computational subject simulator with bounded first-person access, lived continuity, motivated prospective agency, learning, regulation, and longitudinal simulation."
+version = "0.9.0"
+description = "A persistent computational subject simulator with bounded first-person access, lived continuity, motivated prospective agency, endogenous goal formation, counterfactual planning, learning, regulation, and longitudinal simulation."
 requires-python = ">=3.11"
 dependencies = []
 

@@ -2,7 +2,7 @@
 
 DUCK is an experimental persistent human-like subject simulator.
 
-It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, recovery, reinterpretation, and unfinished intentions rather than on a language model pretending to contain all of those things inside one prompt.
+It does not claim phenomenal consciousness. The engineering goal is to create a believable continuing individual whose present cognition depends on limited first-person access, lived history, motivation, memory, belief, relationships, commitments, action, consequence, learning, recovery, reinterpretation, unfinished intentions, self-generated goals, and revisable plans rather than on a language model pretending to contain all of those things inside one prompt.
 
 The governing rules are:
 
@@ -12,46 +12,50 @@ The governing rules are:
 
 > An intention may persist without continuously occupying attention, and may later influence action without being reissued as an external instruction.
 
-## Motivated prospective agency v0.8 candidate
+> A goal may arise from lived experience, and a failed plan may change what I try next.
 
-Version 0.8 keeps the v0.7 thirty-day life-simulation organism and adds a persistent field of unfinished intentions. Prospective concerns can coexist, compete, defer under low energy or threat, wait for relevant context, survive interruption and restart, resume later, link to commitments, and eventually be satisfied or abandoned.
+## Endogenous planning v0.9 candidate
+
+Version 0.9 keeps the v0.8 motivated prospective-agency organism and adds bounded endogenous goal formation, state-sensitive counterfactual route choice, hierarchical subgoals, and outcome-driven replanning.
 
 ```text
-lived experience / self-reflection / commitment
-                    |
-                    v
-          unfinished intentions
-                    |
-       time + context + motivation
-       safety + energy + competition
-                    |
-                    v
-             motivated salience
-                    |
-          defer / pursue / abandon
-                    |
-                    v
-             selected intention
-                    |
-                    v
-          subject-access firewall
-                    |
-                    v
-        first-person SubjectiveMoment
-                    |
-                    v
-         optional inner cognition
-                    |
-                    v
-               action / outcome
-                    |
-                    v
-        learning + resolution + next subject
+lived experience
+      |
+      v
+motivation-sensitive goal formation
+      |
+      v
+persistent goal root
+      |
+      v
+alternative routes
+      |
+      v
+current subgoal
+      |
+      v
+v0.8 motivated prospective agency
+      |
+      v
+subject-access firewall
+      |
+      v
+first-person SubjectiveMoment
+      |
+      v
+optional inner cognition
+      |
+      v
+action -> outcome
+          |
+          +-> advance plan
+          +-> replan
+          +-> complete / abandon
 ```
 
-The LLM remains optional. It may participate in bounded private cognition and expression, but it does not own the prospective concern field and never receives raw priority values, urgency values, internal concern IDs, trust floats, affect magnitudes, memory retrieval scores, latent vectors, or other developer telemetry.
+The LLM remains optional. It may participate in bounded private cognition, interpretation, route proposal, and expression, but it does not own goal formation, canonical plan state, action outcome, or the continuing subject. Raw route scores, plan IDs, subgoal indexes, priority values, trust floats, affect magnitudes, private persistence tags, retrieval scores, and latent values remain outside first-person access.
 
-The v0.8 tests distinguish motivated prospective agency from reminder scheduling. Time can affect salience, but time does not directly execute a task. Current energy, safety, motivation, context, competing concerns, prior attempts, and commitment state can all change whether an unfinished intention becomes actionable.
+The v0.9 tests deliberately run planning with inner speech disabled. They test whether meaningful experience can create a goal without an explicit task command, whether different risk states can prefer different routes to the same objective, whether a multi-step route advances through child intentions, whether failed action changes the route, whether active planning survives restart, whether ordinary experience avoids false goal creation, and whether completed plans stop producing behavior.
 
 ## Run
 
@@ -64,6 +68,8 @@ python -m duck.simulation_lab_v06 --out-dir simulation_results/v06
 python -m duck.life_simulation --out-dir simulation_results/life-v07
 python -m duck.agency_evaluation
 python -m duck.agency_simulation --out-dir simulation_results/agency-v08
+python -m duck.planning_evaluation
+python -m duck.planning_simulation --out-dir simulation_results/planning-v09
 
 duck --root ./duck_state status
 duck --root ./duck_state chat
@@ -79,14 +85,14 @@ export DUCK_LLM_API_KEY="optional-key"
 duck --root ./duck_state --llm chat
 ```
 
-Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation, motivated endogenous agency, and believable persistent subjectivity.
+Model swapping and local/offline provider coverage remain possible but are not current research priorities. The present priority is longitudinal organism simulation, grounded endogenous agency, and believable persistent subjectivity.
 
 ## Documentation authority
 
-The current architecture candidate is `docs/ARCHITECTURE_v0.8.md`.
+The current architecture candidate is `docs/ARCHITECTURE_v0.9.md`.
 
-The current milestone candidate is `docs/MILESTONE_0_8.md`.
+The current milestone candidate is `docs/MILESTONE_0_9.md`.
 
-`docs/INDEX.md` defines document authority, `docs/STATUS.md` records implementation evidence, and `docs/DONOR_AUDIT_v0.1.md` records the nonbinding donor survey.
+`docs/INDEX.md` defines document authority, `docs/STATUS.md` records implementation evidence, `docs/PLANNING_PHASE_v0.9_NOTES.md` records nonbinding engineering observations, and `docs/DONOR_AUDIT_v0.1.md` records the nonbinding donor survey.
 
 Earlier architecture documents remain preserved as history rather than silently rewritten.

@@ -9,7 +9,7 @@ from typing import Any
 
 from .language import ApprovedLanguagePacket, DeterministicExpression, ExpressionProvider
 from .living import LivingStep, RuleEventInterpreter, SubjectState, WorldEvent
-from .living_v08 import LivingDuck
+from .living_v09 import LivingDuck
 from .temporal import stamp
 
 
@@ -196,6 +196,8 @@ class PersistentDuckHost:
             "belief_count": len(state.beliefs),
             "commitment_count": len(state.commitments),
             "open_commitments": sum(1 for item in state.commitments.values() if item.status == "open"),
+            "active_plan_count": len(self.duck.plans(status="active")),
+            "completed_plan_count": len(self.duck.plans(status="completed")),
             "pending_action": state.pending_action.name if state.pending_action else None,
             "recent_actions": list(state.recent_actions[-8:]),
         }

@@ -10,8 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .host import PersistentDuckHost
-from .living import SubjectState, WorldEvent
-from .living_v09 import LivingDuck
+from .living import WorldEvent
 
 
 def _contains_float(value: Any) -> bool:
@@ -38,19 +37,10 @@ def _subjective_lines(step) -> list[str]:
     return [row for row in dict.fromkeys(rows) if row]
 
 
-def _open_v09_host(root: Path, *, name: str = "Aster", subject_id: str | None = None) -> PersistentDuckHost:
-    state_path = root / "subject.json"
-    if state_path.exists():
-        state = SubjectState.from_dict(json.loads(state_path.read_text(encoding="utf-8")))
-    else:
-        state = SubjectState.create(name=name, subject_id=subject_id)
-    return PersistentDuckHost(root, LivingDuck(state))
-
-
 def run_planning_simulation() -> dict[str, Any]:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory) / "planning"
-        host = _open_v09_host(root, name="Aster", subject_id="planning-21d")
+        host = PersistentDuckHost.open(root, name="Aster", subject_id="planning-21d")
         host.duck.state.needs["curiosity"] = 0.84
         host.duck.state.needs["autonomy"] = 0.78
         host.duck.state.affect["fear"] = 0.05
@@ -146,7 +136,7 @@ def run_planning_simulation() -> dict[str, Any]:
         obstacle_plan_id = obstacle_plans[0].plan_id if obstacle_plans else None
         before_restart = host.status()
         host.save()
-        host = _open_v09_host(root)
+        host = PersistentDuckHost.open(root)
         after_restart = host.status()
         restarted_plans = host.duck.plans(status="active")
         restart_preserved_plan = (

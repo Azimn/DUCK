@@ -33,20 +33,32 @@ def residue_recovery() -> dict:
 
 
 def quiet_time_regulation() -> dict:
+    """A healthy idle organism may mostly wait, but it must not saturate or spam.
+
+    `wait` is intentionally treated as the silent/no-outward-action state. The
+    earlier check incorrectly treated a high wait ratio as pathology even though
+    most background cognitive cycles should produce no outward behavior.
+    """
     duck = LivingDuck(SubjectState.create("Quiet", "reg-quiet"))
     actions = [duck.heartbeat(allow_inner_speech=False).selected_action for _ in range(500)]
     counts = Counter(actions)
-    dominant_ratio = max(counts.values()) / len(actions)
     seek_ratio = counts.get("seek_connection", 0) / len(actions)
+    wait_ratio = counts.get("wait", 0) / len(actions)
     needs = dict(duck.state.needs)
     bounded = all(0.0 <= value <= 1.0 for value in duck.state.affect.values()) and all(0.0 <= value <= 1.0 for value in needs.values())
-    not_saturated = needs.get("energy", 0.0) > 0.08 and needs.get("affiliation", 1.0) < 0.95 and needs.get("curiosity", 1.0) < 0.95
+    not_saturated = (
+        0.08 < needs.get("energy", 0.0) < 0.98
+        and needs.get("affiliation", 1.0) < 0.95
+        and needs.get("curiosity", 1.0) < 0.95
+    )
+    self_regulation_visible = counts.get("rest", 0) > 0 and sum(value for key, value in counts.items() if key != "wait") > 0
     return {
         "name": "quiet_time_regulation",
-        "passed": bounded and not_saturated and len(counts) >= 3 and dominant_ratio < 0.60 and seek_ratio < 0.35,
+        "passed": bounded and not_saturated and seek_ratio < 0.15 and self_regulation_visible,
         "action_counts": dict(counts),
-        "dominant_action_ratio": dominant_ratio,
+        "wait_ratio": wait_ratio,
         "seek_connection_ratio": seek_ratio,
+        "needs_not_saturated": not_saturated,
         "needs": needs,
     }
 

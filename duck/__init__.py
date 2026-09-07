@@ -23,7 +23,7 @@ from .living import (
     SubjectState,
     WorldEvent,
 )
-from .living_v06 import LivingDuck
+from .living_v07 import LivingDuck
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .runtime import DuckRuntime, StepResult
 from .subjective import AccessibleTendency, FirstPersonImpression, SubjectiveMoment

@@ -40,7 +40,7 @@ The entire scenario runs with inner speech disabled. It checks every generated `
 
 ## Verified evidence
 
-Implementation head `f821d1838103678a9727d5d061e4d21c52363559` passed GitHub Actions workflow `34156217216` on Python 3.11 and Python 3.12. The full pytest suite, documentation contract as it existed at that head, v0.6 regulation evaluation, original architectural evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, focused v0.8 agency evaluation, and long-horizon v0.8 agency simulation all passed.
+Candidate head `a362d5ace1dcf071eba16ad0219f9b035f1fd60f` passed GitHub Actions workflow `34156617143` on Python 3.11 and Python 3.12. The documentation contract, full pytest suite, v0.6 regulation evaluation, original architectural evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, focused v0.8 agency evaluation, and long-horizon v0.8 agency simulation all passed.
 
 The green v0.8 implementation demonstrates that a prospective concern can become actionable without a new user prompt, can survive serialization/reconstruction, can lose to a more motivated concern, can be deferred by insufficient energy or safety pressure, can wait for context, can survive an interruption, can be satisfied or abandoned, and can be retired automatically when its linked commitment resolves.
 

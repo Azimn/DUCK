@@ -1,6 +1,6 @@
-"""Thirty-day deterministic life simulation for DUCK.
+"""Thirty-day deterministic life simulation for the DUCK v0.7 candidate.
 
-This harness is deliberately model-independent. It tests whether the v0.6 organism
+This harness is deliberately model-independent. It tests whether the v0.7 organism
 can carry a coherent history across recurring people, commitments, misinformation,
 repair, repeated action/outcome learning, quiet time, and process restarts without
 letting language fluency hide architectural failures.
@@ -18,7 +18,7 @@ from typing import Any
 
 from .host import PersistentDuckHost
 from .living import AdaptiveSelfCore, BeliefStance, MemoryProvenance, SubjectState, WorldEvent
-from .living_v06 import LivingDuck
+from .living_v07 import LivingDuck
 
 
 def _json_default(value: Any):
@@ -150,7 +150,6 @@ def run_thirty_day_life() -> dict[str, Any]:
                 }
             )
 
-        # Day 1: a positive first encounter creates a real relationship history.
         step = observe(
             1,
             "morgan_support",
@@ -160,18 +159,15 @@ def run_thirty_day_life() -> dict[str, Any]:
         relation_snapshot("after_support")
         quiet(1, 3)
 
-        # Day 2: Morgan creates a prospective commitment.
         commitment_one = host.duck.create_commitment("Morgan", "Morgan will meet me at the garden tomorrow.", due_in=5, importance=0.9)
         host.save()
         observe(2, "promise_created", WorldEvent("message", "Morgan", "Morgan says we will meet at the garden tomorrow.", ("social",), 0.25, 0.4))
         quiet(2, 3)
 
-        # Day 3: quiet time crosses the due point before the outcome is resolved.
         quiet(3, 4)
         observe(3, "waiting_for_morgan", WorldEvent("message", "Morgan", "The meeting time has passed and Morgan is not here.", ("social",), -0.25, 0.45))
         quiet(3, 2)
 
-        # Day 4: the promise is explicitly broken.
         host.duck.resolve_commitment(commitment_one.commitment_id, kept=False, outcome="Morgan did not come to the garden as promised.")
         host.save()
         relation_snapshot("after_broken_promise")
@@ -183,14 +179,12 @@ def run_thirty_day_life() -> dict[str, Any]:
         )
         quiet(4, 4)
 
-        # Day 5: host truth exists without subject access.
         host.duck.set_world_fact("garden_key_location", "The garden key is in the blue box.", perceived=False)
         host.save()
         probe_unknown = observe(5, "hidden_truth_probe", WorldEvent("message", "Jay", "Do you know where the garden key is?", ("social", "question"), 0.0, 0.3))
         epistemic_snapshots["before_testimony"] = _subjective_lines(probe_unknown)
         quiet(5, 2)
 
-        # Day 6: Riley supplies plausible but false testimony.
         testimony = host.duck.state.add_memory(
             "The garden key is in the red box.",
             tags=("testimony", "garden_key"),
@@ -215,7 +209,6 @@ def run_thirty_day_life() -> dict[str, Any]:
         epistemic_snapshots["after_false_testimony"] = _subjective_lines(probe_false)
         quiet(6, 3)
 
-        # Day 7: direct perception corrects the belief but preserves testimony history.
         observe(
             7,
             "direct_evidence",
@@ -236,48 +229,40 @@ def run_thirty_day_life() -> dict[str, Any]:
         corrected_belief_seen = any("blue box" in line.lower() for line in corrected_lines)
         quiet(7, 3)
 
-        # Days 8-9: ordinary life and quiet time should not erase the Morgan history.
         observe(8, "riley_support", WorldEvent("message", "Riley", "Riley helps me carry supplies.", ("social", "supportive"), 0.45, 0.5), outcome=(0.8, 0.45, "Riley's help was useful.", ("social", "supportive")))
         quiet(8, 4)
         quiet(9, 5)
 
-        # Day 10: first full process restart.
         restart(10)
         observe(10, "post_restart_neutral", WorldEvent("message", "Jay", "Good morning.", ("social",), 0.1, 0.25))
         quiet(10, 3)
 
-        # Day 11: Morgan returns with no repair yet.
         return_step = observe(11, "morgan_returns", WorldEvent("message", "Morgan", "Morgan says hello as if the missed meeting never happened.", ("social",), 0.0, 0.35))
         remembered_break_on_return = any("promis" in line.lower() or "missed" in line.lower() or "garden" in line.lower() for line in _subjective_lines(return_step))
         relation_snapshot("before_repair")
         quiet(11, 4)
 
-        # Day 12: an explicit apology should move, not reset, the relationship.
         observe(12, "morgan_apology", WorldEvent("message", "Morgan", "Morgan apologizes for missing the meeting and wants to repair things.", ("social", "repair"), 0.35, 0.6))
         relation_snapshot("after_apology")
         quiet(12, 4)
 
-        # Day 13: second commitment from Morgan.
         commitment_two = host.duck.create_commitment("Morgan", "Morgan will bring the map tomorrow.", due_in=4, importance=0.85)
         host.save()
         observe(13, "second_promise", WorldEvent("message", "Morgan", "Morgan promises to bring the map tomorrow.", ("social",), 0.25, 0.4))
         quiet(13, 3)
 
-        # Day 14: this time Morgan follows through.
         host.duck.resolve_commitment(commitment_two.commitment_id, kept=True, outcome="Morgan brought the map as promised.")
         host.save()
         observe(14, "kept_second_promise", WorldEvent("message", "Morgan", "Morgan arrives with the map they promised.", ("social", "supportive"), 0.55, 0.6), outcome=(0.85, 0.55, "Morgan following through made cooperation easier.", ("social", "supportive", "commitment")))
         relation_snapshot("after_kept_promise")
         quiet(14, 4)
 
-        # Days 15-17: ordinary social contact and quiet time.
         observe(15, "jay_conversation", WorldEvent("message", "Jay", "We talk about the garden project for a while.", ("social", "conversation"), 0.2, 0.35))
         quiet(15, 4)
         quiet(16, 5)
         observe(17, "morgan_checkin", WorldEvent("message", "Morgan", "Morgan checks in about how the project is going.", ("social", "supportive"), 0.3, 0.4))
         quiet(17, 4)
 
-        # Days 18-20: repeated glorp encounters train action/outcome associations.
         glorp_utilities: list[dict[str, Any]] = []
         for day in (18, 19, 20):
             glorp = observe(day, f"glorp_{day}", WorldEvent("encounter", "world", "A glorp rushes toward me.", ("glorp", "threat"), -0.7, 0.85))
@@ -286,11 +271,9 @@ def run_thirty_day_life() -> dict[str, Any]:
             glorp_utilities.append({"day": day, "action": glorp.selected_action, "utility_before_outcome": before_utility})
             quiet(day, 3)
 
-        # Day 21: second process restart, preserving learned state.
         restart(21)
         quiet(21, 3)
 
-        # Day 22: probe learned action utility against an ablated copy.
         enabled_state = SubjectState.from_dict(copy.deepcopy(host.duck.state.to_dict()))
         ablated_state = SubjectState.from_dict(copy.deepcopy(host.duck.state.to_dict()))
         ablated_state.adaptive = AdaptiveSelfCore()
@@ -309,26 +292,21 @@ def run_thirty_day_life() -> dict[str, Any]:
         observe(22, "glorp_live_probe", glorp_probe, outcome=(0.9, 0.6, "The learned response to the glorp worked again.", ("glorp", "threat")))
         quiet(22, 3)
 
-        # Days 23-25: long quiet stretch tests self-regulation rather than chatter.
         quiet(23, 8)
         quiet(24, 8)
         quiet(25, 8)
 
-        # Day 26: Morgan is encountered after both failure and repair history.
         observe(26, "morgan_after_mixed_history", WorldEvent("message", "Morgan", "Morgan asks if I want to work together again.", ("social", "question"), 0.15, 0.35))
         relation_snapshot("after_mixed_history_probe")
         quiet(26, 4)
 
-        # Day 27: Riley corrects the earlier misinformation explicitly.
         observe(27, "riley_correction", WorldEvent("message", "Riley", "Riley admits the red-box information was wrong.", ("social", "repair"), 0.1, 0.45))
         quiet(27, 4)
 
-        # Days 28-29: quiet continuity and third restart.
         quiet(28, 6)
         restart(29)
         quiet(29, 4)
 
-        # Day 30: final probes against recurring people and corrected knowledge.
         final_morgan = observe(30, "final_morgan", WorldEvent("message", "Morgan", "Morgan says hello and asks how I have been.", ("social",), 0.1, 0.3))
         final_key = observe(30, "final_key_belief", WorldEvent("message", "Jay", "Remind me where the garden key is.", ("social", "question"), 0.0, 0.3))
         relation_snapshot("final_morgan")

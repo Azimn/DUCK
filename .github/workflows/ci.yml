@@ -22,3 +22,4 @@ jobs:
       - run: python -m duck.evaluation
       - run: python -m duck.simulation_lab --out-dir simulation_results/baseline
       - run: python -m duck.simulation_lab_v06 --out-dir simulation_results/v06
+      - run: python -m duck.life_simulation --out-dir simulation_results/life-v07

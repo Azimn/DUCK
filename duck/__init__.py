@@ -15,7 +15,6 @@ from .living import (
     BeliefRecord,
     BeliefStance,
     CommitmentRecord,
-    LivingDuck,
     LivingStep,
     MemoryProvenance,
     MemoryRecord,
@@ -24,6 +23,7 @@ from .living import (
     SubjectState,
     WorldEvent,
 )
+from .living_v06 import LivingDuck
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .runtime import DuckRuntime, StepResult
 from .subjective import AccessibleTendency, FirstPersonImpression, SubjectiveMoment

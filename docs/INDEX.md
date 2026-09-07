@@ -2,19 +2,21 @@
 
 This file defines which documents govern the current repository.
 
-## Current motivated-agency candidate
+## Current endogenous-planning candidate
 
-`ARCHITECTURE_v0.8.md` is the binding architecture for the motivated prospective-agency candidate.
+`ARCHITECTURE_v0.9.md` is the binding architecture for the endogenous goal-formation and counterfactual-planning candidate.
 
-`MILESTONE_0_8.md` is the executable acceptance contract for that candidate.
+`MILESTONE_0_9.md` is the executable acceptance contract for that candidate.
 
 `STATUS.md` records what is actually implemented and what CI has verified.
 
-`AGENCY_PHASE_v0.8_NOTES.md` records supporting engineering observations from the phase. It is nonbinding and cannot override the architecture or milestone.
+`PLANNING_PHASE_v0.9_NOTES.md` records supporting engineering observations from the phase. It is nonbinding and cannot override the architecture or milestone.
 
 `DONOR_AUDIT_v0.1.md` is nonbinding research context. Donor mechanisms do not become DUCK requirements merely because they appear in that document.
 
 ## Historical architecture
+
+`ARCHITECTURE_v0.8.md` and `MILESTONE_0_8.md` remain preserved as the first motivated prospective-agency architecture promoted to `main`. `AGENCY_PHASE_v0.8_NOTES.md` remains nonbinding historical engineering context.
 
 `ARCHITECTURE_v0.7.md` and `MILESTONE_0_7.md` remain preserved as the first thirty-day life-simulation architecture promoted to `main`.
 
@@ -28,9 +30,11 @@ The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/perso
 
 ## Development doctrine
 
-The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0.6 used longitudinal simulation to regulate their interaction. Version 0.7 moved to a thirty-day simulated life. Version 0.8 attacks a different remaining chatbot artifact: meaningful behavior should not require the current user message to supply every goal.
+The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0.6 used longitudinal simulation to regulate their interaction. Version 0.7 moved to a thirty-day simulated life. Version 0.8 established motivated prospective agency so unfinished intentions could survive without the current prompt supplying every goal.
 
-The v0.8 phase therefore tests a persistent field of unfinished intentions that can compete, defer, resume, resolve, and survive restart. It deliberately distinguishes motivated prospective agency from a reminder queue. This simulation-led development does not relax the first-person access firewall or subject-authority rules.
+Version 0.9 attacks the next chatbot artifact: the subject should sometimes develop an objective because of what happened to it, compare more than one possible way forward, carry an objective through intermediate intentions, and change the plan when consequences contradict the first route.
+
+The v0.9 phase therefore treats goal formation, route selection, subgoal progression, action, and outcome as distinct causal stages. This simulation-led development does not relax the first-person access firewall or subject-authority rules.
 
 ## Future modalities
 

@@ -18,6 +18,7 @@ jobs:
       - run: python -m pip install -e '.[test]'
       - run: python tools/check_docs.py
       - run: python -m duck.regulation_evaluation
+      - run: python -m duck.planning_evaluation
       - run: python -m pytest
       - run: python -m duck.evaluation
       - run: python -m duck.simulation_lab --out-dir simulation_results/baseline
@@ -25,5 +26,4 @@ jobs:
       - run: python -m duck.life_simulation --out-dir simulation_results/life-v07
       - run: python -m duck.agency_evaluation
       - run: python -m duck.agency_simulation --out-dir simulation_results/agency-v08
-      - run: python -m duck.planning_evaluation
       - run: python -m duck.planning_simulation --out-dir simulation_results/planning-v09

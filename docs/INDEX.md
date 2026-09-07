@@ -4,9 +4,9 @@ This file defines which documents govern the current repository.
 
 ## Current integrated candidate
 
-`ARCHITECTURE_v0.5.md` is the binding architecture for the `franken-duck` integration candidate.
+`ARCHITECTURE_v0.6.md` is the binding architecture for the long-horizon regulation candidate.
 
-`MILESTONE_0_5.md` is the executable acceptance contract for that candidate.
+`MILESTONE_0_6.md` is the executable simulation and acceptance contract for that candidate.
 
 `STATUS.md` records what is actually implemented and what CI has verified.
 
@@ -14,15 +14,17 @@ This file defines which documents govern the current repository.
 
 ## Historical architecture
 
+`ARCHITECTURE_v0.5.md` and `MILESTONE_0_5.md` remain preserved as the first whole-organism FrankenDUCK integration. They are historical snapshots of the pre-regulation implementation.
+
 `ARCHITECTURE_v0.1.md` and `MILESTONE_0_1.md` remain preserved as the original Subjective Moment milestone. They are historical snapshots and should not be silently edited to describe later architecture.
 
 The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/persona_engine_PYTHONX` is not the current architecture of this repository. Other Wayfarer, Ensemble, subjective-access, portability, sensor, or embodiment documents in older repositories remain donor/history material unless explicitly reintroduced here.
 
 ## Development doctrine
 
-The v0.5 integration sprint is intentionally broader than the earlier evidence-before-every-mechanism cadence. It is a product-oriented synthesis pass: combine already explored mechanisms into one coherent organism, make the authority boundaries executable, then use ablation and human evaluation to determine what deserves to survive.
+The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0.6 shifts emphasis to simulation: run the whole organism over long horizons, identify emergent pathologies, correct them below the subject-access boundary, and preserve baseline behavior for comparison.
 
-That broader integration does not relax the first-person access firewall or subject-authority rules.
+That simulation-led development does not relax the first-person access firewall or subject-authority rules.
 
 ## Future modalities
 

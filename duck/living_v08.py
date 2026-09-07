@@ -93,12 +93,6 @@ class LivingDuck(LifeSimLivingDuck):
         source: str = "self",
         commitment_id: str | None = None,
     ) -> MemoryRecord:
-        """Register an unfinished prospective concern without executing it.
-
-        The concern is persistent subject state, not a scheduled command. Numeric
-        priority/urgency values remain implementation metadata and are never passed
-        through the subject-access firewall.
-        """
         due_tick = self.state.tick + int(due_in) if due_in is not None else None
         not_before_tick = self.state.tick + int(not_before_in) if not_before_in is not None else None
         normalized_tags = [
@@ -141,7 +135,6 @@ class LivingDuck(LifeSimLivingDuck):
         importance: float = 0.7,
         source: str = "self",
     ) -> MemoryRecord:
-        """Backward-compatible convenience wrapper for a curiosity concern."""
         return self.register_concern(
             text,
             tags=tags,
@@ -259,14 +252,14 @@ class LivingDuck(LifeSimLivingDuck):
     def _concern_viability(self, concern: ProspectiveConcern, context_tags: set[str]) -> tuple[bool, str]:
         if concern.status != "open":
             return False, "resolved"
-        if concern.not_before_tick is not None and self.state.tick < concern.not_before_tick:
-            return False, "too_early"
-        if self.state.tick < concern.cooldown_until:
-            return False, "cooldown"
         if not self._commitment_is_open(concern):
             memory = self._concern_memory(concern.concern_id)
             self._set_status(memory, "satisfied")
             return False, "linked_commitment_resolved"
+        if concern.not_before_tick is not None and self.state.tick < concern.not_before_tick:
+            return False, "too_early"
+        if self.state.tick < concern.cooldown_until:
+            return False, "cooldown"
         if self.state.needs.get("energy", 0.0) < concern.min_energy:
             return False, "low_energy"
         if concern.required_tags and not set(concern.required_tags).issubset(context_tags):
@@ -313,7 +306,7 @@ class LivingDuck(LifeSimLivingDuck):
             return None, reasons
         viable.sort(key=lambda row: (row[0], row[1].priority, -row[1].attempts), reverse=True)
         score, concern = viable[0]
-        if score < 0.48:
+        if score < 0.42:
             return None, reasons
         return concern, reasons
 
@@ -376,9 +369,6 @@ class LivingDuck(LifeSimLivingDuck):
         for candidate in rows:
             utility = candidate.utility
             if candidate.name == concern.preferred_action:
-                # A selected prospective concern should normally shape intention,
-                # while rest and safety remain free to win when the organism needs
-                # them. This is stronger than a cosmetic dialogue preference.
                 utility += 0.50 + 0.36 * concern.priority + 0.16 * concern.urgency
                 repeats = sum(1 for action in recent[-3:] if action == candidate.name)
                 utility -= min(0.18, repeats * 0.06)

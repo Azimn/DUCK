@@ -64,13 +64,19 @@ class LivingDuck(BaseLivingDuck):
             self.state.affect["unease"] = _clamp(self.state.affect.get("unease", 0.04) - 0.34 * relief)
 
     def _appraise(self, event: WorldEvent, relation: RelationshipState, memories: list[MemoryRecord]) -> float:
-        """Keep memory causally active without permanently ratcheting relationships.
+        """Keep memory causally active without treating recall as a fresh injury.
 
-        Remembering a bad event can make the current moment uneasy, but merely
-        retrieving the memory should not itself count as another betrayal. v0.5
-        increased guardedness every time a negative memory was retrieved. We undo
-        only that retrieval-induced permanent increment while preserving direct
-        conflict effects from the current event.
+        v0.5 permanently increased guardedness whenever a negative memory was
+        retrieved. It also increased unease on every retrieval. Because important
+        memories can be retrieved during an idle heartbeat, a remembered adverse
+        event could re-injure the subject indefinitely even after its residual
+        activation had decayed.
+
+        v0.6 keeps the memory available to cognition and action selection, but
+        removes the permanent guardedness increment caused by retrieval alone. On
+        endogenous idle cycles it also removes the fresh unease increment. A new
+        external encounter may still reactivate unease, which is a different causal
+        event from merely remembering something while time passes.
         """
         negative = 0.0
         if memories:
@@ -78,6 +84,10 @@ class LivingDuck(BaseLivingDuck):
         prediction_error = super()._appraise(event, relation, memories)
         if negative > 0.30:
             relation.guardedness = _clamp(relation.guardedness - 0.08 * negative)
+            if event.kind == "endogenous":
+                self.state.affect["unease"] = _clamp(
+                    self.state.affect.get("unease", 0.0) - 0.10 * negative
+                )
 
         if "repair" in event.tags:
             intensity = _clamp(event.intensity)
@@ -111,13 +121,12 @@ class LivingDuck(BaseLivingDuck):
         return result
 
     def _apply_endogenous_consequence(self, action: str) -> None:
-        """Let self-directed actions actually regulate the drives that selected them.
+        """Let self-directed actions partly regulate the drives that selected them.
 
-        This is deliberately modest. Seeking connection does not imply that anyone
-        replied, and exploration does not imply external success. The action itself
-        can nevertheless provide partial regulatory relief and a refractory period,
-        preventing an unsatisfied drive from producing the same intention every
-        heartbeat forever.
+        Seeking connection does not imply that anyone replied, and exploration does
+        not imply external success. The intention itself can nevertheless produce a
+        limited refractory effect. Rest is the only endogenous action that restores
+        energy; simply waiting no longer creates energy.
         """
         if action == "rest":
             self.state.needs["energy"] = _clamp(self.state.needs.get("energy", 0.5) + 0.16)
@@ -128,5 +137,3 @@ class LivingDuck(BaseLivingDuck):
         elif action == "seek_connection":
             self.state.needs["affiliation"] = _clamp(self.state.needs.get("affiliation", 0.3) - 0.16)
             self.state.affect["loneliness"] = _clamp(self.state.affect.get("loneliness", 0.18) - 0.04)
-        elif action == "wait":
-            self.state.needs["energy"] = _clamp(self.state.needs.get("energy", 0.5) + 0.012)

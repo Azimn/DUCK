@@ -2,8 +2,9 @@
 
 This is an architecture stress test, not a consciousness test. One persistent
 subject is carried through recurring people, associative recall, curiosity,
-planning failure and recovery, obstacle pressure, restart, threat, fatigue,
-repair, commitments, and quiet time with inner language disabled throughout.
+coherence disruption, planning failure and recovery, obstacle pressure, restart,
+threat, fatigue, repair, commitments, and quiet time with inner language disabled
+throughout.
 """
 from __future__ import annotations
 
@@ -170,22 +171,27 @@ def run_motivated_life() -> dict[str, Any]:
             and flower_id in sarah_return.recalled_memory_ids
         )
 
-        # Days 4-6: curiosity recruits a plan, failure changes route, success completes it.
+        # Days 4-6: curiosity recruits a plan while a genuine contradiction creates
+        # independent coherence pressure; failure changes route and success completes it.
         host.duck.state.needs["curiosity"] = 0.92
         host.duck.state.needs["energy"] = 0.90
         host.duck.state.needs["safety"] = 0.95
         host.duck.state.affect["fear"] = 0.02
         mystery, mystery_row = observe(
             4,
-            "novel_console",
+            "contradictory_console",
             WorldEvent(
                 "observation",
                 "world",
-                "An unfamiliar console is repeating a violet signal.",
-                ("novel", "mystery", "console"),
+                "The console is labeled inactive, but it is repeating a violet signal.",
+                ("novel", "mystery", "console", "contradiction", "expectation_violation"),
                 0.0,
                 0.55,
             ),
+        )
+        coherence_recruited = any(
+            motive.theme == "coherence" and motive.source == "appraisal:inconsistency"
+            for motive in host.duck.cognitive_state.motives.values()
         )
         plans = host.duck.plans(status="active")
         curiosity_plan_formed = bool(plans and plans[0].kind == "investigate")
@@ -449,6 +455,7 @@ def run_motivated_life() -> dict[str, Any]:
 
         gates = {
             "associative_bridge_reaches_nonlexical_memory": associative_bridge,
+            "contradiction_recruits_coherence": coherence_recruited,
             "curiosity_forms_endogenous_plan": curiosity_plan_formed,
             "failed_plan_causes_counterfactual_replan": counterfactual_replan,
             "curiosity_plan_completes": curiosity_plan_completed,

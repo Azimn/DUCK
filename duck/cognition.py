@@ -1,11 +1,16 @@
-"""Private cognition interfaces operating only on prose-only experiential state."""
+"""Private cognition interfaces operating on experiential state.
+
+The v0.10 candidate runtime guarantees that providers receive ExperientialFrame.
+A narrow SubjectiveMoment compatibility path remains here so promoted v0.9
+regression harnesses continue to execute unchanged until v0.10 is promoted.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
 
-from .subjective import ExperientialFrame
+from .subjective import ExperientialFrame, SubjectiveMoment
 
 
 @dataclass(frozen=True)
@@ -18,18 +23,34 @@ class InnerCognitionProvider(Protocol):
         ...
 
 
+def _legacy_experience(moment: SubjectiveMoment) -> ExperientialFrame:
+    lines: list[str] = [item.content for item in moment.impressions]
+    lines.extend(item.felt_as for item in moment.tendencies)
+    lines.extend(moment.recollections)
+    lines.extend(moment.beliefs)
+    lines.extend(moment.concerns)
+    lines.extend(moment.temporal_context)
+    lines.extend(moment.self_context)
+    return ExperientialFrame(tuple(line for line in lines if line))
+
+
+def _coerce_experience(value: ExperientialFrame | SubjectiveMoment) -> ExperientialFrame:
+    if isinstance(value, ExperientialFrame):
+        return value
+    if isinstance(value, SubjectiveMoment):
+        return _legacy_experience(value)
+    raise TypeError("private cognition requires experiential state")
+
+
 class DeterministicInnerVoice:
     """A first-person fallback, not a language model.
 
-    It proves that the organism can continue to deliberate when no model is
-    available. It receives only ExperientialFrame and therefore cannot inspect
-    channels, scores, tags, IDs, certainty telemetry, or other substrate state.
+    v0.10 callers pass ExperientialFrame directly. The legacy conversion exists
+    solely so v0.9 regression paths remain executable during candidate development.
     """
 
-    def generate(self, experience: ExperientialFrame) -> InnerCognition:
-        if not isinstance(experience, ExperientialFrame):
-            raise TypeError("private cognition requires ExperientialFrame")
-
+    def generate(self, experience: ExperientialFrame | SubjectiveMoment) -> InnerCognition:
+        experience = _coerce_experience(experience)
         lines = tuple(line.lower() for line in experience.prose)
         strong_fear = any("i'm scared" in line or "i am scared" in line for line in lines)
         step_back = any("i want to step back" in line for line in lines)

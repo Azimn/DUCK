@@ -1,13 +1,9 @@
-"""Public persistent host for the MicroPsiDUCK v0.10 candidate.
+"""Public persistent host for the current MicroPsiDUCK v0.10 organism.
 
-The v0.9 host remains preserved on main. This development branch deliberately
-publishes the new experiential-firewall host rather than maintaining API identity
-with the promoted v0.9 baseline.
+The v0.9 host remains preserved on main. The branch-public host composes the
+motivated-cognition core with persistent endogenous heartbeat scheduling.
 """
 
-from .host_v010 import InteractionResultV010, PersistentDuckHostV010
+from .host_current import InteractionResult, PersistentDuckHost, PersistentDuckHostCurrent
 
-InteractionResult = InteractionResultV010
-PersistentDuckHost = PersistentDuckHostV010
-
-__all__ = ["InteractionResult", "PersistentDuckHost"]
+__all__ = ["InteractionResult", "PersistentDuckHost", "PersistentDuckHostCurrent"]

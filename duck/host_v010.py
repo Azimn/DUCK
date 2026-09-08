@@ -1,4 +1,9 @@
-"""Persistent v0.10 host with private experiential-state isolation."""
+"""Persistent MicroPsiDUCK v0.10 host.
+
+Canonical subject state, motivated-cognition state, and private experiential state
+are persisted separately because they have different access contracts. Only the
+canonical subject owns identity and autobiographical authority.
+"""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -10,13 +15,14 @@ from typing import Any
 from .language import ApprovedLanguagePacket, DeterministicExpression, ExpressionProvider
 from .living import LivingStep, RuleEventInterpreter, SubjectState, WorldEvent
 from .living_v010 import LivingDuck
+from .motivated_cognition import MotivatedCognitionState
 from .subjective import PrivateInteriorState
 from .temporal import stamp
 
 
 @dataclass(frozen=True)
 class InteractionResultV010:
-    """Public v0.10 interaction result with no private interior fields."""
+    """Public interaction result with no private interior fields."""
 
     response_text: str
     selected_action: str
@@ -25,7 +31,7 @@ class InteractionResultV010:
 
 
 class PersistentDuckHostV010:
-    """v0.10 host separating durable private interior from public expression."""
+    """Durable host for the v0.10 organism and its access-separated state."""
 
     def __init__(
         self,
@@ -38,6 +44,7 @@ class PersistentDuckHostV010:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.state_path = self.root / "subject.json"
+        self.cognitive_path = self.root / "cognition_v010.json"
         self.interior_path = self.root / "private_interior.json"
         self.journal_path = self.root / "events.jsonl"
         self.duck = duck
@@ -58,13 +65,20 @@ class PersistentDuckHostV010:
     ) -> "PersistentDuckHostV010":
         root_path = Path(root)
         state_path = root_path / "subject.json"
+        cognitive_path = root_path / "cognition_v010.json"
         if state_path.exists():
             state = SubjectState.from_dict(json.loads(state_path.read_text(encoding="utf-8")))
         else:
             state = SubjectState.create(name=name, subject_id=subject_id)
+        if cognitive_path.exists():
+            cognitive_state = MotivatedCognitionState.from_dict(
+                json.loads(cognitive_path.read_text(encoding="utf-8"))
+            )
+        else:
+            cognitive_state = MotivatedCognitionState()
         return cls(
             root_path,
-            LivingDuck(state, cognition=cognition),
+            LivingDuck(state, cognition=cognition, cognitive_state=cognitive_state),
             expression=expression,
             interpreter=interpreter,
         )
@@ -72,8 +86,9 @@ class PersistentDuckHostV010:
     def _load_private_interior(self) -> PrivateInteriorState | None:
         if not self.interior_path.exists():
             return None
-        payload = json.loads(self.interior_path.read_text(encoding="utf-8"))
-        return PrivateInteriorState.from_dict(payload)
+        return PrivateInteriorState.from_dict(
+            json.loads(self.interior_path.read_text(encoding="utf-8"))
+        )
 
     def _capture_private_interior(self, step: LivingStep) -> None:
         self.private_interior = PrivateInteriorState.capture(
@@ -97,16 +112,29 @@ class PersistentDuckHostV010:
         Path(temp_name).replace(path)
 
     def save(self) -> None:
-        state_payload = json.dumps(self.duck.state.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
-        self._atomic_write(self.state_path, state_payload)
-        if self.private_interior is not None:
-            interior_payload = json.dumps(
-                self.private_interior.to_dict(),
+        self._atomic_write(
+            self.state_path,
+            json.dumps(self.duck.state.to_dict(), ensure_ascii=False, indent=2, sort_keys=True),
+        )
+        self._atomic_write(
+            self.cognitive_path,
+            json.dumps(
+                self.duck.cognitive_state.to_dict(),
                 ensure_ascii=False,
                 indent=2,
                 sort_keys=True,
+            ),
+        )
+        if self.private_interior is not None:
+            self._atomic_write(
+                self.interior_path,
+                json.dumps(
+                    self.private_interior.to_dict(),
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                ),
             )
-            self._atomic_write(self.interior_path, interior_payload)
 
     def _append_journal(self, event: dict[str, Any]) -> None:
         record = dict(event)
@@ -114,7 +142,13 @@ class PersistentDuckHostV010:
         with self.journal_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
-    def interact(self, text: str, *, speaker: str = "user", allow_inner_speech: bool = True) -> InteractionResultV010:
+    def interact(
+        self,
+        text: str,
+        *,
+        speaker: str = "user",
+        allow_inner_speech: bool = True,
+    ) -> InteractionResultV010:
         event = self.interpreter.interpret(text, source=speaker)
         step = self.duck.step(event, allow_inner_speech=allow_inner_speech)
         self._capture_private_interior(step)
@@ -183,7 +217,13 @@ class PersistentDuckHostV010:
         description: str,
         tags: tuple[str, ...] = (),
     ) -> None:
-        self.duck.resolve_outcome(action_id, success=success, valence=valence, description=description, tags=tags)
+        self.duck.resolve_outcome(
+            action_id,
+            success=success,
+            valence=valence,
+            description=description,
+            tags=tags,
+        )
         self._append_journal(
             {
                 "type": "outcome",
@@ -200,6 +240,7 @@ class PersistentDuckHostV010:
     def status(self) -> dict[str, Any]:
         state = self.duck.state
         temporal = stamp(state.tick)
+        dominant = self.duck.control.dominant_motive()
         return {
             "subject_id": state.subject_id,
             "name": state.name,
@@ -212,7 +253,11 @@ class PersistentDuckHostV010:
             "open_commitments": sum(1 for item in state.commitments.values() if item.status == "open"),
             "active_plan_count": len(self.duck.plans(status="active")),
             "completed_plan_count": len(self.duck.plans(status="completed")),
+            "motive_count": len(self.duck.cognitive_state.motives),
+            "dominant_motive": dominant.theme if dominant is not None else None,
+            "associative_edge_count": len(self.duck.cognitive_state.graph.edges),
             "pending_action": state.pending_action.name if state.pending_action else None,
             "recent_actions": list(state.recent_actions[-8:]),
+            "cognitive_schema": self.duck.cognitive_state.schema_version,
             "private_interior_schema": self.private_interior.schema_version if self.private_interior else None,
         }

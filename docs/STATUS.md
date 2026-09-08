@@ -14,7 +14,7 @@ Preserved promoted baseline: DUCK v0.9 on `main`
 
 MicroPsiDUCK v0.10 is a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The branch public package points to the v0.10 organism and persistent host. The v0.9 organism remains explicitly importable for comparison and remains preserved as the promoted baseline on `main`.
 
-The current implementation now contains the central motivated-cognition control spine rather than only the experiential boundary. Implemented mechanisms include persistent motives, bounded motive competition, a bounded typed associative graph, transient global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, outcome learning, restart persistence, and the experiential firewall.
+The current implementation now contains the central motivated-cognition control spine rather than only the experiential boundary. Implemented mechanisms include persistent motives, bounded motive competition, a bounded typed associative graph, transient global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, explicit validated action selection, outcome learning, restart persistence, and the experiential firewall.
 
 No donor package is a runtime dependency.
 
@@ -41,6 +41,8 @@ Each v0.10 action cycle can assemble a transient mechanistic `CognitiveField` fr
 Routine endogenous cycles remain on the automatic path. Severe safety interruption can also remain automatic rather than recruiting deliberative cognition. Novelty, coherence disruption, obstacles, repair conflicts, close affordance competition, and motive conflict can recruit an optional executive provider when conditions justify the additional computation.
 
 `ExecutiveCognitionProvider` is an optional runtime service. It never receives `CognitiveField`. Its input is only an `ExperientialFrame` containing validated first-person experiential prose. It may return an `ExecutiveProposal`, but the proposal is not subject authority. The runtime validates a proposed action against currently available canonical affordances, rejects invalid or unavailable proposals, and falls back to automatic policy when the provider is absent, disabled, fails, or returns an invalid result.
+
+Accepted executive choices now pass through an explicit `_select_candidate(...)` seam. Historical runtimes inherit the original max-utility selection unchanged. MicroPsiDUCK can choose a validated executive proposal at the selection layer without modifying the underlying affordance utilities. Regression tests require the complete candidate-utility map and the transient cognitive field to remain identical between equivalent provider and no-provider runs even when the accepted executive action differs from the automatic winner.
 
 Executive intention prose is not automatically written to autobiographical memory, self-narrative, goals, plans, motives, beliefs, or identity. Provider configuration is host/runtime configuration rather than persistent cognitive identity. Reopening a saved organism without supplying a provider restores the same subject and cognitive state without restoring the provider itself or a previous transient cognitive field.
 
@@ -70,13 +72,13 @@ The current configured CI matrix runs documentation validation, focused regulati
 
 ## Remaining architectural work
 
-The central v0.10 motive, association, modulation, cognitive-field, firewall, and selective-executive mechanisms now exist, but the development line is not frozen.
+The central v0.10 motive, association, modulation, cognitive-field, firewall, selective-executive, and explicit action-selection mechanisms now exist, but the development line is not frozen.
 
-The most immediate control-flow cleanup is to make accepted executive selection an explicit action-selection hook rather than using an inherited candidate-ordering compatibility bridge. The current bridge keeps provider authority bounded and tested, but the final architecture should preserve original affordance utilities and represent executive selection as a separate validated decision step.
-
-Continuous organism dynamics can also be strengthened beyond the inherited heartbeat/homeostatic mechanisms. Future work can add richer endogenous event generation from changing body, environment, expectations, commitments, goals, and social context while keeping executive recruitment sparse.
+Continuous organism dynamics can be strengthened beyond the inherited heartbeat/homeostatic mechanisms. Future work can add richer endogenous event generation from changing body, environment, expectations, commitments, goals, and social context while keeping executive recruitment sparse.
 
 Executive proposals may eventually support validated goal or plan proposals in addition to immediate action proposals, but any such extension must preserve canonical subject authority. A provider may suggest; the organism must validate, adopt, reject, revise, persist, and learn through its own state machinery.
+
+The current v0.10 planner still inherits substantial v0.9 representation and lifecycle machinery. A later cleanup may move goal, plan, and intention ownership into a purpose-built motivated-cognition planning layer if that produces clearer authority boundaries without sacrificing the current tested behaviors.
 
 Historical regression harnesses remain useful, but their version binding needs continued cleanup. The v0.7 thirty-day harness is now explicitly pinned to a v0.7 persistence host. Some older v0.5/v0.6/v0.8/v0.9 simulation modules still import the branch-public host and should be pinned or parameterized before their version labels are treated as exact implementation provenance rather than broad behavioral regression evidence.
 

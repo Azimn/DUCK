@@ -1,4 +1,4 @@
-"""DUCK: a persistent first-person subject simulation architecture."""
+"""MicroPsiDUCK v0.10: motivated cognition with bounded first-person access."""
 
 from .access import SubjectAccessFirewall
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
@@ -24,8 +24,8 @@ from .living import (
     SubjectState,
     WorldEvent,
 )
-from .living_v09 import GoalPlan, LivingDuck, PlanStepSpec
-from .living_v010 import LivingDuck as LivingDuckV010
+from .living_v09 import GoalPlan, LivingDuck as LivingDuckV09, PlanStepSpec
+from .living_v010 import LivingDuck
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
@@ -35,6 +35,8 @@ from .subjective import (
     PrivateInteriorState,
     SubjectiveMoment,
 )
+
+LivingDuckV010 = LivingDuck
 
 __all__ = [
     "AccessibleTendency",
@@ -54,6 +56,7 @@ __all__ = [
     "InteractionResult",
     "InteractionResultV010",
     "LivingDuck",
+    "LivingDuckV09",
     "LivingDuckV010",
     "LivingStep",
     "MechanisticSnapshot",

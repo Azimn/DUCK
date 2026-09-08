@@ -21,6 +21,7 @@ jobs:
       - run: python -m duck.planning_evaluation
       - run: python -m duck.motivated_evaluation
       - run: python -m duck.planning_simulation --out-dir simulation_results/planning-v09
+      - run: python -m duck.motivated_simulation_v010 --out-dir simulation_results/motivated-v010
       - run: python -m pytest
       - run: python -m duck.evaluation
       - run: python -m duck.simulation_lab --out-dir simulation_results/baseline

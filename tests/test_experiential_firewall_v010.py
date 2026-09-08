@@ -6,8 +6,8 @@ import pytest
 from duck import (
     ApprovedLanguagePacket,
     ExperientialFrame,
-    LivingDuck,
-    PersistentDuckHost,
+    LivingDuckV010,
+    PersistentDuckHostV010,
     PrivateInteriorState,
     SubjectState,
     WorldEvent,
@@ -38,7 +38,7 @@ class FakePort:
 
 def test_full_v010_runtime_private_cognition_gets_prose_only():
     spy = SpyCognition()
-    duck = LivingDuck(SubjectState.create("Aster", "firewall-subject"), cognition=spy)
+    duck = LivingDuckV010(SubjectState.create("Aster", "firewall-subject"), cognition=spy)
     step = duck.step(
         WorldEvent("encounter", "Morgan", "Morgan threatens me.", ("social", "threat", "conflict"), -0.8, 0.9)
     )
@@ -75,7 +75,7 @@ def test_private_interior_is_versioned_and_roundtrips():
 
 def test_host_persists_private_interior_but_does_not_return_it_publicly(tmp_path):
     root = tmp_path / "aster"
-    host = PersistentDuckHost.open(root, name="Aster", subject_id="aster-firewall")
+    host = PersistentDuckHostV010.open(root, name="Aster", subject_id="aster-firewall")
     result = host.interact("Hello, Aster.")
 
     assert result.response_text
@@ -90,13 +90,13 @@ def test_host_persists_private_interior_but_does_not_return_it_publicly(tmp_path
     assert "needs" not in payload
     assert "selected_action" not in payload
 
-    reopened = PersistentDuckHost.open(root)
+    reopened = PersistentDuckHostV010.open(root)
     assert reopened.private_interior == host.private_interior
 
 
 def test_event_journal_does_not_publish_private_interior(tmp_path):
     root = tmp_path / "aster"
-    host = PersistentDuckHost.open(root, name="Aster")
+    host = PersistentDuckHostV010.open(root, name="Aster")
     host.interact("Can we talk?")
     host.heartbeat(1)
     journal = (root / "events.jsonl").read_text(encoding="utf-8")
@@ -130,7 +130,7 @@ def test_renderer_packet_contains_prose_intent_not_machine_action_tag():
 
 
 def test_language_lesion_still_refreshes_experiential_state():
-    duck = LivingDuck(SubjectState.create("Aster", "lesioned-firewall"))
+    duck = LivingDuckV010(SubjectState.create("Aster", "lesioned-firewall"))
     step = duck.step(
         WorldEvent("encounter", "world", "Something dangerous approaches.", ("threat",), -0.8, 0.9),
         allow_inner_speech=False,

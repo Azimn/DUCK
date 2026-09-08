@@ -71,6 +71,12 @@ class LivingDuck(MotivatedLivingDuck):
         elif "commitment_signal" in tags:
             bonuses = {"ask": 0.34, "respond": 0.12, "wait": -0.03}
             reason = "endogenous_commitment"
+        elif "coherence_signal" in tags:
+            bonuses = {"ask": 0.38, "wait": 0.05, "explore": 0.08}
+            reason = "endogenous_coherence"
+        elif "curiosity_signal" in tags:
+            bonuses = {"explore": 0.38, "ask": 0.16, "wait": -0.05}
+            reason = "endogenous_curiosity"
         if not bonuses:
             return rows
 

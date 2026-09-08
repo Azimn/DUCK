@@ -2,17 +2,23 @@
 
 This file defines which documents govern the current repository.
 
-## Current endogenous-planning candidate
+## Current motivated-cognition design candidate
 
-`ARCHITECTURE_v0.9.md` is the binding architecture for the endogenous goal-formation and counterfactual-planning candidate.
+`ARCHITECTURE_v0.10.md` is the binding design architecture for the motivated-cognition phase.
 
-`MILESTONE_0_9.md` is the executable acceptance contract for that candidate.
+`MILESTONE_0_10.md` is the executable acceptance contract for that phase.
 
-`STATUS.md` records what is actually implemented and what CI has verified.
+`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi/MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture or milestone.
 
-`PLANNING_PHASE_v0.9_NOTES.md` records supporting engineering observations from the phase. It is nonbinding and cannot override the architecture or milestone.
+`STATUS.md` records what is actually implemented and what CI has verified. Until v0.10 implementation gates pass, v0.9 remains the promoted executable baseline.
 
-`DONOR_AUDIT_v0.1.md` is nonbinding research context. Donor mechanisms do not become DUCK requirements merely because they appear in that document.
+`DONOR_AUDIT_v0.1.md` remains nonbinding research context. Donor mechanisms do not become DUCK requirements merely because they appear in that document.
+
+## Current promoted implementation baseline
+
+`ARCHITECTURE_v0.9.md` and `MILESTONE_0_9.md` describe the current promoted endogenous goal-formation and counterfactual-planning implementation on `main`.
+
+`PLANNING_PHASE_v0.9_NOTES.md` remains supporting engineering context for that promoted phase.
 
 ## Historical architecture
 
@@ -30,11 +36,13 @@ The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/perso
 
 ## Development doctrine
 
-The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0.6 used longitudinal simulation to regulate their interaction. Version 0.7 moved to a thirty-day simulated life. Version 0.8 established motivated prospective agency so unfinished intentions could survive without the current prompt supplying every goal.
+The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0.6 used longitudinal simulation to regulate their interaction. Version 0.7 moved to a thirty-day simulated life. Version 0.8 established motivated prospective agency so unfinished intentions could survive without the current prompt supplying every goal. Version 0.9 added experience-driven goal formation, counterfactual route selection, hierarchical planning, and outcome-driven replanning.
 
-Version 0.9 attacks the next chatbot artifact: the subject should sometimes develop an objective because of what happened to it, compare more than one possible way forward, carry an objective through intermediate intentions, and change the plan when consequences contradict the first route.
+Version 0.10 attacks the next architectural limitation: motivation should organize cognition rather than merely bias action utility. Needs therefore generate persistent competing motives, motives recruit associative activation and planning, and global modulation changes how cognition itself operates under threat, curiosity, fatigue, competence pressure, affiliation, and coherence pressure.
 
-The v0.9 phase therefore treats goal formation, route selection, subgoal progression, action, and outcome as distinct causal stages. This simulation-led development does not relax the first-person access firewall or subject-authority rules.
+The v0.10 phase explicitly modernizes selected Psi/MicroPsi principles through DUCK-native structures. It does not recreate the historical MicroPsi node-net or introduce a second subject authority.
+
+This simulation-led development does not relax the first-person access firewall, autobiographical provenance rules, world/belief separation, relationship continuity, commitment continuity, or language-lesion doctrine.
 
 ## Future modalities
 

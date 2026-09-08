@@ -2,6 +2,7 @@
 
 from .access import SubjectAccessFirewall
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
+from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .host import InteractionResult, PersistentDuckHost
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .language import (
@@ -58,11 +59,14 @@ __all__ = [
     "BeliefRecord",
     "BeliefStance",
     "CognitiveCycle",
+    "CognitiveField",
     "CognitiveModulation",
     "CommitmentRecord",
     "DeterministicExpression",
     "DeterministicInnerVoice",
     "DuckRuntime",
+    "ExecutiveCognitionProvider",
+    "ExecutiveProposal",
     "ExperientialFrame",
     "FirstPersonImpression",
     "GoalPlan",

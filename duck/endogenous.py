@@ -18,6 +18,12 @@ from .living import SubjectState, WorldEvent, _clamp
 
 ENDOGENOUS_STATE_SCHEMA = "micropsi-duck.endogenous.v1"
 MAX_SIGNAL_RECORDS = 64
+_COHERENCE_TAGS = frozenset({
+    "contradiction",
+    "inconsistency",
+    "expectation_violation",
+    "prediction_error",
+})
 
 
 @dataclass
@@ -144,6 +150,16 @@ class EndogenousEventGenerator:
             perceived=False,
         )
 
+    @staticmethod
+    def _recent_coherence_disruption(subject: SubjectState, *, max_age: int = 8) -> bool:
+        for memory in reversed(subject.memories):
+            age = subject.tick - memory.tick
+            if age > max_age:
+                break
+            if set(memory.tags) & _COHERENCE_TAGS:
+                return True
+        return False
+
     def refresh(self, subject: SubjectState) -> None:
         """Re-arm recovered pressures and retire resolved commitment alarms."""
 
@@ -160,6 +176,19 @@ class EndogenousEventGenerator:
         safety = _clamp(subject.needs.get("safety", 0.85))
         if fear <= 0.32 and safety >= 0.62:
             self.state.rearm("safety")
+
+        curiosity = _clamp(subject.needs.get("curiosity", 0.35))
+        if curiosity <= 0.56:
+            self.state.rearm("curiosity")
+
+        coherence = _clamp(subject.needs.get("coherence", 0.70))
+        unease = _clamp(subject.affect.get("unease", 0.05))
+        if (
+            coherence >= 0.68
+            and unease <= 0.30
+            and not self._recent_coherence_disruption(subject)
+        ):
+            self.state.rearm("coherence")
 
         known_commitments = {f"commitment:{item.commitment_id}" for item in subject.commitments.values()}
         for key in list(self.state.latched_signals):
@@ -229,6 +258,48 @@ class EndogenousEventGenerator:
                         "safety",
                         "I still feel that I need to protect myself.",
                         ("safety_signal", "safety_pressure"),
+                        salience,
+                    ),
+                )
+            )
+
+        curiosity = _clamp(subject.needs.get("curiosity", 0.35))
+        if (
+            curiosity >= 0.82
+            and fear <= 0.35
+            and safety >= 0.62
+            and "curiosity" not in self.state.latched_signals
+        ):
+            salience = _clamp(0.50 + (curiosity - 0.82) * 1.35)
+            rows.append(
+                EndogenousSignal(
+                    "curiosity",
+                    "curiosity",
+                    salience,
+                    self._signal_event(
+                        "curiosity",
+                        "I keep wanting to find something out.",
+                        ("curiosity_signal", "curiosity_pressure"),
+                        salience,
+                    ),
+                )
+            )
+
+        coherence = _clamp(subject.needs.get("coherence", 0.70))
+        unease = _clamp(subject.affect.get("unease", 0.05))
+        disrupted = self._recent_coherence_disruption(subject)
+        coherence_pressure = max(1.0 - coherence, 0.70 if disrupted else 0.0, unease * 0.65)
+        if coherence_pressure >= 0.62 and "coherence" not in self.state.latched_signals:
+            salience = _clamp(0.56 + (coherence_pressure - 0.62) * 1.20)
+            rows.append(
+                EndogenousSignal(
+                    "coherence",
+                    "coherence",
+                    salience,
+                    self._signal_event(
+                        "coherence",
+                        "I keep turning over something that does not fit together yet.",
+                        ("coherence_signal", "coherence_pressure", "inconsistency"),
                         salience,
                     ),
                 )

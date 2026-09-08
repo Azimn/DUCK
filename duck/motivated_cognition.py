@@ -22,6 +22,15 @@ _CONTROL_TAGS = {
     "opportunity_acted", "plan_step", "planning",
 }
 
+COHERENCE_DISRUPTION_TAGS = frozenset(
+    {
+        "contradiction",
+        "inconsistency",
+        "expectation_violation",
+        "prediction_error",
+    }
+)
+
 MOTIVE_ACTION_PREFERENCES: dict[str, tuple[str, ...]] = {
     "safety": ("step_back", "wait", "ask"),
     "energy": ("rest", "wait"),
@@ -384,6 +393,14 @@ class MotivatedCognitionEngine:
         threat_event = _clamp(event.intensity if "threat" in tags else 0.0)
         obstacle = _clamp(event.intensity if tags & {"obstacle", "blocked"} else 0.0)
         novel = _clamp(event.intensity if tags & {"novel", "mystery", "unknown"} else 0.0)
+        coherence_disruption = _clamp(event.intensity if tags & COHERENCE_DISRUPTION_TAGS else 0.0)
+        baseline_coherence_pressure = max(1.0 - coherence, unease * 0.45)
+        coherence_pressure = max(baseline_coherence_pressure, coherence_disruption * 0.88)
+        coherence_source = (
+            "appraisal:inconsistency"
+            if coherence_disruption * 0.88 > baseline_coherence_pressure
+            else "need:coherence"
+        )
 
         rows: dict[tuple[str, str], tuple[str, float]] = {
             ("safety", ""): ("need:safety", max(1.0 - safety, fear * 0.9, threat_event)),
@@ -391,7 +408,7 @@ class MotivatedCognitionEngine:
             ("affiliation", ""): ("need:affiliation", max(affiliation, loneliness * 0.8)),
             ("curiosity", ""): ("need:curiosity", max(curiosity, novel * 0.75)),
             ("competence", ""): ("need:competence", 1.0 - competence),
-            ("coherence", ""): ("need:coherence", max(1.0 - coherence, unease * 0.45)),
+            ("coherence", ""): (coherence_source, coherence_pressure),
             ("autonomy", ""): ("need:autonomy", max(1.0 - autonomy, obstacle * 0.75)),
         }
         if "conflict" in tags or "repair_needed" in tags:
@@ -491,6 +508,8 @@ class MotivatedCognitionEngine:
             score += 0.14
         if motive.theme == "repair" and tags & {"conflict", "repair_needed"}:
             score += 0.18
+        if motive.theme == "coherence" and tags & COHERENCE_DISRUPTION_TAGS:
+            score += 0.20
         return score
 
     def _select_motives(

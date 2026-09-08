@@ -1,13 +1,22 @@
 """The subject-access firewall.
 
 Raw mechanistic state may influence the subject, but it must be projected into
-bounded first-person experience before private cognition can access it.
+bounded first-person experience before private cognition can access it. Structured
+SubjectiveMoment data remains internal diagnostic scaffolding. ExperientialFrame is
+the actual access contract and contains prose only.
 """
 
 from __future__ import annotations
 
 from .mechanics import MechanisticSnapshot
-from .subjective import AccessibleTendency, Certainty, FirstPersonImpression, Intensity, SubjectiveMoment
+from .subjective import (
+    AccessibleTendency,
+    Certainty,
+    ExperientialFrame,
+    FirstPersonImpression,
+    Intensity,
+    SubjectiveMoment,
+)
 
 
 def _clamp01(value: float) -> float:
@@ -39,9 +48,10 @@ def _certainty(value: float) -> Certainty:
 
 
 class SubjectAccessFirewall:
-    """Project implementation state into a bounded first-person moment."""
+    """Translate implementation state into bounded first-person experience."""
 
     def project(self, snapshot: MechanisticSnapshot) -> SubjectiveMoment:
+        """Build internal structured subjective diagnostics from mechanistic state."""
         impressions: list[FirstPersonImpression] = []
         tendencies: list[AccessibleTendency] = []
 
@@ -110,6 +120,25 @@ class SubjectAccessFirewall:
             tendencies.append(AccessibleTendency(action=action, felt_as=self._felt_tendency(action)))
 
         return SubjectiveMoment(tuple(impressions), tuple(tendencies))
+
+    def experience(self, moment: SubjectiveMoment) -> ExperientialFrame:
+        """Cross the experiential firewall.
+
+        Only prose consequences of the structured projection survive this method.
+        Channels, intensities, certainty enums, action tags, IDs, and all numeric
+        implementation values remain on the mechanistic side of the boundary.
+        """
+        lines: list[str] = [item.content for item in moment.impressions]
+        lines.extend(item.felt_as for item in moment.tendencies)
+        lines.extend(moment.recollections)
+        lines.extend(moment.beliefs)
+        lines.extend(moment.concerns)
+        lines.extend(moment.temporal_context)
+        lines.extend(moment.self_context)
+        return ExperientialFrame(tuple(line for line in lines if line))
+
+    def project_experience(self, snapshot: MechanisticSnapshot) -> ExperientialFrame:
+        return self.experience(self.project(snapshot))
 
     @staticmethod
     def _felt_tendency(action: str) -> str:

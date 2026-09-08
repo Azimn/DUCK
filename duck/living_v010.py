@@ -11,6 +11,7 @@ from typing import Iterable
 
 from .access import SubjectAccessFirewall
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
+from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .living import (
     ActionCandidate,
     MemoryProvenance,
@@ -22,6 +23,7 @@ from .living import (
 )
 from .living_v08 import ProspectiveConcern
 from .living_v09 import LivingDuck as PlanningLivingDuck
+from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .motivated_cognition import (
     CognitiveCycle,
     CognitiveModulation,
@@ -63,14 +65,21 @@ class LivingDuck(PlanningLivingDuck):
         *,
         firewall: SubjectAccessFirewall | None = None,
         cognition: InnerCognitionProvider | None = None,
+        executive: ExecutiveCognitionProvider | None = None,
         cognitive_state: MotivatedCognitionState | None = None,
     ) -> None:
         experiential_firewall = firewall or SubjectAccessFirewall()
         self.experiential_firewall = experiential_firewall
         self.private_cognition_provider = cognition or DeterministicInnerVoice()
+        self.executive_provider = executive
         self.control = MotivatedCognitionEngine(cognitive_state)
         self.current_cycle: CognitiveCycle | None = None
         self.last_experience = ExperientialFrame()
+        self.last_executive_experience = ExperientialFrame()
+        self.last_cognitive_field: CognitiveField | None = None
+        self._executive_allowed_for_step = True
+        self._last_prediction_error = 0.0
+        self._pending_executive_trace: dict[str, object] = {}
         super().__init__(
             state,
             firewall=experiential_firewall,
@@ -135,6 +144,231 @@ class LivingDuck(PlanningLivingDuck):
             preference = max(0.25, 1.0 - preference_rank * 0.22)
             total += dominance * preference * (0.30 + 0.38 * motive.strength + 0.18 * motive.urgency)
         return total
+
+    def _appraise(
+        self,
+        event: WorldEvent,
+        relation: RelationshipState,
+        memories: list[MemoryRecord],
+    ) -> float:
+        prediction_error = super()._appraise(event, relation, memories)
+        self._last_prediction_error = prediction_error
+        return prediction_error
+
+    def _perception_line(self, event: WorldEvent) -> str | None:
+        text = event.text.strip()
+        if not text:
+            return None
+        if text.lower().startswith(("i ", "i'm ", "i’ve ", "i've ")):
+            candidate = text
+        elif event.source not in {"", "self", "world", "system"}:
+            candidate = f"I hear or notice this from {event.source}: {text}"
+        else:
+            candidate = f"I notice this: {text}"
+        try:
+            return ExperientialFrame((candidate,)).prose[0]
+        except ValueError:
+            tags = {str(tag).lower() for tag in event.tags}
+            if tags & {"contradiction", "inconsistency", "expectation_violation", "prediction_error"}:
+                return "What I'm noticing does not fit with what I expected."
+            if "threat" in tags:
+                return "I notice something that feels dangerous."
+            if tags & {"obstacle", "blocked"}:
+                return "Something is blocking what I was trying to do."
+            if tags & {"novel", "mystery", "unknown"}:
+                return "I'm noticing something unfamiliar."
+            if tags & {"conflict", "repair", "repair_needed"}:
+                return "There is tension here that needs attention."
+            return "Something is happening that I need to respond to."
+
+    def _executive_experience(
+        self,
+        event: WorldEvent,
+        relation: RelationshipState,
+        memories: list[MemoryRecord],
+        automatic: ActionCandidate,
+    ) -> ExperientialFrame:
+        suspicion = _clamp((1.0 - relation.trust) * 0.55 + relation.guardedness * 0.45)
+        recognition = None
+        if event.source not in {"self", "world", "system", ""}:
+            recognition = RecognitionSignal(
+                event.source,
+                _clamp(0.35 + relation.familiarity * 0.65),
+            )
+        hidden_causes: dict[str, str] = {}
+        accessible_causes: set[str] = set()
+        if self.state.affect.get("unease", 0.0) >= 0.25:
+            if memories and memories[0].valence < -0.20:
+                hidden_causes["unease"] = f"what happened before with {event.source}"
+            elif "threat" in event.tags or "conflict" in event.tags:
+                hidden_causes["unease"] = "what is happening right now"
+                accessible_causes.add("unease")
+        snapshot = MechanisticSnapshot(
+            affect={
+                "fear": self.state.affect.get("fear", 0.0),
+                "loneliness": self.state.affect.get("loneliness", 0.0),
+                "unease": self.state.affect.get("unease", 0.0),
+            },
+            relationship={
+                "trust": relation.trust,
+                "guardedness": relation.guardedness,
+                "suspicion": suspicion,
+            },
+            prediction_error=self._last_prediction_error,
+            recognition=recognition,
+            action_tendency=automatic.name,
+            hidden_causes=hidden_causes,
+            introspectively_accessible_causes=frozenset(accessible_causes),
+        )
+        moment = self.experiential_firewall.project(snapshot)
+        concerns = list(self._subjective_concerns(event.source))
+        perception = self._perception_line(event)
+        if perception:
+            concerns.insert(0, perception)
+        moment = replace(
+            moment,
+            recollections=tuple(self._recollection_text(memory) for memory in memories[:3]),
+            beliefs=tuple(self._belief_text(belief) for belief in self._relevant_beliefs(event.text)[:3]),
+            concerns=tuple(concerns),
+            temporal_context=self._temporal_context(),
+            self_context=tuple(self.state.self_narrative[-3:]),
+        )
+        if self.current_cycle is not None:
+            moment, _ = self._augment_subjective_moment(
+                moment,
+                self.current_cycle,
+                tuple(memory.memory_id for memory in memories),
+            )
+        experience = self.experiential_firewall.experience(moment)
+        self.last_executive_experience = experience
+        return experience
+
+    def _cognitive_field(
+        self,
+        event: WorldEvent,
+        rows: list[ActionCandidate],
+    ) -> CognitiveField:
+        automatic = max(rows, key=lambda candidate: (candidate.utility, candidate.name))
+        cycle = self.current_cycle
+        modulation = cycle.modulation if cycle is not None else self._idle_modulation()
+        return CognitiveField(
+            tick=self.state.tick,
+            event_kind=event.kind,
+            event_tags=tuple(str(tag).lower() for tag in event.tags),
+            dominant_motive_id=cycle.dominant_motive_id if cycle is not None else None,
+            active_motive_ids=cycle.active_motive_ids if cycle is not None else (),
+            activated_memory_ids=cycle.activated_memory_ids if cycle is not None else (),
+            candidate_utilities=tuple((row.name, float(row.utility)) for row in rows),
+            automatic_action=automatic.name,
+            modulation=modulation,
+        )
+
+    def _executive_recruitment(
+        self,
+        field: CognitiveField,
+        event: WorldEvent,
+    ) -> tuple[bool, tuple[str, ...]]:
+        tags = set(field.event_tags)
+        dominant = self.control.motive_for(field.dominant_motive_id)
+        if event.kind == "endogenous" and "opportunity_active" not in tags:
+            return False, ("routine_endogenous",)
+        if (
+            dominant is not None
+            and dominant.theme == "safety"
+            and field.modulation.interruption_sensitivity >= 0.72
+        ):
+            return False, ("automatic_safety_override",)
+
+        reasons: list[str] = []
+        if tags & {"contradiction", "inconsistency", "expectation_violation", "prediction_error"}:
+            reasons.append("coherence_disruption")
+        if tags & {"novel", "mystery", "unknown"}:
+            reasons.append("novelty")
+        if tags & {"obstacle", "blocked", "challenge", "failed_attempt"}:
+            reasons.append("obstacle")
+        if tags & {"conflict", "repair", "repair_needed"}:
+            reasons.append("social_repair")
+
+        ranked = sorted(field.candidate_utilities, key=lambda row: (row[1], row[0]), reverse=True)
+        margin = ranked[0][1] - ranked[1][1] if len(ranked) > 1 else 1.0
+        if event.kind != "endogenous" and margin <= 0.08:
+            reasons.append("affordance_conflict")
+        if len(self._active_motive_themes()) >= 2 and margin <= 0.14:
+            reasons.append("motive_conflict")
+        return bool(reasons), tuple(dict.fromkeys(reasons))
+
+    def _apply_executive_selection(
+        self,
+        event: WorldEvent,
+        relation: RelationshipState,
+        memories: list[MemoryRecord],
+        rows: list[ActionCandidate],
+    ) -> list[ActionCandidate]:
+        if not rows:
+            self.last_cognitive_field = None
+            self._pending_executive_trace = {
+                "recruited": False,
+                "invoked": False,
+                "accepted": False,
+                "reasons": ["no_affordances"],
+            }
+            return rows
+
+        field = self._cognitive_field(event, rows)
+        self.last_cognitive_field = field
+        automatic = max(rows, key=lambda candidate: (candidate.utility, candidate.name))
+        recruited, reasons = self._executive_recruitment(field, event)
+        trace: dict[str, object] = {
+            "recruited": recruited,
+            "invoked": False,
+            "accepted": False,
+            "reasons": list(reasons),
+            "automatic_action": automatic.name,
+            "provider_available": self.executive_provider is not None,
+            "provider_allowed": bool(self._executive_allowed_for_step),
+        }
+        self._pending_executive_trace = trace
+        if not recruited or self.executive_provider is None or not self._executive_allowed_for_step:
+            return rows
+
+        experience = self._executive_experience(event, relation, memories, automatic)
+        trace["invoked"] = True
+        try:
+            proposal = self.executive_provider.propose(experience)
+        except Exception as exc:
+            trace["provider_error"] = type(exc).__name__
+            return rows
+        if not isinstance(proposal, ExecutiveProposal):
+            trace["proposal_rejected"] = "invalid_contract"
+            return rows
+        trace["proposal_action"] = proposal.action
+        trace["proposal_has_intention"] = proposal.intention is not None
+        if proposal.action is None:
+            trace["proposal_rejected"] = "no_action"
+            return rows
+
+        available = {candidate.name: candidate for candidate in rows}
+        if proposal.action not in available:
+            trace["proposal_rejected"] = "unavailable_action"
+            return rows
+        trace["accepted"] = True
+        if proposal.action == automatic.name:
+            return rows
+
+        ceiling = max(candidate.utility for candidate in rows)
+        adjusted: list[ActionCandidate] = []
+        for candidate in rows:
+            if candidate.name == proposal.action:
+                adjusted.append(
+                    ActionCandidate(
+                        candidate.name,
+                        ceiling + 1e-6,
+                        tuple(dict.fromkeys((*candidate.reasons, "executive_proposal"))),
+                    )
+                )
+            else:
+                adjusted.append(candidate)
+        return adjusted
 
     def _candidates(
         self,
@@ -247,7 +481,7 @@ class LivingDuck(PlanningLivingDuck):
                         utility -= 0.10 * concern.priority
                     adjusted.append(ActionCandidate(candidate.name, utility, candidate.reasons))
                 rows = adjusted
-        return rows
+        return self._apply_executive_selection(event, relation, memories, rows)
 
     def _idle_modulation(self) -> CognitiveModulation:
         event = WorldEvent(
@@ -452,6 +686,10 @@ class LivingDuck(PlanningLivingDuck):
         event = self._normalize_control_event(event)
         cycle = self.control.prepare_cycle(self.state, event)
         self.current_cycle = cycle
+        self.last_cognitive_field = None
+        self.last_executive_experience = ExperientialFrame()
+        self._pending_executive_trace = {}
+        self._executive_allowed_for_step = bool(allow_inner_speech)
         result = super().step(event, allow_inner_speech=False)
         moment, recalled_ids = self._augment_subjective_moment(
             result.subjective_moment,
@@ -483,6 +721,9 @@ class LivingDuck(PlanningLivingDuck):
             )[:8]
         ]
         trace["motivated_cognition"]["graph_edge_count"] = len(self.cognitive_state.graph.edges)
+        if self.last_cognitive_field is not None:
+            trace["cognitive_field"] = self.last_cognitive_field.to_developer_dict()
+        trace["executive_recruitment"] = dict(self._pending_executive_trace)
         trace["subjective_projection"] = asdict(moment)
         return replace(
             result,

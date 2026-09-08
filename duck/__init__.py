@@ -3,6 +3,7 @@
 from .access import SubjectAccessFirewall
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
 from .host import InteractionResult, PersistentDuckHost
+from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .language import (
     ApprovedLanguagePacket,
     DeterministicExpression,
@@ -23,8 +24,8 @@ from .living import (
     SubjectState,
     WorldEvent,
 )
-from .living_v09 import GoalPlan, PlanStepSpec
-from .living_v010 import LivingDuck
+from .living_v09 import GoalPlan, LivingDuck, PlanStepSpec
+from .living_v010 import LivingDuck as LivingDuckV010
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
@@ -51,7 +52,9 @@ __all__ = [
     "InnerCognition",
     "InnerCognitionProvider",
     "InteractionResult",
+    "InteractionResultV010",
     "LivingDuck",
+    "LivingDuckV010",
     "LivingStep",
     "MechanisticSnapshot",
     "MemoryProvenance",
@@ -60,6 +63,7 @@ __all__ = [
     "ModelInnerVoice",
     "OpenAICompatiblePort",
     "PersistentDuckHost",
+    "PersistentDuckHostV010",
     "PlanStepSpec",
     "PrivateInteriorState",
     "RecognitionSignal",

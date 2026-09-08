@@ -36,6 +36,22 @@ Threat should narrow cognition before action choice. Curiosity should broaden it
 
 This should be implemented as bounded modulation parameters affecting retrieval breadth, graph propagation, planning branching, search depth, novelty tolerance, interruption thresholds, evidence thresholds, and persistence. The exact parameterization is a DUCK implementation choice and should be learned or tuned through simulation rather than copied from historical Psi values.
 
+## Canonical MicroPsi-to-DUCK modulator mapping
+
+MicroPsi's historically important global modulators can be retained as functional concepts while being renamed and generalized for DUCK.
+
+`activation` maps to an overall cognitive mobilization signal. High mobilization means faster action readiness, stronger interruption response, less deliberative depth, and greater resource expenditure. It should rise under urgent motives and threat, not simply mirror emotional arousal.
+
+`resolution level` maps to cognitive resolution. It controls associative breadth, retrieval detail, perceptual interpretation detail, and planning depth. High resolution means broader and deeper consideration at greater computational cost. Low resolution means faster, coarser cognition.
+
+`selection threshold` maps to commitment or switching threshold. It governs how readily the currently selected motive, attentional focus, or plan is displaced by a competitor. This should interact with motive urgency, uncertainty, interruption salience, and fatigue.
+
+MicroPsi-style motive suppression maps to bounded competitor inhibition. A selected motive can temporarily suppress nearby competitors enough to prevent oscillation without deleting them. Suppression must decay so a formerly losing motive can return when circumstances change.
+
+DUCK should add at least one explicitly modern control not present in this historical form: associative exploration temperature. This controls how willing spreading activation and planning are to follow weak but potentially useful links. Curiosity can raise it, threat can lower it, and repeated failure can selectively shift it rather than globally increasing randomness.
+
+Together these controls produce a cognitive regime rather than a mood label. For example, severe threat could mean high mobilization, low cognitive resolution, high switching resistance toward safety, strong competitor suppression, and low associative exploration. Calm curiosity could mean moderate mobilization, high resolution, lower switching resistance, weak suppression, and broad associative exploration.
+
 ## Do not recreate the MicroPsi node-net literally
 
 The historical node-net is not required for DUCK's research goal. Recreating it literally would risk duplicating representation already provided by explicit memory records, relationship objects, belief records, commitments, plans, and adaptive state.
@@ -67,3 +83,7 @@ Inner speech can be generated from the resulting first-person state, but it is a
 The v0.10 phase should be implemented as one substantial organism-level experiment rather than three unrelated feature modules. The motive system should energize the activation graph. The activation graph should influence retrieval and planning. Global modulation should change how widely activation spreads and how deeply planning searches. Outcomes should then alter needs, learned associations, competence, beliefs, relationships, and future motive dynamics.
 
 The meaningful test is not whether each component works independently. It is whether the same continuing subject behaves differently for intelligible internal reasons across threat, curiosity, fatigue, social pressure, uncertainty, competence changes, failure, recovery, and quiet time while the language layer is disabled.
+
+## Primary references
+
+The modernization is grounded primarily in Joscha Bach's MicroPsi work: the MIT Media Lab MicroPsi project overview; Bach's 2003 `The MicroPsi Agent Architecture`; Bach, Bauer, and Vuine's 2006 `MicroPsi: Contributions to a Broad Architecture of Cognition`; Bach's 2009 `Principles of Synthetic Intelligence: PSI, An Architecture of Motivated Cognition`; Bach's 2012 work on emergent emotions and cognitive modulators; and later MicroPsi motivation work. These sources motivate the functional preservation of motive selection, spreading activation, activation/resolution/selection-threshold modulation, and situated autonomous behavior. DUCK's implementation deliberately departs from the historical node-net representation.

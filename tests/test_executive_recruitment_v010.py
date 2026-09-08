@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from duck import LivingDuck, SubjectState, WorldEvent
+from duck import LivingDuck, PersistentDuckHost, SubjectState, WorldEvent
 from duck.executive import ExecutiveProposal
 from duck.subjective import ExperientialFrame
 
@@ -167,3 +167,39 @@ def test_mechanistic_looking_world_text_falls_back_to_safe_experience():
     assert "motive strength" not in joined
     assert "0.8" not in joined
     assert "unfamiliar" in joined
+
+
+def test_host_provider_is_runtime_configuration_not_persisted_state(tmp_path):
+    root = tmp_path / "executive-host"
+    provider = RecordingExecutive("ask")
+    host = PersistentDuckHost.open(
+        root,
+        name="Aster",
+        subject_id="executive-host",
+        executive=provider,
+    )
+    step = host.observe(_novel_event(), allow_inner_speech=True)
+    assert step.selected_action == "ask"
+    assert len(provider.calls) == 1
+    assert host.status()["executive_provider_configured"] is True
+    assert host.duck.last_cognitive_field is not None
+    host.save()
+
+    subject_payload = (root / "subject.json").read_text(encoding="utf-8").lower()
+    cognition_payload = (root / "cognition_v010.json").read_text(encoding="utf-8").lower()
+    assert "executive_provider" not in subject_payload
+    assert "cognitive_field" not in subject_payload
+    assert "executive_provider" not in cognition_payload
+    assert "cognitive_field" not in cognition_payload
+
+    reopened = PersistentDuckHost.open(root)
+    assert reopened.status()["executive_provider_configured"] is False
+    assert reopened.duck.executive_provider is None
+    assert reopened.duck.last_cognitive_field is None
+    assert reopened.duck.state.subject_id == "executive-host"
+
+    replacement = RecordingExecutive("ask")
+    reopened_with_provider = PersistentDuckHost.open(root, executive=replacement)
+    assert reopened_with_provider.status()["executive_provider_configured"] is True
+    reopened_with_provider.observe(_novel_event(), allow_inner_speech=True)
+    assert len(replacement.calls) == 1

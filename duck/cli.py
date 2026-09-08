@@ -1,4 +1,4 @@
-"""Command line interface for the integrated DUCK build."""
+"""Command line interface for the MicroPsiDUCK v0.10 candidate."""
 from __future__ import annotations
 
 import argparse
@@ -56,8 +56,7 @@ def cmd_chat(args) -> int:
             count = int(parts[1]) if len(parts) > 1 else 1
             steps = host.heartbeat(count)
             if steps:
-                last = steps[-1]
-                print(f"[{last.selected_action}] {last.inner_cognition.thought or ''}")
+                print(f"[{steps[-1].selected_action}]")
             continue
         result = host.interact(text)
         print(f"{host.duck.state.name}> {result.response_text}")
@@ -68,7 +67,7 @@ def cmd_chat(args) -> int:
 def cmd_tick(args) -> int:
     host = _host(args)
     for step in host.heartbeat(args.count):
-        print(json.dumps({"tick": step.tick, "action": step.selected_action, "thought": step.inner_cognition.thought}, ensure_ascii=False))
+        print(json.dumps({"tick": step.tick, "action": step.selected_action}, ensure_ascii=False))
     return 0
 
 
@@ -82,10 +81,7 @@ def cmd_demo(args) -> int:
     print("subject:", host.duck.state.subject_id)
     print("beat:", host.status()["beat_time"])
     print("response:", later.response_text)
-    print("private thought:", later.private_thought)
-    print("subjective state:")
-    for line in later.subjective_state:
-        print("  ", line)
+    print("private interior schema:", host.status()["private_interior_schema"])
     return 0
 
 
@@ -126,7 +122,7 @@ def cmd_belief(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="duck", description="DUCK persistent subject simulator")
+    parser = argparse.ArgumentParser(prog="duck", description="MicroPsiDUCK v0.10 motivated subject simulator")
     parser.add_argument("--root", type=Path, default=Path("./duck_state"))
     parser.add_argument("--name", default="Duck")
     parser.add_argument("--llm", action="store_true", help="use DUCK_LLM_* environment variables for semantic interpretation, inner cognition, and expression")

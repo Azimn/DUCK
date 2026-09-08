@@ -16,7 +16,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-from .host import PersistentDuckHost
+from .host_v07 import PersistentDuckHostV07 as PersistentDuckHost
 from .living import AdaptiveSelfCore, BeliefStance, MemoryProvenance, SubjectState, WorldEvent
 from .living_v07 import LivingDuck
 

@@ -89,6 +89,19 @@ class LivingDuck(PlanningLivingDuck):
         )
         return motive.theme if motive is not None else None
 
+    def _active_motive_themes(self) -> set[str]:
+        if self.current_cycle is None:
+            return set()
+        themes: set[str] = set()
+        for motive_id in self.current_cycle.active_motive_ids:
+            motive = self.control.motive_for(motive_id)
+            if motive is not None:
+                themes.add(motive.theme)
+        dominant = self.control.motive_for(self.current_cycle.dominant_motive_id)
+        if dominant is not None:
+            themes.add(dominant.theme)
+        return themes
+
     def _motive_action_weight(self, action: str, event: WorldEvent) -> float:
         if self.current_cycle is None:
             return 0.0
@@ -343,15 +356,13 @@ class LivingDuck(PlanningLivingDuck):
     def _infer_goal(self, event: WorldEvent) -> tuple[str, str] | None:
         if self.current_cycle is None:
             return None
-        motive = self.control.motive_for(self.current_cycle.dominant_motive_id)
-        if motive is None:
-            return None
         tags = {str(tag).lower() for tag in event.tags}
-        if tags & {"mystery", "unknown", "novel"} and motive.theme in {"curiosity", "coherence"}:
+        themes = self._active_motive_themes()
+        if tags & {"mystery", "unknown", "novel"} and themes & {"curiosity", "coherence"}:
             return "investigate", f"I want to understand what I encountered: {event.text.strip()}"
-        if tags & {"obstacle", "blocked"} and motive.theme in {"autonomy", "competence", "coherence"}:
+        if tags & {"obstacle", "blocked"} and themes & {"autonomy", "competence", "coherence"}:
             return "overcome", f"I want to work out a way past this obstacle: {event.text.strip()}"
-        if tags & {"repair", "repair_needed", "conflict"} and motive.theme in {"repair", "affiliation", "coherence", "commitment"}:
+        if tags & {"repair", "repair_needed", "conflict"} and themes & {"repair", "affiliation", "coherence", "commitment"}:
             return "repair", f"I want to repair what went wrong with {event.source}."
         return None
 

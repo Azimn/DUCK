@@ -1,8 +1,7 @@
 """Persistent motivated-cognition substrate for MicroPsiDUCK v0.10.
 
-This module owns persistent motives, learned associative links, and persistent
-strategy familiarity. Momentary activation fields and modulation regimes are
-derived each cycle and are deliberately not persisted as identity.
+Persistent: motive identities, learned associative links, strategy familiarity.
+Transient: activation fields and global cognitive modulation.
 """
 from __future__ import annotations
 
@@ -21,15 +20,13 @@ _CONTROL_TAGS = {
     "idle", "time_passed", "opportunity", "prospective", "opportunity_active",
     "opportunity_acted", "plan_step", "planning",
 }
-
-COHERENCE_DISRUPTION_TAGS = frozenset(
-    {
-        "contradiction",
-        "inconsistency",
-        "expectation_violation",
-        "prediction_error",
-    }
-)
+COHERENCE_DISRUPTION_TAGS = frozenset({
+    "contradiction", "inconsistency", "expectation_violation", "prediction_error",
+})
+_STATUS_PRIORITY = {
+    "dominant": 5, "active": 4, "latent": 3, "inhibited": 2,
+    "satisfied": 1, "impossible": 0,
+}
 
 MOTIVE_ACTION_PREFERENCES: dict[str, tuple[str, ...]] = {
     "safety": ("step_back", "wait", "ask"),
@@ -42,7 +39,6 @@ MOTIVE_ACTION_PREFERENCES: dict[str, tuple[str, ...]] = {
     "repair": ("repair", "ask", "respond"),
     "commitment": ("ask", "respond", "wait"),
 }
-
 MOTIVE_PROSE: dict[str, str] = {
     "safety": "I want to get somewhere that feels safer.",
     "energy": "I need to slow down and recover.",
@@ -159,7 +155,7 @@ class ActivationField:
             if prefix is None or node.startswith(prefix)
         ]
         rows.sort(key=lambda row: (row[0], row[1]), reverse=True)
-        return tuple(node for _, node in rows[: max(0, int(limit))])
+        return tuple(node for _, node in rows[:max(0, int(limit))])
 
 
 @dataclass
@@ -171,13 +167,7 @@ class AssociativeGraph:
         return f"{source}|{relation}|{target}"
 
     def connect(
-        self,
-        source: str,
-        target: str,
-        relation: str,
-        weight: float,
-        tick: int,
-        *,
+        self, source: str, target: str, relation: str, weight: float, tick: int, *,
         learn: bool = True,
     ) -> None:
         if not source or not target or source == target:
@@ -186,53 +176,49 @@ class AssociativeGraph:
         edge = self.edges.get(key)
         if edge is None:
             self.edges[key] = AssociativeEdge(
-                source=source,
-                target=target,
-                relation=str(relation),
-                weight=max(0.02, min(1.0, float(weight))),
-                count=1,
-                updated_tick=int(tick),
+                source=source, target=target, relation=str(relation),
+                weight=max(0.02, min(1.0, float(weight))), count=1, updated_tick=int(tick),
             )
         elif learn:
             edge.count += 1
             edge.weight = min(1.0, edge.weight + 0.035 * (1.0 - edge.weight))
             edge.updated_tick = int(tick)
-        if len(self.edges) > MAX_EDGES:
-            ordered = sorted(
-                self.edges.items(),
-                key=lambda row: (row[1].weight, row[1].count, row[1].updated_tick),
-                reverse=True,
-            )
-            self.edges = dict(ordered[:MAX_EDGES])
+        self._bound()
 
     def connect_both(
-        self,
-        left: str,
-        right: str,
-        relation: str,
-        weight: float,
-        tick: int,
-        *,
+        self, left: str, right: str, relation: str, weight: float, tick: int, *,
         learn: bool = True,
     ) -> None:
         self.connect(left, right, relation, weight, tick, learn=learn)
         self.connect(right, left, relation, weight, tick, learn=learn)
 
+    def _bound(self) -> None:
+        if len(self.edges) <= MAX_EDGES:
+            return
+        ordered = sorted(
+            self.edges.items(),
+            key=lambda row: (row[1].weight, row[1].count, row[1].updated_tick),
+            reverse=True,
+        )
+        self.edges = dict(ordered[:MAX_EDGES])
+
+    def remove_nodes(self, nodes: set[str]) -> None:
+        if not nodes:
+            return
+        self.edges = {
+            key: edge for key, edge in self.edges.items()
+            if edge.source not in nodes and edge.target not in nodes
+        }
+
     def spread(
-        self,
-        seeds: Mapping[str, float],
-        *,
-        depth: int,
-        fanout: int,
-        decay: float = 0.68,
-        max_active: int = 64,
+        self, seeds: Mapping[str, float], *, depth: int, fanout: int,
+        decay: float = 0.68, max_active: int = 64,
     ) -> ActivationField:
         depth = max(0, min(5, int(depth)))
         fanout = max(1, min(10, int(fanout)))
-        scores: dict[str, float] = {
+        scores = {
             str(node): max(0.0, min(1.0, float(value)))
-            for node, value in seeds.items()
-            if float(value) > 0
+            for node, value in seeds.items() if float(value) > 0
         }
         frontier = dict(scores)
         expanded = 0
@@ -272,13 +258,7 @@ class AssociativeGraph:
         for payload in data.get("edges", ()):
             edge = AssociativeEdge.from_dict(payload)
             graph.edges[graph._key(edge.source, edge.target, edge.relation)] = edge
-        if len(graph.edges) > MAX_EDGES:
-            ordered = sorted(
-                graph.edges.items(),
-                key=lambda row: (row[1].weight, row[1].count, row[1].updated_tick),
-                reverse=True,
-            )
-            graph.edges = dict(ordered[:MAX_EDGES])
+        graph._bound()
         return graph
 
 
@@ -308,7 +288,7 @@ class MotivatedCognitionState:
         version = str(data.get("schema_version", COGNITIVE_STATE_SCHEMA))
         if version != COGNITIVE_STATE_SCHEMA:
             raise ValueError(f"unsupported motivated cognition schema: {version}")
-        return cls(
+        state = cls(
             schema_version=version,
             motive_counter=int(data.get("motive_counter", 0)),
             motives={
@@ -319,14 +299,134 @@ class MotivatedCognitionState:
             indexed_memory_ids={str(x) for x in data.get("indexed_memory_ids", ())},
             last_dominant_motive_id=(
                 str(data["last_dominant_motive_id"])
-                if data.get("last_dominant_motive_id") is not None
-                else None
+                if data.get("last_dominant_motive_id") is not None else None
             ),
             strategy_success={
                 str(key): max(-1.0, min(1.0, float(value)))
                 for key, value in data.get("strategy_success", {}).items()
             },
         )
+        _compact_motive_state(
+            state,
+            tick=max((m.updated_tick for m in state.motives.values()), default=0),
+            retire_stale=False,
+        )
+        return state
+
+
+def _survivor_key(motive: MotiveRecord) -> tuple:
+    return (
+        _STATUS_PRIORITY.get(motive.status, 0),
+        motive.persistence,
+        motive.strength,
+        motive.urgency,
+        motive.updated_tick,
+        -motive.created_tick,
+    )
+
+
+def _merge_motive(survivor: MotiveRecord, other: MotiveRecord) -> None:
+    survivor.strength = max(survivor.strength, other.strength)
+    survivor.urgency = max(survivor.urgency, other.urgency)
+    survivor.persistence = max(survivor.persistence, other.persistence)
+    survivor.inhibition = min(survivor.inhibition, other.inhibition)
+    survivor.created_tick = min(survivor.created_tick, other.created_tick)
+    survivor.updated_tick = max(survivor.updated_tick, other.updated_tick)
+    if other.last_dominant_tick is not None:
+        survivor.last_dominant_tick = max(
+            survivor.last_dominant_tick or other.last_dominant_tick,
+            other.last_dominant_tick,
+        )
+    if _STATUS_PRIORITY.get(other.status, 0) > _STATUS_PRIORITY.get(survivor.status, 0):
+        survivor.status = other.status
+    if other.source.startswith("appraisal:") and not survivor.source.startswith("appraisal:"):
+        survivor.source = other.source
+    survivor.links = tuple(dict.fromkeys((*survivor.links, *other.links)))
+    survivor.normalize()
+
+
+def _compact_motive_state(
+    state: MotivatedCognitionState,
+    *,
+    tick: int,
+    retire_stale: bool = True,
+) -> None:
+    """Canonicalize motive identity and retire stale records.
+
+    Motive identity is `(theme, target)`. Repeated pressure reactivates the same
+    persistent object. Compaction is intentionally conservative for untargeted
+    homeostatic motives and more aggressive for resolved contextual motives.
+    """
+    grouped: dict[tuple[str, str], list[MotiveRecord]] = {}
+    for motive in state.motives.values():
+        grouped.setdefault((motive.theme, motive.target), []).append(motive)
+
+    retire_ids: set[str] = set()
+    dominant_remap: dict[str, str] = {}
+    for rows in grouped.values():
+        if len(rows) <= 1:
+            continue
+        rows.sort(key=_survivor_key, reverse=True)
+        survivor = rows[0]
+        for duplicate in rows[1:]:
+            _merge_motive(survivor, duplicate)
+            dominant_remap[duplicate.motive_id] = survivor.motive_id
+            retire_ids.add(duplicate.motive_id)
+
+    if state.last_dominant_motive_id in dominant_remap:
+        state.last_dominant_motive_id = dominant_remap[state.last_dominant_motive_id]
+
+    if retire_stale:
+        protected = {
+            motive_id for motive_id, motive in state.motives.items()
+            if motive.status in {"dominant", "active"}
+        }
+        for motive_id, motive in state.motives.items():
+            if motive_id in protected or motive_id in retire_ids:
+                continue
+            age = max(0, int(tick) - motive.updated_tick)
+            targeted_resolved = (
+                bool(motive.target)
+                and motive.status in {"satisfied", "impossible"}
+                and age >= 24
+            )
+            targeted_weak = (
+                bool(motive.target)
+                and motive.status in {"latent", "inhibited"}
+                and motive.strength < 0.22
+                and motive.persistence < 0.20
+                and age >= 48
+            )
+            if targeted_resolved or targeted_weak:
+                retire_ids.add(motive_id)
+
+    survivors = [
+        motive for motive_id, motive in state.motives.items()
+        if motive_id not in retire_ids
+    ]
+    if len(survivors) > MAX_MOTIVES:
+        survivors.sort(
+            key=lambda m: (
+                m.status == "dominant",
+                m.status == "active",
+                not bool(m.target),
+                _STATUS_PRIORITY.get(m.status, 0),
+                m.persistence,
+                m.strength,
+                m.urgency,
+                m.updated_tick,
+            ),
+            reverse=True,
+        )
+        keep_ids = {m.motive_id for m in survivors[:MAX_MOTIVES]}
+        retire_ids.update(m.motive_id for m in survivors[MAX_MOTIVES:] if m.motive_id not in keep_ids)
+
+    if retire_ids:
+        state.graph.remove_nodes({_ref("motive", motive_id) for motive_id in retire_ids})
+        for motive_id in retire_ids:
+            state.motives.pop(motive_id, None)
+        if state.last_dominant_motive_id in retire_ids:
+            state.last_dominant_motive_id = None
 
 
 @dataclass(frozen=True)
@@ -377,8 +477,15 @@ class MotivatedCognitionEngine:
 
     def __init__(self, state: MotivatedCognitionState | None = None) -> None:
         self.state = state or MotivatedCognitionState()
+        _compact_motive_state(
+            self.state,
+            tick=max((m.updated_tick for m in self.state.motives.values()), default=0),
+            retire_stale=False,
+        )
 
-    def _pressure_map(self, subject: SubjectState, event: WorldEvent) -> dict[tuple[str, str], tuple[str, float]]:
+    def _pressure_map(
+        self, subject: SubjectState, event: WorldEvent
+    ) -> dict[tuple[str, str], tuple[str, float]]:
         tags = {str(tag).lower() for tag in event.tags}
         fear = _clamp(subject.affect.get("fear", 0.0))
         loneliness = _clamp(subject.affect.get("loneliness", 0.0))
@@ -393,7 +500,9 @@ class MotivatedCognitionEngine:
         threat_event = _clamp(event.intensity if "threat" in tags else 0.0)
         obstacle = _clamp(event.intensity if tags & {"obstacle", "blocked"} else 0.0)
         novel = _clamp(event.intensity if tags & {"novel", "mystery", "unknown"} else 0.0)
-        coherence_disruption = _clamp(event.intensity if tags & COHERENCE_DISRUPTION_TAGS else 0.0)
+        coherence_disruption = _clamp(
+            event.intensity if tags & COHERENCE_DISRUPTION_TAGS else 0.0
+        )
         baseline_coherence_pressure = max(1.0 - coherence, unease * 0.45)
         coherence_pressure = max(baseline_coherence_pressure, coherence_disruption * 0.88)
         coherence_source = (
@@ -401,7 +510,6 @@ class MotivatedCognitionEngine:
             if coherence_disruption * 0.88 > baseline_coherence_pressure
             else "need:coherence"
         )
-
         rows: dict[tuple[str, str], tuple[str, float]] = {
             ("safety", ""): ("need:safety", max(1.0 - safety, fear * 0.9, threat_event)),
             ("energy", ""): ("need:energy", 1.0 - energy),
@@ -417,7 +525,9 @@ class MotivatedCognitionEngine:
             relationship_value = 0.50
             if relation is not None:
                 relationship_value = max(relation.attachment, relation.trust * 0.8)
-            rows[("repair", target)] = ("relationship", _clamp(0.42 + 0.45 * relationship_value))
+            rows[("repair", target)] = (
+                "relationship", _clamp(0.42 + 0.45 * relationship_value)
+            )
         due_pressure = 0.0
         due_actor = ""
         for item in subject.commitments.values():
@@ -427,7 +537,9 @@ class MotivatedCognitionEngine:
                 pressure = 0.22 * item.importance
             else:
                 distance = item.due_tick - (subject.tick + 1)
-                pressure = item.importance * (0.35 if distance > 8 else 0.55 if distance > 2 else 0.82)
+                pressure = item.importance * (
+                    0.35 if distance > 8 else 0.55 if distance > 2 else 0.82
+                )
             if pressure > due_pressure:
                 due_pressure = pressure
                 due_actor = item.actor
@@ -436,18 +548,16 @@ class MotivatedCognitionEngine:
         return rows
 
     def _existing_motive(self, theme: str, target: str) -> MotiveRecord | None:
-        for motive in self.state.motives.values():
-            if motive.theme == theme and motive.target == target and motive.status != "impossible":
-                return motive
-        return None
+        matches = [
+            motive for motive in self.state.motives.values()
+            if motive.theme == theme and motive.target == target
+        ]
+        if not matches:
+            return None
+        return max(matches, key=_survivor_key)
 
     def _ensure_motive(
-        self,
-        theme: str,
-        source: str,
-        target: str,
-        pressure: float,
-        tick: int,
+        self, theme: str, source: str, target: str, pressure: float, tick: int
     ) -> MotiveRecord | None:
         motive = self._existing_motive(theme, target)
         if motive is None and pressure < 0.34:
@@ -467,16 +577,19 @@ class MotivatedCognitionEngine:
                 created_tick=tick,
                 updated_tick=tick,
                 links=tuple(
-                    x
-                    for x in (
+                    x for x in (
                         _ref("concept", theme),
                         _ref("person", target) if target else "",
-                    )
-                    if x
+                    ) if x
                 ),
             )
             self.state.motives[motive.motive_id] = motive
         else:
+            if motive.status == "impossible":
+                if pressure < 0.34:
+                    return motive
+                motive.status = "latent"
+                motive.inhibition *= 0.35
             motive.inhibition *= 0.72
             motive.strength = _clamp(motive.strength * 0.70 + pressure * 0.30)
             motive.urgency = _clamp(motive.urgency * 0.72 + pressure * 0.28)
@@ -484,6 +597,8 @@ class MotivatedCognitionEngine:
                 motive.persistence = _clamp(motive.persistence + 0.045)
             else:
                 motive.persistence = _clamp(motive.persistence - 0.035)
+            if source.startswith("appraisal:") or motive.source.startswith("need:"):
+                motive.source = source
             motive.updated_tick = tick
         if pressure <= 0.16 and motive.strength <= 0.28:
             motive.status = "satisfied"
@@ -513,15 +628,12 @@ class MotivatedCognitionEngine:
         return score
 
     def _select_motives(
-        self,
-        subject: SubjectState,
-        event: WorldEvent,
-        tick: int,
+        self, subject: SubjectState, event: WorldEvent, tick: int
     ) -> tuple[str | None, tuple[str, ...]]:
         candidates = [
-            motive
-            for motive in self.state.motives.values()
-            if motive.status not in {"satisfied", "impossible"} and (motive.strength >= 0.22 or motive.persistence >= 0.24)
+            motive for motive in self.state.motives.values()
+            if motive.status not in {"satisfied", "impossible"}
+            and (motive.strength >= 0.22 or motive.persistence >= 0.24)
         ]
         if not candidates:
             self.state.last_dominant_motive_id = None
@@ -539,11 +651,10 @@ class MotivatedCognitionEngine:
             previous_score = self._motive_score(previous, event)
             if previous_score + switching_margin >= top_score:
                 top = previous
-                top_score = previous_score
+
         active = tuple(m.motive_id for _, m in ranked[:MAX_ACTIVE_MOTIVES])
         if top.motive_id not in active:
-            active = (top.motive_id, *active[: MAX_ACTIVE_MOTIVES - 1])
-
+            active = (top.motive_id, *active[:MAX_ACTIVE_MOTIVES - 1])
         for _, motive in ranked:
             if motive.motive_id == top.motive_id:
                 motive.status = "dominant"
@@ -563,10 +674,7 @@ class MotivatedCognitionEngine:
         return top.motive_id, active
 
     def derive_modulation(
-        self,
-        subject: SubjectState,
-        event: WorldEvent,
-        dominant_motive: MotiveRecord | None,
+        self, subject: SubjectState, event: WorldEvent, dominant_motive: MotiveRecord | None
     ) -> CognitiveModulation:
         tags = {str(tag).lower() for tag in event.tags}
         threat_signal = max(
@@ -579,23 +687,27 @@ class MotivatedCognitionEngine:
         competence_pressure = 1.0 - _clamp(subject.needs.get("competence", 0.55))
         motive_urgency = dominant_motive.urgency if dominant_motive is not None else 0.0
 
-        mobilization = _clamp(0.24 + 0.58 * threat_signal + 0.22 * event.intensity + 0.14 * motive_urgency - 0.18 * fatigue)
-        resolution = _clamp(0.70 + 0.22 * curiosity - 0.52 * threat_signal - 0.46 * fatigue)
+        mobilization = _clamp(
+            0.24 + 0.58 * threat_signal + 0.22 * event.intensity
+            + 0.14 * motive_urgency - 0.18 * fatigue
+        )
+        resolution = _clamp(
+            0.70 + 0.22 * curiosity - 0.52 * threat_signal - 0.46 * fatigue
+        )
         switching_threshold = _clamp(0.16 + 0.46 * threat_signal + 0.18 * fatigue)
         competitor_inhibition = _clamp(0.10 + 0.62 * threat_signal)
-        exploration = _clamp(0.24 + 0.66 * curiosity - 0.72 * threat_signal - 0.34 * fatigue)
-        familiar_strategy_bias = _clamp(0.18 + 0.56 * competence_pressure + 0.34 * threat_signal)
+        exploration = _clamp(
+            0.24 + 0.66 * curiosity - 0.72 * threat_signal - 0.34 * fatigue
+        )
+        familiar_strategy_bias = _clamp(
+            0.18 + 0.56 * competence_pressure + 0.34 * threat_signal
+        )
         interruption = _clamp(0.18 + 0.72 * threat_signal + 0.12 * fatigue)
         retrieval_budget = max(2, min(7, 2 + round(resolution * 5)))
         propagation_depth = max(1, min(4, 1 + round(resolution * 3)))
         fanout = max(2, min(8, 2 + round((resolution + exploration) * 3)))
         planning_depth = max(1, min(4, 1 + round(resolution * 3)))
-        route_branching = 1
-        if exploration >= 0.34:
-            route_branching += 1
-        if resolution >= 0.66:
-            route_branching += 1
-        route_branching = max(1, min(3, route_branching))
+        route_branching = 1 + int(exploration >= 0.34) + int(resolution >= 0.66)
         return CognitiveModulation(
             mobilization=mobilization,
             resolution=resolution,
@@ -606,7 +718,7 @@ class MotivatedCognitionEngine:
             propagation_depth=propagation_depth,
             propagation_fanout=fanout,
             planning_depth=planning_depth,
-            route_branching=route_branching,
+            route_branching=max(1, min(3, route_branching)),
             familiar_strategy_bias=familiar_strategy_bias,
             interruption_sensitivity=interruption,
         )
@@ -623,22 +735,33 @@ class MotivatedCognitionEngine:
         for person in memory.people[:6]:
             graph.connect_both(memory_ref, _ref("person", person), "person", 0.72, tick, learn=False)
         if memory.source and memory.source not in {"self", "world", "system"}:
-            graph.connect_both(memory_ref, _ref("person", memory.source), "source", 0.64, tick, learn=False)
+            graph.connect_both(
+                memory_ref, _ref("person", memory.source), "source", 0.64, tick, learn=False
+            )
         if memory.provenance is MemoryProvenance.OUTCOME:
-            for action in MOTIVE_ACTION_PREFERENCES.values():
-                for name in action:
+            for actions in MOTIVE_ACTION_PREFERENCES.values():
+                for name in actions:
                     if name in semantic_tags:
-                        graph.connect_both(memory_ref, _ref("action", name), "outcome_action", 0.62, tick, learn=False)
+                        graph.connect_both(
+                            memory_ref, _ref("action", name), "outcome_action",
+                            0.62, tick, learn=False,
+                        )
         previous = None
         if len(subject.memories) >= 2:
             try:
-                index = next(i for i, row in enumerate(subject.memories) if row.memory_id == memory.memory_id)
+                index = next(
+                    i for i, row in enumerate(subject.memories)
+                    if row.memory_id == memory.memory_id
+                )
                 if index > 0:
                     previous = subject.memories[index - 1]
             except StopIteration:
-                previous = None
+                pass
         if previous is not None:
-            graph.connect_both(memory_ref, _ref("memory", previous.memory_id), "temporal", 0.34, tick, learn=False)
+            graph.connect_both(
+                memory_ref, _ref("memory", previous.memory_id), "temporal",
+                0.34, tick, learn=False,
+            )
         self.state.indexed_memory_ids.add(memory.memory_id)
 
     def index_canonical_state(self, subject: SubjectState) -> None:
@@ -646,38 +769,32 @@ class MotivatedCognitionEngine:
             self._index_memory(subject, memory)
         for key in subject.beliefs:
             self.state.graph.connect_both(
-                _ref("belief", key), _ref("concept", key), "belief_topic", 0.46, subject.tick, learn=False
+                _ref("belief", key), _ref("concept", key), "belief_topic",
+                0.46, subject.tick, learn=False,
             )
         for person in subject.relationships:
             self.state.graph.connect(
-                _ref("person", person), _ref("concept", "social"), "social", 0.28, subject.tick, learn=False
+                _ref("person", person), _ref("concept", "social"), "social",
+                0.28, subject.tick, learn=False,
             )
         for motive in self.state.motives.values():
             motive_ref = _ref("motive", motive.motive_id)
             self.state.graph.connect_both(
-                motive_ref, _ref("concept", motive.theme), "motive_theme", 0.74, subject.tick, learn=False
+                motive_ref, _ref("concept", motive.theme), "motive_theme",
+                0.74, subject.tick, learn=False,
             )
             if motive.target:
                 self.state.graph.connect_both(
-                    motive_ref, _ref("person", motive.target), "motive_target", 0.66, subject.tick, learn=False
+                    motive_ref, _ref("person", motive.target), "motive_target",
+                    0.66, subject.tick, learn=False,
                 )
 
     def prepare_cycle(self, subject: SubjectState, event: WorldEvent) -> CognitiveCycle:
         tick = subject.tick + 1
+        _compact_motive_state(self.state, tick=tick)
         for (theme, target), (source, pressure) in self._pressure_map(subject, event).items():
             self._ensure_motive(theme, source, target, pressure, tick)
-        if len(self.state.motives) > MAX_MOTIVES:
-            ordered = sorted(
-                self.state.motives.values(),
-                key=lambda m: (
-                    m.status == "dominant",
-                    m.status in {"active", "latent"},
-                    m.persistence,
-                    m.updated_tick,
-                ),
-                reverse=True,
-            )
-            self.state.motives = {m.motive_id: m for m in ordered[:MAX_MOTIVES]}
+        _compact_motive_state(self.state, tick=tick)
 
         dominant_id, active_ids = self._select_motives(subject, event, tick)
         dominant = self.state.motives.get(dominant_id or "")
@@ -689,14 +806,15 @@ class MotivatedCognitionEngine:
             seeds[_ref("person", event.source)] = 0.92
         for tag in event.tags:
             if _semantic_tag(tag):
-                seeds[_ref("concept", tag)] = max(seeds.get(_ref("concept", tag), 0.0), 0.78)
+                ref = _ref("concept", tag)
+                seeds[ref] = max(seeds.get(ref, 0.0), 0.78)
         for rank, motive_id in enumerate(active_ids):
             seeds[_ref("motive", motive_id)] = max(0.42, 0.88 - rank * 0.16)
             motive = self.state.motives.get(motive_id)
             if motive is not None:
-                seeds[_ref("concept", motive.theme)] = max(
-                    seeds.get(_ref("concept", motive.theme), 0.0), 0.68 - rank * 0.10
-                )
+                ref = _ref("concept", motive.theme)
+                seeds[ref] = max(seeds.get(ref, 0.0), 0.68 - rank * 0.10)
+
         activation = self.state.graph.spread(
             seeds,
             depth=modulation.propagation_depth,
@@ -705,24 +823,18 @@ class MotivatedCognitionEngine:
             max_active=64,
         )
         memory_refs = activation.top("memory:", modulation.retrieval_budget)
-        activated_memory_ids = tuple(ref.split(":", 1)[1] for ref in memory_refs)
         return CognitiveCycle(
             tick=tick,
             dominant_motive_id=dominant_id,
             active_motive_ids=active_ids,
             modulation=modulation,
             activation=activation,
-            activated_memory_ids=activated_memory_ids,
+            activated_memory_ids=tuple(ref.split(":", 1)[1] for ref in memory_refs),
         )
 
     def learn_after_step(
-        self,
-        subject: SubjectState,
-        event: WorldEvent,
-        cycle: CognitiveCycle,
-        *,
-        recalled_memory_ids: Iterable[str],
-        selected_action: str,
+        self, subject: SubjectState, event: WorldEvent, cycle: CognitiveCycle, *,
+        recalled_memory_ids: Iterable[str], selected_action: str,
     ) -> None:
         self.index_canonical_state(subject)
         graph = self.state.graph
@@ -730,29 +842,45 @@ class MotivatedCognitionEngine:
         context_refs: list[str] = []
         if event.source and event.source not in {"self", "world", "system"}:
             context_refs.append(_ref("person", event.source))
-        context_refs.extend(_ref("concept", tag) for tag in event.tags if _semantic_tag(tag))
+        context_refs.extend(
+            _ref("concept", tag) for tag in event.tags if _semantic_tag(tag)
+        )
         memory_refs = [_ref("memory", memory_id) for memory_id in recalled_memory_ids]
         for motive_id in cycle.active_motive_ids:
+            if motive_id not in self.state.motives:
+                continue
             motive_ref = _ref("motive", motive_id)
             for target in (*context_refs[:6], *memory_refs[:4]):
                 graph.connect_both(motive_ref, target, "coactive", 0.24, tick, learn=True)
-            graph.connect_both(motive_ref, _ref("action", selected_action), "action_context", 0.28, tick, learn=True)
+            graph.connect_both(
+                motive_ref, _ref("action", selected_action), "action_context",
+                0.28, tick, learn=True,
+            )
         for left in context_refs[:5]:
             for right in context_refs[:5]:
                 if left < right:
                     graph.connect_both(left, right, "cooccurs", 0.18, tick, learn=True)
 
-    def record_outcome(self, action: str, success: float, valence: float, tags: Iterable[str], tick: int) -> None:
+    def record_outcome(
+        self, action: str, success: float, valence: float,
+        tags: Iterable[str], tick: int,
+    ) -> None:
         success = _clamp(success)
         reward = max(-1.0, min(1.0, (success - 0.5) * 1.4 + float(valence) * 0.45))
         old = self.state.strategy_success.get(action, 0.0)
-        self.state.strategy_success[action] = max(-1.0, min(1.0, old * 0.82 + reward * 0.18))
+        self.state.strategy_success[action] = max(
+            -1.0, min(1.0, old * 0.82 + reward * 0.18)
+        )
         action_ref = _ref("action", action)
         for tag in tags:
             if _semantic_tag(tag):
                 self.state.graph.connect_both(
-                    action_ref, _ref("concept", tag), "outcome_context", 0.34 + 0.20 * max(0.0, reward), tick, learn=True
+                    action_ref, _ref("concept", tag), "outcome_context",
+                    0.34 + 0.20 * max(0.0, reward), tick, learn=True,
                 )
+
+    def compact(self, tick: int, *, retire_stale: bool = True) -> None:
+        _compact_motive_state(self.state, tick=tick, retire_stale=retire_stale)
 
     def dominant_motive(self) -> MotiveRecord | None:
         return self.state.motives.get(self.state.last_dominant_motive_id or "")

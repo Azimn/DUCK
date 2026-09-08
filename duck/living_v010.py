@@ -162,6 +162,9 @@ class LivingDuck(PlanningLivingDuck):
         if "conflict" in tags:
             base["repair"] += 0.07
             base["ask"] += 0.04
+        if "repair_needed" in tags:
+            base["repair"] += 0.18
+            base["respond"] += 0.04
         if tags & {"novel", "mystery", "unknown"}:
             base["explore"] += 0.08
             base["ask"] += 0.05
@@ -192,7 +195,7 @@ class LivingDuck(PlanningLivingDuck):
         if activated_tags & {"novel", "mystery", "unknown"}:
             base["ask"] += 0.04
             base["explore"] += 0.04
-        if activated_tags & {"repair", "conflict"}:
+        if activated_tags & {"repair", "repair_needed", "conflict"}:
             base["repair"] += 0.04
 
         rows: list[ActionCandidate] = []
@@ -348,7 +351,7 @@ class LivingDuck(PlanningLivingDuck):
             return "investigate", f"I want to understand what I encountered: {event.text.strip()}"
         if tags & {"obstacle", "blocked"} and motive.theme in {"autonomy", "competence", "coherence"}:
             return "overcome", f"I want to work out a way past this obstacle: {event.text.strip()}"
-        if tags & {"repair_needed", "conflict"} and motive.theme in {"repair", "affiliation", "coherence", "commitment"}:
+        if tags & {"repair", "repair_needed", "conflict"} and motive.theme in {"repair", "affiliation", "coherence", "commitment"}:
             return "repair", f"I want to repair what went wrong with {event.source}."
         return None
 
@@ -424,7 +427,18 @@ class LivingDuck(PlanningLivingDuck):
         )
         return augmented, tuple(dict.fromkeys(recalled_ids))
 
+    @staticmethod
+    def _normalize_control_event(event: WorldEvent) -> WorldEvent:
+        """Add control semantics without rewriting autobiographical event content."""
+        tags = tuple(dict.fromkeys(str(tag).lower() for tag in event.tags))
+        if "repair" in tags and "repair_needed" not in tags:
+            tags = (*tags, "repair_needed")
+        if tags == event.tags:
+            return event
+        return replace(event, tags=tags)
+
     def step(self, event: WorldEvent, *, allow_inner_speech: bool = True):
+        event = self._normalize_control_event(event)
         cycle = self.control.prepare_cycle(self.state, event)
         self.current_cycle = cycle
         result = super().step(event, allow_inner_speech=False)

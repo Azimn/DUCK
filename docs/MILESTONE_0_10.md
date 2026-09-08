@@ -20,6 +20,24 @@ The same external situation must be evaluated under at least two different inter
 
 A selected motive must be able to recruit or prioritize a goal, and modulation must be able to constrain route search depth or branching. Planning may remain deterministic for the milestone, but route generation and evaluation must consume motive and modulation context rather than only shallow utility terms. The v0.9 planner may be reused, refactored, or replaced if another bounded planner better fits the new control spine.
 
+## Automatic policy and selective executive acceptance contract
+
+The organism must not require a continuously running executive model. Routine endogenous cycles and sufficiently simple immediate affordances must be executable through the substrate's automatic policy. Severe safety interruption may also bypass deliberative executive recruitment when rapid protective behavior is already well specified by the current control state.
+
+A transient cognitive field may contain current mechanistic context, active motive IDs, associative availability, modulation, candidate affordance scores, and other developer-only state. That field is not the executive-provider API and must not be persisted as canonical subject identity.
+
+Executive cognition is optional and replaceable. Recruitment must be conditional rather than automatic. Novelty, contradiction, unresolved obstacles, repair conflicts, close affordance competition, or competing active motives may justify recruitment, while quiet routine cycles must not continuously invoke the provider.
+
+An `ExecutiveCognitionProvider` must receive only an `ExperientialFrame` containing validated first-person prose. It must not receive raw cognitive-field state, motive strengths, activations, utility scores, graph IDs, modulation coefficients, route scores, telemetry, or persistence metadata.
+
+The provider may return a bounded proposal, but the proposal is not subject authority. A proposed immediate action must be validated against the organism's currently available affordances. Invalid, unavailable, malformed, failed, or absent proposals must fall back to automatic policy without corrupting canonical state.
+
+Provider-generated intention prose must not automatically become autobiographical memory, self-narrative, identity, belief, motive, goal, plan, commitment, or outcome. Any future mechanism that allows an executive proposal to create or revise persistent goals or plans must route through explicit organism-side validation and adoption.
+
+Executive provider configuration is host/runtime configuration rather than persistent identity. Restarting a subject without supplying a provider must preserve the subject and its cognitive state without silently serializing or restoring the provider or a prior transient cognitive field.
+
+Private inner voice and executive proposal are separate contracts. Inner voice may generate private first-person thought from experiential state after projection. Executive cognition is selectively recruited to propose action or intention before final action selection. Neither provider owns the continuing subject.
+
 ## Experiential firewall acceptance contract
 
 The experiential firewall is a technical requirement of the architecture, not a rendering preference.
@@ -40,18 +58,18 @@ The renderer is not subject authority. It cannot directly write canonical memori
 
 ## Lesion, persistence, and longitudinal requirements
 
-The milestone must pass language-lesion testing. Motive generation, motive persistence, motive competition, associative propagation, modulation, retrieval changes, planning recruitment, action selection, outcome learning, experiential projection, and restart continuity must operate with inner speech disabled and with no LLM provider.
+The milestone must pass language-lesion testing. Motive generation, motive persistence, motive competition, associative propagation, modulation, retrieval changes, planning recruitment, automatic action selection, outcome learning, experiential projection, and restart continuity must operate with inner speech disabled and with no LLM provider. Optional language-dependent executive cognition must be removable without disabling the substrate control spine.
 
-The milestone must pass persistence testing. Motives, learned graph associations, persistent modulation-relevant learned state, and versioned private interior state must survive process restart without creating a second subject authority.
+The milestone must pass persistence testing. Motives, learned graph associations, persistent modulation-relevant learned state, and versioned private interior state must survive process restart without creating a second subject authority. Executive provider objects and transient cognitive fields must not be serialized as cognitive identity.
 
 The milestone must pass longitudinal testing. A multi-day synthetic-life scenario must include competing safety, curiosity, energy, affiliation, competence, and coherence pressures; recurring people; commitments; a threat episode; a novel problem; fatigue; successful and failed plans; quiet recovery; and at least one restart. The test must show that motives rise, fall, persist, become inhibited, recruit goals, and stop dominating when their target condition changes.
 
-The milestone must include negative controls. Ordinary quiet state must not continuously generate new motives or graph activation. A satisfied motive must not remain permanently dominant. Threat narrowing must relax after safety recovery. Curiosity broadening must not override severe threat. Fatigue must not permanently cripple planning after energy recovery. Raw mechanistic telemetry must not appear in private cognition or public language packets.
+The milestone must include negative controls. Ordinary quiet state must not continuously generate new motives, graph activation, or executive calls. A satisfied motive must not remain permanently dominant. Threat narrowing must relax after safety recovery. Curiosity broadening must not override severe threat. Fatigue must not permanently cripple planning after energy recovery. Raw mechanistic telemetry must not appear in private cognition, executive-provider input, or public language packets.
 
 ## Promotion rule
 
 The branch public API may point directly at the v0.10 MicroPsiDUCK runtime and host. Version 0.9 remains the preserved comparison baseline on `main`; v0.10 does not need to masquerade as v0.9 while under development.
 
-Before promotion, the full v0.10 test matrix must pass on supported Python versions, including documentation validation, architectural unit tests, language-lesion tests, persistence and restart tests, experiential-firewall tests, long-horizon simulation, and any historical behavioral regressions still designated as scientifically relevant.
+Before promotion, the full v0.10 test matrix must pass on supported Python versions, including documentation validation, architectural unit tests, language-lesion tests, persistence and restart tests, experiential-firewall tests, selective-executive tests, long-horizon simulation, and any historical behavioral regressions still designated as scientifically relevant.
 
 Passing this milestone establishes a tested modern motivated-cognition architecture under the defined simulations. It does not establish phenomenal consciousness, human-equivalent cognition, general psychological validity, or unrestricted autonomous agency.

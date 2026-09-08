@@ -44,6 +44,13 @@ def _novel_event() -> WorldEvent:
     )
 
 
+def _candidate_utilities(step) -> dict[str, float]:
+    return {
+        str(row["name"]): float(row["utility"])
+        for row in step.developer_trace["candidate_actions"]
+    }
+
+
 def test_quiet_heartbeat_stays_automatic_and_does_not_invoke_executive():
     provider = RecordingExecutive("explore")
     duck = LivingDuck(_state("executive-quiet"), executive=provider)
@@ -53,11 +60,15 @@ def test_quiet_heartbeat_stays_automatic_and_does_not_invoke_executive():
     assert trace["recruited"] is False
     assert trace["invoked"] is False
     assert trace["reasons"] == ["routine_endogenous"]
+    assert trace["selection_source"] == "automatic"
     assert provider.calls == []
     assert step.selected_action == "wait"
 
 
 def test_novelty_recruits_executive_through_experiential_frame_only():
+    baseline = LivingDuck(_state("executive-novelty-baseline"))
+    baseline_step = baseline.step(_novel_event(), allow_inner_speech=True)
+
     provider = RecordingExecutive("ask")
     duck = LivingDuck(_state("executive-novelty"), executive=provider)
     step = duck.step(_novel_event(), allow_inner_speech=True)
@@ -66,12 +77,16 @@ def test_novelty_recruits_executive_through_experiential_frame_only():
     assert trace["recruited"] is True
     assert trace["invoked"] is True
     assert trace["accepted"] is True
+    assert trace["selection_source"] == "executive"
+    assert trace["automatic_action"] == baseline_step.selected_action
     assert "novelty" in trace["reasons"]
     assert step.selected_action == "ask"
     assert len(provider.calls) == 1
     assert provider.calls[0].prose
     assert duck.last_cognitive_field is not None
     assert duck.last_cognitive_field.event_tags == ("novel", "mystery")
+    assert _candidate_utilities(step) == _candidate_utilities(baseline_step)
+    assert dict(duck.last_cognitive_field.candidate_utilities) == _candidate_utilities(step)
 
 
 def test_unavailable_executive_action_is_rejected_and_automatic_policy_wins():
@@ -86,6 +101,7 @@ def test_unavailable_executive_action_is_rejected_and_automatic_policy_wins():
     assert trace["recruited"] is True
     assert trace["invoked"] is True
     assert trace["accepted"] is False
+    assert trace["selection_source"] == "automatic"
     assert trace["proposal_rejected"] == "unavailable_action"
     assert step.selected_action == expected
 
@@ -100,6 +116,7 @@ def test_language_lesion_disables_optional_executive_but_not_control_spine():
     assert trace["provider_available"] is True
     assert trace["provider_allowed"] is False
     assert trace["invoked"] is False
+    assert trace["selection_source"] == "automatic"
     assert provider.calls == []
     assert step.inner_cognition.thought is None
     assert step.selected_action
@@ -128,6 +145,7 @@ def test_severe_safety_interrupt_bypasses_deliberative_executive():
     assert trace["recruited"] is False
     assert trace["reasons"] == ["automatic_safety_override"]
     assert trace["invoked"] is False
+    assert trace["selection_source"] == "automatic"
     assert provider.calls == []
     assert duck.control.dominant_motive() is not None
     assert duck.control.dominant_motive().theme == "safety"

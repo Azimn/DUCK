@@ -9,7 +9,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-from .host import PersistentDuckHost
+from .host_v09 import PersistentDuckHostV09 as PersistentDuckHost
 from .living import WorldEvent
 
 

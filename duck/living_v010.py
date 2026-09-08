@@ -71,9 +71,6 @@ class LivingDuck(PlanningLivingDuck):
         self.control = MotivatedCognitionEngine(cognitive_state)
         self.current_cycle: CognitiveCycle | None = None
         self.last_experience = ExperientialFrame()
-        # Parent cognition is never invoked directly by v0.10 step. The parent loop
-        # runs with language lesioned, then v0.10 projects the final cognitive field
-        # through the experiential firewall and optionally recruits private language.
         super().__init__(
             state,
             firewall=experiential_firewall,
@@ -86,13 +83,17 @@ class LivingDuck(PlanningLivingDuck):
 
     def _dominant_theme(self) -> str | None:
         motive = self.control.motive_for(
-            self.current_cycle.dominant_motive_id if self.current_cycle is not None else self.cognitive_state.last_dominant_motive_id
+            self.current_cycle.dominant_motive_id
+            if self.current_cycle is not None
+            else self.cognitive_state.last_dominant_motive_id
         )
         return motive.theme if motive is not None else None
 
-    def _motive_action_weight(self, action: str) -> float:
+    def _motive_action_weight(self, action: str, event: WorldEvent) -> float:
         if self.current_cycle is None:
             return 0.0
+        tags = {str(tag).lower() for tag in event.tags}
+        quiet_endogenous = event.kind == "endogenous" and "opportunity_active" not in tags
         total = 0.0
         for rank, motive_id in enumerate(self.current_cycle.active_motive_ids):
             motive = self.control.motive_for(motive_id)
@@ -100,6 +101,21 @@ class LivingDuck(PlanningLivingDuck):
                 continue
             preferences = MOTIVE_ACTION_PREFERENCES.get(motive.theme, ())
             if action not in preferences:
+                continue
+            relevant = (
+                (motive.theme == "safety" and ("threat" in tags or motive.strength >= 0.72))
+                or (motive.theme == "energy" and (quiet_endogenous or "rest" in tags))
+                or (motive.theme == "affiliation" and ("social" in tags or quiet_endogenous))
+                or (motive.theme == "curiosity" and bool(tags & {"novel", "mystery", "unknown", "question"}))
+                or (motive.theme == "competence" and bool(tags & {"obstacle", "blocked", "challenge", "failed_attempt"}))
+                or (motive.theme == "coherence" and bool(tags & {"question", "unknown", "mystery", "conflict", "repair_needed"}))
+                or (motive.theme == "autonomy" and bool(tags & {"obstacle", "blocked"}))
+                or (motive.theme == "repair" and bool(tags & {"conflict", "repair", "repair_needed"}))
+                or (motive.theme == "commitment" and ("commitment" in tags or "opportunity_active" in tags))
+            )
+            if not relevant:
+                continue
+            if quiet_endogenous and motive.theme in {"energy", "affiliation"} and motive.strength < 0.72:
                 continue
             preference_rank = preferences.index(action)
             dominance = 1.0 if motive_id == self.current_cycle.dominant_motive_id else 0.46
@@ -113,11 +129,7 @@ class LivingDuck(PlanningLivingDuck):
         relation: RelationshipState,
         memories: list[MemoryRecord],
     ) -> list[ActionCandidate]:
-        """Local affordance arbitration downstream of motive and modulation.
-
-        Numeric utility remains intentionally local. Needs and affect no longer enter
-        this stage as direct global action terms.
-        """
+        """Local affordance arbitration downstream of motive and modulation."""
         modulation = self.current_cycle.modulation if self.current_cycle is not None else self._idle_modulation()
         tags = {str(tag).lower() for tag in event.tags}
         base = {
@@ -134,6 +146,11 @@ class LivingDuck(PlanningLivingDuck):
         if event.kind == "endogenous" and not event.text:
             base["respond"] -= 0.10
             base["approach"] -= 0.04
+        quiet_endogenous = event.kind == "endogenous" and "opportunity_active" not in tags
+        if quiet_endogenous:
+            base["wait"] += 0.34
+            for action in ("respond", "step_back", "approach", "ask", "explore", "rest", "repair", "seek_connection"):
+                base[action] -= 0.05
         if "social" in tags:
             base["respond"] += 0.09
         if "supportive" in tags:
@@ -152,7 +169,6 @@ class LivingDuck(PlanningLivingDuck):
             base["explore"] += 0.05
             base["ask"] += 0.04
 
-        # Relationship values are local affordance evidence, not global drives.
         if relation.trust >= 0.68:
             base["approach"] += 0.08
             base["respond"] += 0.04
@@ -181,7 +197,7 @@ class LivingDuck(PlanningLivingDuck):
 
         rows: list[ActionCandidate] = []
         for action, utility in base.items():
-            motive_term = self._motive_action_weight(action)
+            motive_term = self._motive_action_weight(action, event)
             learned = self.cognitive_state.strategy_success.get(action, 0.0)
             learned_term = max(0.0, learned) * 0.20 * modulation.familiar_strategy_bias
             adaptive = self.state.adaptive.bias(action, event.tags) * 0.18
@@ -192,6 +208,29 @@ class LivingDuck(PlanningLivingDuck):
                     ("affordance", "motive", "modulation"),
                 )
             )
+
+        if event.kind == "endogenous" and "opportunity_active" in tags:
+            concern_id = next(
+                (tag.split(":", 1)[1] for tag in event.tags if tag.startswith("concern_id:")),
+                "",
+            )
+            try:
+                concern = self._concern_from_memory(self._concern_memory(concern_id))
+            except KeyError:
+                concern = None
+            if concern is not None:
+                recent = self.state.recent_actions[-6:]
+                adjusted: list[ActionCandidate] = []
+                for candidate in rows:
+                    utility = candidate.utility
+                    if candidate.name == concern.preferred_action:
+                        utility += 0.50 + 0.36 * concern.priority + 0.16 * concern.urgency
+                        repeats = sum(1 for previous in recent[-3:] if previous == candidate.name)
+                        utility -= min(0.18, repeats * 0.06)
+                    elif candidate.name == "wait":
+                        utility -= 0.10 * concern.priority
+                    adjusted.append(ActionCandidate(candidate.name, utility, candidate.reasons))
+                rows = adjusted
         return rows
 
     def _idle_modulation(self) -> CognitiveModulation:
@@ -217,6 +256,8 @@ class LivingDuck(PlanningLivingDuck):
             return False, "too_early"
         if self.state.tick < concern.cooldown_until:
             return False, "cooldown"
+        if self.state.needs.get("energy", 0.0) < concern.min_energy:
+            return False, "low_energy"
         if concern.required_tags and not set(concern.required_tags).issubset(context_tags):
             return False, "context_missing"
         if set(concern.blocked_tags) & context_tags:
@@ -280,8 +321,8 @@ class LivingDuck(PlanningLivingDuck):
         score += modulation.exploration * 0.26 * novelty
         score += modulation.resolution * 0.12 * complexity
         score -= (1.0 - modulation.resolution) * 0.34 * complexity
-        score += modulation.interruption_sensitivity * 0.30 * safety
-        score -= modulation.interruption_sensitivity * 0.18 * novelty
+        score += modulation.interruption_sensitivity * 0.65 * safety
+        score -= modulation.interruption_sensitivity * 0.35 * novelty
         learned = max(0.0, self.cognitive_state.strategy_success.get(action, 0.0))
         score += learned * 0.24 * modulation.familiar_strategy_bias
         return score
@@ -386,10 +427,6 @@ class LivingDuck(PlanningLivingDuck):
     def step(self, event: WorldEvent, *, allow_inner_speech: bool = True):
         cycle = self.control.prepare_cycle(self.state, event)
         self.current_cycle = cycle
-
-        # Parent mechanics, appraisal, memory, plans, and outcomes remain active, but
-        # parent language is always lesioned. v0.10 recruits language only after the
-        # motivated cognitive field has been projected into first-person experience.
         result = super().step(event, allow_inner_speech=False)
         moment, recalled_ids = self._augment_subjective_moment(
             result.subjective_moment,

@@ -60,6 +60,7 @@ class PersistentDuckHostV010:
         name: str = "Duck",
         subject_id: str | None = None,
         cognition=None,
+        executive=None,
         expression: ExpressionProvider | None = None,
         interpreter=None,
     ) -> "PersistentDuckHostV010":
@@ -78,7 +79,12 @@ class PersistentDuckHostV010:
             cognitive_state = MotivatedCognitionState()
         return cls(
             root_path,
-            LivingDuck(state, cognition=cognition, cognitive_state=cognitive_state),
+            LivingDuck(
+                state,
+                cognition=cognition,
+                executive=executive,
+                cognitive_state=cognitive_state,
+            ),
             expression=expression,
             interpreter=interpreter,
         )
@@ -256,6 +262,7 @@ class PersistentDuckHostV010:
             "motive_count": len(self.duck.cognitive_state.motives),
             "dominant_motive": dominant.theme if dominant is not None else None,
             "associative_edge_count": len(self.duck.cognitive_state.graph.edges),
+            "executive_provider_configured": self.duck.executive_provider is not None,
             "pending_action": state.pending_action.name if state.pending_action else None,
             "recent_actions": list(state.recent_actions[-8:]),
             "cognitive_schema": self.duck.cognitive_state.schema_version,

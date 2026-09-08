@@ -79,6 +79,7 @@ class LivingDuck(PlanningLivingDuck):
         self.last_cognitive_field: CognitiveField | None = None
         self._executive_allowed_for_step = True
         self._last_prediction_error = 0.0
+        self._pending_executive_action: str | None = None
         self._pending_executive_trace: dict[str, object] = {}
         super().__init__(
             state,
@@ -304,6 +305,7 @@ class LivingDuck(PlanningLivingDuck):
         memories: list[MemoryRecord],
         rows: list[ActionCandidate],
     ) -> list[ActionCandidate]:
+        self._pending_executive_action = None
         if not rows:
             self.last_cognitive_field = None
             self._pending_executive_trace = {
@@ -311,6 +313,7 @@ class LivingDuck(PlanningLivingDuck):
                 "invoked": False,
                 "accepted": False,
                 "reasons": ["no_affordances"],
+                "selection_source": "automatic",
             }
             return rows
 
@@ -326,6 +329,7 @@ class LivingDuck(PlanningLivingDuck):
             "automatic_action": automatic.name,
             "provider_available": self.executive_provider is not None,
             "provider_allowed": bool(self._executive_allowed_for_step),
+            "selection_source": "automatic",
         }
         self._pending_executive_trace = trace
         if not recruited or self.executive_provider is None or not self._executive_allowed_for_step:
@@ -347,28 +351,33 @@ class LivingDuck(PlanningLivingDuck):
             trace["proposal_rejected"] = "no_action"
             return rows
 
-        available = {candidate.name: candidate for candidate in rows}
+        available = {candidate.name for candidate in rows}
         if proposal.action not in available:
             trace["proposal_rejected"] = "unavailable_action"
             return rows
         trace["accepted"] = True
-        if proposal.action == automatic.name:
-            return rows
+        self._pending_executive_action = proposal.action
+        return rows
 
-        ceiling = max(candidate.utility for candidate in rows)
-        adjusted: list[ActionCandidate] = []
-        for candidate in rows:
-            if candidate.name == proposal.action:
-                adjusted.append(
-                    ActionCandidate(
-                        candidate.name,
-                        ceiling + 1e-6,
-                        tuple(dict.fromkeys((*candidate.reasons, "executive_proposal"))),
-                    )
-                )
-            else:
-                adjusted.append(candidate)
-        return adjusted
+    def _select_candidate(
+        self,
+        event: WorldEvent,
+        relation: RelationshipState,
+        memories: list[MemoryRecord],
+        candidates: list[ActionCandidate],
+    ) -> ActionCandidate:
+        automatic = super()._select_candidate(event, relation, memories, candidates)
+        proposed = self._pending_executive_action
+        if proposed is None:
+            return automatic
+        selected = next((candidate for candidate in candidates if candidate.name == proposed), None)
+        if selected is None:
+            self._pending_executive_trace["proposal_rejected"] = "unavailable_at_selection"
+            self._pending_executive_trace["accepted"] = False
+            self._pending_executive_trace["selection_source"] = "automatic"
+            return automatic
+        self._pending_executive_trace["selection_source"] = "executive"
+        return selected
 
     def _candidates(
         self,
@@ -688,6 +697,7 @@ class LivingDuck(PlanningLivingDuck):
         self.current_cycle = cycle
         self.last_cognitive_field = None
         self.last_executive_experience = ExperientialFrame()
+        self._pending_executive_action = None
         self._pending_executive_trace = {}
         self._executive_allowed_for_step = bool(allow_inner_speech)
         result = super().step(event, allow_inner_speech=False)

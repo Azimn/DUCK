@@ -8,7 +8,9 @@ This file defines which documents govern the current repository.
 
 `MILESTONE_0_10.md` is the executable acceptance contract for that phase.
 
-`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi/MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture or milestone.
+`EXPERIENTIAL_FIREWALL_v0.10.md` is a binding v0.10 interface contract. It tightens the subject-access boundary by requiring a prose-only experiential data contract for private cognition, versioned persistence of private interior state, and a renderer that may read controlled private prose without publishing private state. Where older v0.10 wording permits a weaker interpretation of subject access, this stricter contract governs.
+
+`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi/MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, or experiential-firewall contract.
 
 `STATUS.md` records what is actually implemented and what CI has verified. Until v0.10 implementation gates pass, v0.9 remains the promoted executable baseline.
 
@@ -40,10 +42,12 @@ The v0.5 integration sprint deliberately assembled mechanisms broadly. Version 0
 
 Version 0.10 attacks the next architectural limitation: motivation should organize cognition rather than merely bias action utility. Needs therefore generate persistent competing motives, motives recruit associative activation and planning, and global modulation changes how cognition itself operates under threat, curiosity, fatigue, competence pressure, affiliation, and coherence pressure.
 
+The v0.10 phase also hardens the first-person architecture. Mechanistic state may causally shape experience, but the character's private-cognition interface receives only first-person experiential prose. Private interior state is versioned and persistent, and public expression is rendered from a controlled prose-only view rather than from canonical subject machinery.
+
 The v0.10 phase explicitly modernizes selected Psi/MicroPsi principles through DUCK-native structures. It does not recreate the historical MicroPsi node-net or introduce a second subject authority.
 
 This simulation-led development does not relax the first-person access firewall, autobiographical provenance rules, world/belief separation, relationship continuity, commitment continuity, or language-lesion doctrine.
 
 ## Future modalities
 
-Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and richer embodiment remain future surfaces. The architecture-level rule remains fixed: machine representations must cross the same subject-access boundary before they become available to the simulated subject.
+Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and richer embodiment remain future surfaces. The architecture-level rule remains fixed: machine representations must cross the same experiential firewall before they become available to the simulated subject.

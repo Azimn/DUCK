@@ -1,10 +1,10 @@
 # MicroPsiDUCK Architecture v0.10: Motivated Cognitive Organism
 
-MicroPsiDUCK v0.10 is a structural redesign of DUCK around motivated cognition, continuous organism dynamics, associative activation, global cognitive modulation, and a strict experiential firewall.
+MicroPsiDUCK v0.10 is a structural redesign of DUCK around motivated cognition, continuous organism dynamics, associative activation, global cognitive modulation, selective executive recruitment, and a strict experiential firewall.
 
-Version 0.9 remains preserved on `main` as the previous promoted DUCK baseline. The v0.10 development branch is allowed to change public classes, file layout, control flow, persistence boundaries, planning interfaces, and renderer contracts when a cleaner structure better serves the new architecture.
+Version 0.9 remains preserved on `main` as the previous promoted DUCK baseline. The v0.10 development branch may change public classes, file layout, control flow, persistence boundaries, planning interfaces, and renderer contracts when a cleaner structure better serves the new architecture.
 
-The historical system is therefore a donor and regression reference, not an implementation constraint.
+The historical system is a donor and regression reference, not an implementation constraint.
 
 The central doctrine is:
 
@@ -17,6 +17,10 @@ A second doctrine governs continuity:
 A third doctrine governs first-person access:
 
 > The machinery may contain numbers, tags, IDs, graphs, and scores. The subject receives only the experiential consequences of that machinery.
+
+A fourth doctrine governs external reasoning services:
+
+> A recruited model may propose. The organism remains the authority that validates, acts, persists, and learns.
 
 ## Control spine
 
@@ -51,27 +55,32 @@ ACTIVATION       MODULATION
  ATTENTION / OPPORTUNITY
         /           \
        v             v
-AUTOMATIC POLICY   EXECUTIVE COGNITION
+AUTOMATIC POLICY   EXECUTIVE RECRUITMENT
        |             |
-       v             v
- AFFORDANCE       GOAL / PLAN
-       \             /
-        v           v
-         INTENTION
-             |
-             v
-           ACTION
-             |
-             v
-          OUTCOME
-             |
-             v
- LEARNING + CHANGED SUBJECT
-             |
-             +------> continuous state dynamics
+       |             v
+       |       EXPERIENTIAL FIREWALL
+       |             |
+       |             v
+       |       EXECUTIVE PROPOSAL
+       |             |
+       +-------> VALIDATION
+                    |
+                    v
+                 INTENTION
+                    |
+                    v
+                  ACTION
+                    |
+                    v
+                 OUTCOME
+                    |
+                    v
+        LEARNING + CHANGED SUBJECT
+                    |
+                    +-----> continuous state dynamics
 ```
 
-Utility calculations may still exist at local arbitration points, especially for immediate affordances, but utility is not the executive architecture. The dominant motive determines why cognition is being organized. Modulation determines how cognition operates. Associative activation helps determine what becomes cognitively available. Planning and affordance arbitration determine what the organism attempts.
+Utility calculations may exist at local arbitration points, especially for immediate affordances, but utility is not the executive architecture. The dominant motive determines why cognition is being organized. Modulation determines how cognition operates. Associative activation helps determine what becomes cognitively available. Automatic policy, validated executive proposals, and planning determine what the organism attempts.
 
 ## Continuous organism dynamics
 
@@ -81,7 +90,7 @@ Time passes. Energy changes. Affiliation pressure can rise. Commitments approach
 
 The continuous substrate therefore acts as an endogenous event generator. Candidate events are produced by changes in body state, world state, social context, commitments, goals, predictions, and learned expectations.
 
-Most candidate events do not recruit executive cognition. Some die below salience threshold. Some are handled by automatic policy or immediate affordance selection. Only situations requiring richer integration, planning, reflection, unusual association, or language should recruit an executive cognition provider.
+Most candidate events do not recruit executive cognition. Some die below salience threshold. Some are handled by automatic policy or immediate affordance selection. Only situations requiring richer integration, planning, reflection, unusual association, or language should recruit an executive provider.
 
 Continuity belongs to persistent state and causal dynamics, not to inference uptime.
 
@@ -89,11 +98,11 @@ Continuity belongs to persistent state and causal dynamics, not to inference upt
 
 Needs are regulated internal variables. They are not goals and they do not directly select primitive actions.
 
-Need state generates motive candidates. A motive is a persistent pressure to change or preserve a condition. Examples include restoring safety, recovering energy, reducing isolation, understanding something novel, repairing a valued relationship, preserving coherence, completing an important commitment, or maintaining autonomy.
+Need state and appraisal generate motive candidates. A motive is a persistent pressure to change or preserve a condition. Examples include restoring safety, recovering energy, reducing isolation, understanding something novel, repairing a valued relationship, preserving coherence, completing an important commitment, or maintaining autonomy.
 
-A motive may contain developer-only numeric fields for strength, urgency, expected relief, inhibition, persistence, and competition. Those fields are mechanistic and inaccessible to the simulated subject.
+A motive may contain developer-only numeric fields for strength, urgency, inhibition, persistence, competition, and learned history. Those fields are mechanistic and inaccessible to the simulated subject.
 
-Motive selection should support a bounded active motive set rather than deleting all competitors when one motive wins. The system distinguishes:
+Motive selection supports a bounded active set rather than deleting all competitors when one motive wins. The system distinguishes:
 
 ```text
 primary organizing motive
@@ -107,9 +116,13 @@ The primary motive organizes current cognition. Other active motives can constra
 
 Motives can persist through quiet time, become inhibited, recover when suppression ends, merge when they represent the same concern, recruit goals, lose dominance after satisfaction, or terminate when their target condition no longer applies.
 
+Canonical motive identity should be stable. Recurrent pressure should normally reactivate an existing `(theme, target)` motive rather than creating unlimited equivalent records.
+
+Coherence is not merely a low stored need. Contradiction, inconsistency, expectation violation, or prediction error may create coherence pressure through appraisal when lived evidence stops fitting the subject's current expectations.
+
 ## Global cognitive modulation
 
-MicroPsiDUCK inherits the functional idea that internal condition alters the operating regime of cognition.
+MicroPsiDUCK preserves the functional idea that internal condition alters the operating regime of cognition.
 
 The modernized global control state includes at minimum:
 
@@ -135,7 +148,7 @@ The same person in the same external situation should therefore exhibit differen
 
 ## Associative activation substrate
 
-MicroPsiDUCK adds a bounded typed associative graph. The graph is an overlay, not a second database and not a second subject authority.
+MicroPsiDUCK has a bounded typed associative graph. The graph is an overlay, not a second database and not a second subject authority.
 
 Canonical entities remain in their authoritative stores. The graph holds typed references to those entities and learned association edges between them.
 
@@ -154,39 +167,74 @@ next_activation
 
 Propagation depth, fan-out, retained edges, total activation mass, and graph growth must remain bounded.
 
-The important behavioral contribution is indirect retrieval. A present cue may activate a person, which activates a place, which activates an old experience, which activates an unfinished motive. The final memory may have little lexical overlap with the current percept.
+The important behavioral contribution is indirect retrieval. A present cue may activate a person, which activates a concept or place, which activates an old experience, which activates an unfinished motive. The final memory may have little lexical overlap with the current percept.
 
 That bridge case is a required architectural test because it distinguishes associative cognition from another top-k scoring layer.
 
-## Cognitive field and executive recruitment
+The associative graph changes availability, not epistemic status. Activating a world fact does not make it a memory. Testimony remains testimony. A belief remains a belief until evidence changes it.
 
-The output of motive competition, associative activation, current context, active goals, and modulation is a bounded cognitive field.
+## Cognitive field
 
-The field determines what is salient enough to influence immediate policy, memory availability, planning, opportunity recognition, or executive recruitment.
+The output of motive competition, associative activation, current context, active goals, modulation, and candidate affordances is a bounded transient cognitive field.
 
-An executive cognition provider is optional and replaceable. It may be a deterministic rule system, a small local model, a frontier language model, or another reasoning engine.
+`CognitiveField` is mechanistic. It may contain raw candidate utilities, event tags, motive IDs, activated memory IDs, modulation parameters, and other developer-visible machinery. It is not an introspective object and it is not an executive-provider input.
 
-The provider is not the subject.
+The field determines what is salient enough to influence immediate policy, memory availability, planning, opportunity recognition, or executive recruitment. It should be reconstructed from current canonical state rather than persisted as a second continuing self.
 
-The intended interface is:
+## Automatic policy and executive recruitment
+
+Automatic policy is a first-class path, not a degraded fallback. Routine endogenous cycles, familiar immediate affordances, and urgent protective reactions should be executable without a language model or other expensive executive service.
+
+Executive cognition is optional and selectively recruited. Recruitment can be justified by novelty, unresolved contradiction, obstacles, repair conflict, close competition among plausible affordances, competing motives, or planning demands. Quiet routine state must not continuously call an executive provider.
+
+Severe safety pressure may bypass deliberative executive recruitment when current automatic policy already specifies a protective response. This preserves fast behavior and prevents curiosity or model verbosity from overriding acute safety organization.
+
+The executive interface is:
 
 ```text
-MicroPsiDUCK organism
+MECHANISTIC COGNITIVE FIELD
+scores, IDs, tags, activations, modulation
+        |
+        |  influences translation and recruitment
+        v
+EXPERIENTIAL FIREWALL
         |
         v
-ExperientialFrame / approved cognitive situation
+EXPERIENTIAL FRAME
+first-person prose only
         |
         v
 ExecutiveCognitionProvider
         |
         v
-proposal or private thought
+ExecutiveProposal
+bounded suggestion only
         |
         v
-MicroPsiDUCK validation and subject authority
+ORGANISM VALIDATION
+        |
+        +---- reject / fall back to automatic policy
+        |
+        +---- accept as current action or later validated goal/plan proposal
 ```
 
-The provider cannot become canonical authority for identity, memories, beliefs, relationships, motives, goals, plans, commitments, or outcomes.
+The provider never receives the raw cognitive field. It cannot inspect motive strengths, candidate utilities, graph activations, route scores, modulation coefficients, IDs, or persistence metadata.
+
+A proposed action must correspond to an affordance currently available to the organism. Invalid, unavailable, malformed, failed, or absent proposals are rejected without corrupting state, and the automatic policy remains available.
+
+Provider output is not canonical authority. Executive intention prose does not automatically become autobiographical memory, self-narrative, belief, motive, goal, plan, commitment, or identity. If future versions permit richer goal or plan proposals, the organism must validate and explicitly adopt them through canonical state transitions.
+
+Provider configuration is runtime/host configuration rather than persistent cognitive identity. Restarting the organism without supplying a provider restores the subject and its cognitive state without silently restoring the provider or the previous transient cognitive field.
+
+## Private inner cognition is a separate contract
+
+Private inner cognition and executive proposal are different functions even when both happen to be implemented by language models.
+
+`InnerCognitionProvider` receives experiential state and may generate private first-person thought. Its output can become controlled private interior context, subject to the experiential validator and private-interior persistence rules.
+
+`ExecutiveCognitionProvider` is recruited selectively before final action selection and returns a bounded proposal. It is not the same interface as inner voice, and an executive proposal does not become private thought merely because both are language-like.
+
+This separation allows experiments in which inner language is absent while motivated cognition, automatic policy, associative retrieval, modulation, planning, and action continue to function.
 
 ## Planning
 
@@ -223,21 +271,19 @@ Planning depth and branching are controlled by modulation. Associative activatio
 
 ## Canonical subject authority
 
-MicroPsiDUCK must continue to have one authoritative continuing subject.
+MicroPsiDUCK has one authoritative continuing subject.
 
-Autobiographical memory, beliefs, relationships, commitments, motives, goals, plans, learned associations, adaptive state, and private interior persistence must have explicit ownership. Overlay systems may reference these stores but may not create competing canonical copies.
+Autobiographical memory, beliefs, relationships, commitments, motives, goals, plans, learned associations, adaptive state, and private interior persistence must have explicit ownership. Overlay systems and recruited providers may reference or influence these stores but may not create competing canonical copies.
 
-World truth and subject belief remain distinct. Memory provenance remains distinct. An activated world fact does not become a memory merely because it is salient. A testimony memory remains testimony. A false belief remains a belief until evidence changes it.
-
-The associative graph changes availability, not epistemic status.
+World truth and subject belief remain distinct. Memory provenance remains distinct. The associative graph changes availability, not truth status. A renderer or executive provider cannot directly rewrite identity or autobiographical history.
 
 ## Experiential firewall
 
 The experiential firewall is the technical boundary between mechanistic state and first-person access.
 
-The substrate may contain numeric need levels, motive strengths, inhibition values, activation values, graph weights, propagation depth, modulation coefficients, retrieval scores, route scores, plan indexes, confidence values, trust values, affect magnitudes, latent vectors, tags, and identifiers.
+The substrate may contain numeric need levels, motive strengths, inhibition values, activation values, graph weights, propagation depth, modulation coefficients, retrieval scores, action utilities, route scores, plan indexes, confidence values, trust values, affect magnitudes, latent vectors, tags, and identifiers.
 
-None of those representations may cross into private cognition.
+None of those representations may cross into private cognition or executive-provider input.
 
 The boundary path is:
 
@@ -257,18 +303,19 @@ translation + validation
 EXPERIENTIAL FRAME
 immutable first-person experiential prose only
         |
-        +-------------------+
-        |                   |
-        v                   v
-PRIVATE COGNITION    PRIVATE INTERIOR RECORD
-        |                   |
-        +---------+---------+
-                  |
-                  v
-             RENDERER VIEW
-                  |
-                  v
-             PUBLIC OUTPUT
+        +------------------------+
+        |                        |
+        v                        v
+PRIVATE INNER COGNITION    OPTIONAL EXECUTIVE
+        |                        |
+        v                        v
+PRIVATE INTERIOR RECORD    VALIDATED PROPOSAL
+        |
+        v
+RENDERER VIEW
+        |
+        v
+PUBLIC OUTPUT
 ```
 
 `ExperientialFrame` is the introspective API. Structured diagnostics such as `SubjectiveMoment` may exist internally during development, but they are not private cognition input.
@@ -278,6 +325,7 @@ The subject may experience:
 ```text
 I'm exhausted.
 I really need somewhere quiet.
+I keep coming back to what Morgan promised.
 That flower just came back to mind.
 I feel uneasy, but I'm not sure why.
 I don't feel safe enough to think about this right now.
@@ -293,7 +341,7 @@ planning_depth = 2
 trust = 0.61
 ```
 
-The translator must reject disguised telemetry rather than merely removing float-typed fields.
+The translator must reject disguised telemetry rather than merely removing float-typed fields. If current-world text itself resembles implementation telemetry, the experiential projection must avoid blindly copying that machinery into the private interface and should fall back to an appropriate qualitative first-person description when possible.
 
 ## Private interior persistence
 
@@ -304,6 +352,8 @@ A durable private-interior record contains approved experiential prose and optio
 Unsupported private-interior schema versions must fail explicitly.
 
 Persistence of private interior does not make the persisted file introspectively accessible. The subject experiences the restored interior, not the serialization mechanism.
+
+Transient cognitive fields and executive-provider objects are not private interior and are not persisted as subject identity.
 
 ## Renderer boundary
 
@@ -317,7 +367,9 @@ The renderer cannot directly modify canonical subject state.
 
 ## Language lesion
 
-The motive system, associative graph, modulation, cognitive field, retrieval, planning, automatic policy, action selection, learning, persistence, and experiential projection must function with inner language disabled and without an LLM service.
+Motive generation, motive competition, associative graph propagation, modulation, cognitive-field construction, retrieval, planning, automatic policy, action selection, learning, persistence, and experiential projection must function with inner language disabled and without an LLM service.
+
+A language-dependent executive provider must be removable without disabling the organism. The current lesion condition may disable both optional executive calls and inner voice while leaving the full substrate control spine operational.
 
 The language model is a recruited cognitive or expressive organ. It is not where the simulated individual resides.
 
@@ -325,9 +377,11 @@ The language model is a recruited cognitive or expressive organ. It is not where
 
 The architecture must be evaluated as an interacting organism across time.
 
-A long-horizon simulation must force safety, curiosity, energy, affiliation, competence, coherence, and autonomy pressures to compete across changing histories. Motives should rise, remain latent, become inhibited, return, recruit plans, resolve through simple affordances, fail, become impossible, or disappear after satisfaction.
+A long-horizon simulation must force safety, curiosity, energy, affiliation, competence, coherence, autonomy, repair, and commitment pressures to compete across changing histories. Motives should rise, remain latent, become inhibited, return, recruit plans, resolve through simple affordances, fail, become impossible, or disappear after satisfaction.
 
 The same external situation should produce different measurable cognitive regimes under different internal histories and conditions while developer diagnostics remain causally interpretable.
+
+Quiet time must remain bounded. Persistent motives must not become unbounded motive records, learned associations must not grow without limits, and optional executive cognition must not be continuously recruited simply because a provider is available.
 
 ## Compatibility and naming doctrine
 
@@ -337,4 +391,4 @@ Version 0.9 remains available on `main` and in explicit historical modules for c
 
 Historical Psi and MicroPsi systems are functional donors, not authorities. MicroPsiDUCK preserves useful principles such as motivated autonomous behavior, spreading activation, and global modulation without recreating the historical implementation.
 
-The research target is therefore not `MicroPsi rewritten in Python`, and it is not `DUCK v0.9 with three extra modules`. It is a new motivated cognitive organism that preserves the strongest DUCK subject-continuity ideas while reorganizing the control structure around motivation, associative cognition, modulation, continuous state evolution, and bounded first-person access.
+The research target is therefore not `MicroPsi rewritten in Python`, and it is not `DUCK v0.9 with extra modules`. It is a motivated cognitive organism that preserves the strongest DUCK subject-continuity ideas while reorganizing the control structure around motivation, associative cognition, modulation, continuous state evolution, selective executive recruitment, and bounded first-person access.

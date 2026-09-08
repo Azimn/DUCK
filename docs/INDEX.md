@@ -36,7 +36,7 @@ The v0.10 branch is not required to keep v0.9 API identity, file layout, class h
 
 `ARCHITECTURE_v0.1.md` and `MILESTONE_0_1.md` preserve the original Subjective Moment milestone. Historical documents should not be silently rewritten to describe later architecture.
 
-The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/persona_engine_PYTHONX` remains donor and history material unless explicitly reintroduced.
+The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/persona_engine_PYTHONX` is not the current architecture. It remains donor and history material unless explicitly reintroduced.
 
 ## Development doctrine
 

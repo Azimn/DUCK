@@ -539,6 +539,21 @@ class LivingDuck:
         )
         self.state.pending_action = None
 
+    def _select_candidate(
+        self,
+        event: WorldEvent,
+        relation: RelationshipState,
+        memories: list[MemoryRecord],
+        candidates: list[ActionCandidate],
+    ) -> ActionCandidate:
+        """Select one current affordance without changing candidate scores.
+
+        Historical runtimes inherit the original max-utility policy unchanged.
+        Newer architectures may override this seam to validate a higher-level
+        proposal while keeping the underlying affordance utilities intact.
+        """
+        return max(candidates, key=lambda candidate: (candidate.utility, candidate.name))
+
     def step(self, event: WorldEvent, *, allow_inner_speech: bool = True) -> LivingStep:
         self.state.tick += 1
         self._advance_homeostasis()
@@ -548,7 +563,7 @@ class LivingDuck:
         prediction_error = self._appraise(event, relation, memories)
         self.state.adaptive.observe(event.text, event.tags)
         candidates = self._candidates(event, relation, memories)
-        selected = max(candidates, key=lambda candidate: (candidate.utility, candidate.name))
+        selected = self._select_candidate(event, relation, memories, candidates)
 
         for key, text in event.world_facts:
             self.state.world_facts[str(key)] = str(text)

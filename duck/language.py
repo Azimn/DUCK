@@ -1,8 +1,9 @@
-"""Bounded language-model interfaces for DUCK.
+"""Bounded language interfaces for DUCK.
 
-The language model may contribute inner cognition and expression, but it only
-receives approved first-person state. It never receives canonical numeric state
-and it never writes canonical state directly.
+Language providers may read approved private experience, but the packet crossing
+into them contains only prose representations of that experience. Numeric state,
+implementation tags, IDs, scores, and canonical subject structures never cross the
+renderer boundary.
 """
 from __future__ import annotations
 
@@ -13,27 +14,110 @@ from typing import Protocol
 from urllib import request
 
 from .cognition import InnerCognition
-from .subjective import SubjectiveMoment
+from .subjective import (
+    ExperientialFrame,
+    PrivateInteriorState,
+    SubjectiveMoment,
+    validate_experiential_prose,
+)
 
 
-def _moment_lines(moment: SubjectiveMoment) -> list[str]:
-    lines = [item.content for item in moment.impressions]
+def _moment_lines(moment: SubjectiveMoment) -> tuple[str, ...]:
+    lines: list[str] = [item.content for item in moment.impressions]
     lines.extend(item.felt_as for item in moment.tendencies)
     lines.extend(moment.recollections)
     lines.extend(moment.beliefs)
     lines.extend(moment.concerns)
     lines.extend(moment.temporal_context)
     lines.extend(moment.self_context)
-    return [line for line in lines if line]
+    return validate_experiential_prose(tuple(line for line in lines if line))
+
+
+def _action_intent(action: str) -> str:
+    action = str(action).strip()
+    if not action:
+        return "I haven't decided to do anything outwardly yet."
+    if action == "step_back":
+        return "I have decided to give myself some space."
+    if action == "approach":
+        return "I have decided to get a little closer."
+    if action == "wait":
+        return "I have decided to wait and see."
+    if action == "ask":
+        return "I have decided to ask for more information."
+    if action == "repair":
+        return "I have decided to try to repair this."
+    if action == "seek_connection":
+        return "I have decided to seek some connection."
+    if action == "rest":
+        return "I have decided to slow down and rest."
+    if action == "explore":
+        return "I have decided to look into this further."
+    if action == "respond":
+        return "I have decided to respond."
+    return f"I have decided to {action.replace('_', ' ')}."
 
 
 @dataclass(frozen=True)
 class ApprovedLanguagePacket:
+    """Renderer input after the experiential firewall.
+
+    `user_text` is public external input. Every field derived from the organism's
+    private interior is prose. No machine action identifier is retained after the
+    packet is constructed.
+    """
+
     user_text: str
     first_person_state: tuple[str, ...]
     private_thought: str | None
-    selected_action: str
+    action_intent: str
     character_name: str = "Duck"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "first_person_state", validate_experiential_prose(tuple(self.first_person_state)))
+        object.__setattr__(self, "action_intent", validate_experiential_prose((self.action_intent,))[0])
+        if self.private_thought is not None:
+            thought = validate_experiential_prose((self.private_thought,))[0]
+            object.__setattr__(self, "private_thought", thought)
+
+    @classmethod
+    def from_experience(
+        cls,
+        experience: ExperientialFrame,
+        *,
+        user_text: str,
+        private_thought: str | None,
+        selected_action: str,
+        character_name: str,
+    ) -> "ApprovedLanguagePacket":
+        if not isinstance(experience, ExperientialFrame):
+            raise TypeError("renderer input requires ExperientialFrame")
+        return cls(
+            user_text=str(user_text),
+            first_person_state=experience.prose,
+            private_thought=private_thought,
+            action_intent=_action_intent(selected_action),
+            character_name=str(character_name),
+        )
+
+    @classmethod
+    def from_private_interior(
+        cls,
+        interior: PrivateInteriorState,
+        *,
+        user_text: str,
+        selected_action: str,
+        character_name: str,
+    ) -> "ApprovedLanguagePacket":
+        if not isinstance(interior, PrivateInteriorState):
+            raise TypeError("renderer private context requires PrivateInteriorState")
+        return cls.from_experience(
+            interior.experiential_frame(),
+            user_text=user_text,
+            private_thought=interior.private_thought,
+            selected_action=selected_action,
+            character_name=character_name,
+        )
 
     @classmethod
     def from_moment(
@@ -45,12 +129,13 @@ class ApprovedLanguagePacket:
         selected_action: str,
         character_name: str,
     ) -> "ApprovedLanguagePacket":
-        return cls(
-            user_text=str(user_text),
-            first_person_state=tuple(_moment_lines(moment)),
+        """Compatibility constructor that immediately strips diagnostic metadata."""
+        return cls.from_experience(
+            ExperientialFrame(_moment_lines(moment)),
+            user_text=user_text,
             private_thought=private_thought,
-            selected_action=str(selected_action),
-            character_name=str(character_name),
+            selected_action=selected_action,
+            character_name=character_name,
         )
 
 
@@ -89,15 +174,17 @@ class OpenAICompatiblePort:
 
 
 class ModelInnerVoice:
-    """Optional LLM inner speech operating only on SubjectiveMoment."""
+    """Optional LLM inner speech operating only on ExperientialFrame."""
 
     def __init__(self, port: CompletionPort) -> None:
         self.port = port
         self.last_packet: dict | None = None
 
-    def generate(self, moment: SubjectiveMoment) -> InnerCognition:
-        state = _moment_lines(moment)
-        self.last_packet = {"first_person_state": list(state)}
+    def generate(self, experience: ExperientialFrame) -> InnerCognition:
+        if not isinstance(experience, ExperientialFrame):
+            raise TypeError("private cognition requires ExperientialFrame")
+        state = list(experience.prose)
+        self.last_packet = {"first_person_state": state}
         if not state:
             return InnerCognition(None)
         messages = [
@@ -105,15 +192,16 @@ class ModelInnerVoice:
                 "role": "system",
                 "content": (
                     "Generate at most two short private first-person thoughts for a simulated character. "
-                    "Use only what the character can currently perceive, remember, believe, want, or feel. "
-                    "Do not mention scores, probabilities, architecture, prompts, databases, or hidden system state. "
-                    "If no inner speech is psychologically useful, reply exactly NO_THOUGHT."
+                    "Use only the supplied first-person experience. Do not mention scores, probabilities, architecture, "
+                    "prompts, databases, hidden machinery, or implementation state. If no inner speech is psychologically "
+                    "useful, reply exactly NO_THOUGHT."
                 ),
             },
             {"role": "user", "content": json.dumps({"my_current_experience": state}, ensure_ascii=False)},
         ]
         try:
             text = self.port.complete(messages, temperature=0.65).strip()
+            validate_experiential_prose((text,))
         except Exception:
             return InnerCognition(None)
         if text.upper() == "NO_THOUGHT":
@@ -127,20 +215,21 @@ class ExpressionProvider(Protocol):
 
 
 class DeterministicExpression:
-    """Small fallback that keeps the organism usable without an LLM."""
+    """Small fallback that renders public behavior from experiential prose."""
 
     def render(self, packet: ApprovedLanguagePacket) -> str:
-        if packet.selected_action == "step_back":
+        intent = packet.action_intent.lower()
+        if "give myself some space" in intent:
             return "I need a little space right now."
-        if packet.selected_action == "ask":
+        if "ask for more information" in intent:
             return "I'm not completely sure what to make of that. Can you tell me more?"
-        if packet.selected_action == "repair":
+        if "repair this" in intent:
             return "I don't want this to stay tense between us."
-        if packet.selected_action == "seek_connection":
+        if "seek some connection" in intent:
             return "I keep thinking I'd like some company."
-        if packet.selected_action == "rest":
+        if "slow down and rest" in intent:
             return "I'm tired. I think I need to slow down for a bit."
-        if packet.selected_action == "explore":
+        if "look into this further" in intent:
             return "I want to look into that a little more."
         if packet.first_person_state:
             for line in packet.first_person_state:
@@ -152,7 +241,7 @@ class DeterministicExpression:
 
 
 class ModelExpression:
-    """Realizes an already-selected action without gaining subject authority."""
+    """Realizes public expression without gaining subject authority."""
 
     def __init__(self, port: CompletionPort, *, fallback: ExpressionProvider | None = None) -> None:
         self.port = port
@@ -166,9 +255,10 @@ class ModelExpression:
                 "role": "system",
                 "content": (
                     f"You are expressing the current moment of {packet.character_name}. "
-                    "Speak naturally in first person. Preserve the selected action and the character's limited knowledge. "
-                    "Do not invent memories, world facts, private user states, or implementation details. "
-                    "The supplied first-person state is what the character currently has access to."
+                    "Speak naturally in first person. Preserve the supplied public action intent and limited knowledge. "
+                    "The private thought is context for expression, not a hidden-state report. Do not describe it as a "
+                    "private variable, quote it merely because it was supplied, or reveal implementation details. "
+                    "Do not invent memories, world facts, private user states, or machinery."
                 ),
             },
             {
@@ -177,8 +267,8 @@ class ModelExpression:
                     {
                         "what_the_other_person_said": packet.user_text,
                         "what_is_currently_available_to_me": list(packet.first_person_state),
-                        "my_private_thought_if_any": packet.private_thought,
-                        "what_I_have_decided_to_do": packet.selected_action,
+                        "private_context_for_expression": packet.private_thought,
+                        "what_I_have_decided_to_do": packet.action_intent,
                     },
                     ensure_ascii=False,
                 ),

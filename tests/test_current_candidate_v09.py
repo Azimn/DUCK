@@ -1,15 +1,25 @@
 from duck import LivingDuck as PublicLivingDuck, PersistentDuckHost
 from duck.living import MemoryProvenance, SubjectState, WorldEvent
 from duck.living_v09 import LivingDuck as V09LivingDuck
+from duck.living_v010 import LivingDuck as V010LivingDuck
+from duck.host_v010 import PersistentDuckHostV010
 
 
-def test_public_package_and_persistent_host_use_v09_candidate(tmp_path):
-    assert PublicLivingDuck is V09LivingDuck
-    host = PersistentDuckHost.open(tmp_path / "current", name="Aster", subject_id="current-v09")
+def test_public_package_uses_micropsiduck_v010_candidate(tmp_path):
+    assert PublicLivingDuck is V010LivingDuck
+    assert PersistentDuckHost is PersistentDuckHostV010
+    host = PersistentDuckHost.open(tmp_path / "current", name="Aster", subject_id="current-v010")
+    assert isinstance(host.duck, V010LivingDuck)
     assert isinstance(host.duck, V09LivingDuck)
     status = host.status()
-    assert status["subject_id"] == "current-v09"
+    assert status["subject_id"] == "current-v010"
     assert status["active_plan_count"] == 0
+
+
+def test_v09_remains_available_as_explicit_preserved_baseline():
+    legacy = V09LivingDuck(SubjectState.create(name="Aster", subject_id="preserved-v09"))
+    assert type(legacy) is V09LivingDuck
+    assert legacy.state.subject_id == "preserved-v09"
 
 
 def test_plan_outcome_memory_cannot_become_a_ghost_concern():

@@ -20,6 +20,7 @@ jobs:
       - run: python -m duck.regulation_evaluation
       - run: python -m duck.planning_evaluation
       - run: python -m duck.motivated_evaluation
+      - run: python -m duck.planning_simulation --out-dir simulation_results/planning-v09
       - run: python -m pytest
       - run: python -m duck.evaluation
       - run: python -m duck.simulation_lab --out-dir simulation_results/baseline
@@ -27,4 +28,3 @@ jobs:
       - run: python -m duck.life_simulation --out-dir simulation_results/life-v07
       - run: python -m duck.agency_evaluation
       - run: python -m duck.agency_simulation --out-dir simulation_results/agency-v08
-      - run: python -m duck.planning_simulation --out-dir simulation_results/planning-v09

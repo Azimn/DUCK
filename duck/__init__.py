@@ -23,10 +23,17 @@ from .living import (
     SubjectState,
     WorldEvent,
 )
-from .living_v09 import GoalPlan, LivingDuck, PlanStepSpec
+from .living_v09 import GoalPlan, PlanStepSpec
+from .living_v010 import LivingDuck
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .runtime import DuckRuntime, StepResult
-from .subjective import AccessibleTendency, FirstPersonImpression, SubjectiveMoment
+from .subjective import (
+    AccessibleTendency,
+    ExperientialFrame,
+    FirstPersonImpression,
+    PrivateInteriorState,
+    SubjectiveMoment,
+)
 
 __all__ = [
     "AccessibleTendency",
@@ -38,6 +45,7 @@ __all__ = [
     "DeterministicExpression",
     "DeterministicInnerVoice",
     "DuckRuntime",
+    "ExperientialFrame",
     "FirstPersonImpression",
     "GoalPlan",
     "InnerCognition",
@@ -53,6 +61,7 @@ __all__ = [
     "OpenAICompatiblePort",
     "PersistentDuckHost",
     "PlanStepSpec",
+    "PrivateInteriorState",
     "RecognitionSignal",
     "RelationshipState",
     "RuleEventInterpreter",

@@ -1,71 +1,65 @@
-# DUCK Current Status
+# MicroPsiDUCK v0.10 Current Status
 
-Current architecture candidate: `docs/ARCHITECTURE_v0.9.md`
+Current architecture candidate: `docs/ARCHITECTURE_v0.10.md`
 
-Current milestone candidate: `docs/MILESTONE_0_9.md`
+Current milestone candidate: `docs/MILESTONE_0_10.md`
 
-Branch: `planning-lab-v0.9`
+Experiential boundary contract: `docs/EXPERIENTIAL_FIREWALL_v0.10.md`
 
-## Integrated implementation
+Development branch: `motivated-cognition-v0.10`
 
-DUCK v0.9 retains the v0.8 motivated prospective-agency organism and adds endogenous goal formation, counterfactual route selection, hierarchical plan steps, and outcome-driven replanning in `duck/living_v09.py`. The candidate wiring makes the persistent host and public package use the v0.9 organism while `duck/living_v08.py`, `duck/living_v07.py`, `duck/living_v06.py`, and `duck/living.py` remain preserved implementation layers and regression baselines.
+Preserved promoted baseline: DUCK v0.9 on `main`
 
-The organism contains persistent subject identity, affect and homeostatic needs, relationship trajectories, autobiographical memory with provenance, objective world facts separated from subject beliefs, commitments, lived-consequence residue, action selection, action/outcome separation, outcome-dependent learned affordances, a small path-dependent adaptive latent trace, endogenous heartbeat, motivated prospective concerns, optional first-person inner cognition, optional bounded model-assisted semantic appraisal, optional model-backed expression, deterministic fallbacks, atomic JSON state persistence, an append-only JSONL host journal, UTC timestamps, and Swatch Internet Time / Beat Time stamps.
+## Scope of the current implementation
 
-Version 0.9 adds persistent goal roots linked to lived experience, deterministic candidate routes whose ordering depends on current subject state, sequential child concerns for hierarchical subgoals, and route revision after failed action outcome. The subject-access firewall remains mandatory. Raw route scores, plan IDs, route indexes, child indexes, prospective priority/urgency values, internal concern identifiers, cooldowns, private tags, and other mechanistic telemetry remain developer state.
+MicroPsiDUCK v0.10 is now treated as a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The branch public package points to the v0.10 runtime and persistent host. The v0.9 organism remains explicitly importable for comparison and remains preserved unchanged as the promoted baseline on `main`.
+
+The current implementation hardens the first-person boundary before the full motive, associative-graph, and global-modulation control spine is implemented.
+
+The new private-cognition contract is `ExperientialFrame`. It is immutable and contains only approved first-person experiential prose. Structured `SubjectiveMoment` data may still exist inside inherited implementation layers as diagnostic scaffolding, but the v0.10 runtime converts it through the experiential firewall before a private cognition provider receives it.
+
+The experiential validator rejects raw decimal telemetry, percentages used as magnitude or confidence reports, machine identifiers, key-value telemetry, activation reports, route scores, retrieval scores, motive strengths, need magnitudes, and related implementation leakage.
+
+Private interior state is persisted separately in a versioned `PrivateInteriorState` envelope. The current schema is `duck.private-interior.v1`. The persistence envelope stores approved experiential prose and optional private thought, while mechanistic affect, need state, action scores, graph state, and other developer telemetry remain outside it. Unsupported private-interior schema versions fail explicitly.
+
+The v0.10 persistent host writes canonical subject state and private interior state separately. Public interaction results no longer include private-thought or subjective-state fields. Ordinary interaction and heartbeat journals do not publish private interior content.
+
+The renderer contract now receives prose-only experiential state, optional private thought as controlled rendering context, and a first-person action-intent sentence. Machine action identifiers are translated before entering the renderer packet. The renderer remains an expression surface and cannot become canonical subject authority.
+
+The branch CLI has been aligned with that boundary. Ordinary tick and demo output no longer print private thought. The package metadata identifies the candidate as `micropsi-duck` version `0.10.0`, with both `micropsiduck` and historical `duck` command aliases targeting the v0.10 CLI.
 
 No donor package is a runtime dependency.
 
-## Endogenous planning implementation
+## Architecture still to implement
 
-The goal-formation gate is deliberately bounded. Novel or unknown perceived situations can create an investigative goal when curiosity is sufficiently engaged. Obstacles can create an overcoming goal when autonomy pressure makes the blockage relevant. Relationship conflict or explicit repair need can create a repair goal when the relationship state makes repair meaningful. Ordinary perception is a negative control and does not automatically create an objective.
+The binding v0.10 architecture now defines the next control spine: continuous state dynamics, need-driven persistent motives, motive competition, a bounded active motive set, typed associative activation, global cognitive modulation, a cognitive field, automatic policy, executive recruitment, planning, action, outcome, and recursive learning.
 
-A goal root is a provenance-bearing `SELF_REFLECTION` memory in the canonical `SubjectState`. Private `pl_*` tags carry plan kind, status, candidate routes, current route, current step, trigger link, child-concern link, and pending-action link. This keeps planning in the existing subject authority rather than introducing a second canonical planner database.
+The motive system, typed associative graph, modernized global modulators, and dedicated long-horizon MicroPsiDUCK simulation are not yet complete merely because the experiential firewall is implemented. The v0.10 milestone remains open until those mechanisms and their required experiments pass.
 
-The current route library is intentionally small and deterministic. It exists so route choice and replanning can be evaluated without an LLM silently generating the executive structure. Investigation can choose direct exploration or cautious inquiry followed by exploration. Obstacles can choose inspection-first or information-first routes. Repair can choose direct repair or clarification-first repair.
+The v0.9 planner is not architecturally privileged in v0.10. It may be reused, refactored, or replaced if a different bounded planning design better fits the motive and modulation control spine.
 
-Current affect and needs influence route ordering. The focused test demonstrates that low fear with high curiosity prefers direct exploration while a higher fear state can make cautious inquiry preferable for the same investigative objective.
+## Experiential firewall verification targets
 
-Plan steps reuse v0.8 prospective concerns. This means planning remains subordinate to the organism's motivation, safety, energy, competition, and interruption behavior. A plan does not gain an unconditional task-execution channel.
+The v0.10 tests require the full candidate runtime to deliver an `ExperientialFrame` to private cognition rather than structured diagnostic state. They verify that the frame has only a prose field, that no raw float telemetry appears, that disguised telemetry is rejected, and that language-lesion operation still refreshes experiential state.
 
-## Lifecycle defect discovered by planning
+The persistence tests require private interior state to survive restart with the same supported schema and prose content. They verify that the private-interior file does not contain canonical affect, needs, or machine action selection state.
 
-The first hierarchical v0.9 test exposed a cross-layer bug after the visible plan behavior already looked correct. The subject asked for information, advanced to the next step, explored, and completed the plan, yet two open plan-step concerns remained.
+Renderer tests require first-person action intent rather than machine action tags and verify that renderer packets do not contain private schema metadata or selected-action identifiers.
 
-Diagnostics showed that the real plan-step memories had been satisfied. The open records were `OUTCOME` memories whose descriptions were the successful outcomes. Prospective and planning control tags had propagated from the endogenous action event into the pending action and then into the generic outcome memory. The v0.8 concern scanner consequently misclassified those outcome records as new open intentions.
+Public-boundary tests verify that interaction results omit private thought and subjective state and that ordinary event journals do not publish private interior fields.
 
-Version 0.9 now sanitizes action tags before generic outcome learning. Environmental and task-semantic tags are retained, while `pc_*`, `pl_*`, concern identifiers, preferred-action metadata, plan-step markers, opportunity lifecycle tags, and idle-control tags are removed. Outcome memory can influence learning and replanning without becoming a ghost concern.
+## Preserved scientific and behavioral invariants
 
-The planning layer also enforces explicit child lifecycle invariants. An active plan can have at most one live current plan-step concern. Repeated activation of the same current step is idempotent. Completing or abandoning a plan leaves zero live child intentions.
+The v0.10 branch may change implementation structure, but it continues to protect substantive invariants that remain useful from DUCK: persistent subject identity, autobiographical provenance, world and belief separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, and the experiential firewall.
 
-## Focused and long-horizon evaluation
+Earlier long-horizon regulation, life simulation, agency, and planning harnesses remain valuable regression evidence while the new control spine is built. They are historical behavioral tests, not authorities over v0.10 internal design.
 
-`duck/planning_evaluation.py` tests experience-driven goal formation, risk-sensitive route choice, two-step hierarchical progression, failed-route replanning, state-roundtrip persistence, ordinary-experience false-goal control, and first-person metadata isolation. All probes run with private inner speech disabled.
+## Relationship to DUCK v0.9
 
-`duck/planning_simulation.py` runs a longer sequence through the real persistent-host surface. An unfamiliar signal produces an investigative goal. The initially preferred direct route is deliberately failed, causing a switch to cautious inquiry. Successful inquiry advances to informed inspection, which completes the plan. A later blocked gate produces a separate obstacle goal. The host is restarted while that plan is active, the plan continues and completes after restart, an ordinary control event is presented, and quiet time continues afterward to detect runaway goal generation.
+DUCK v0.9 remains the stable comparison point on `main`. It established endogenous goal formation, counterfactual route selection, hierarchical subgoals, outcome-driven replanning, and a persistent planning lifecycle.
 
-Every long-horizon `SubjectiveMoment` is checked for raw floats and private planning metadata. The simulation therefore tests planning while language generation is absent rather than using fluent private narration to conceal executive gaps.
+MicroPsiDUCK v0.10 changes the research question. The target is no longer only whether lived experience can create and revise goals. The target is whether needs create persistent motives, motives organize cognition, associative activation makes relevant material available without explicit search, internal condition changes the computational regime, and the subject experiences the consequences of those mechanisms without gaining introspective access to the machinery.
 
-## Verified evidence
+The subject-access firewall remains mandatory, now strengthened as the experiential firewall.
 
-The v0.8 merge commit `42e6e7dd86f09f9cec3152d5bd24b9dd98607447` passed post-merge `main` workflow `34168398759` on Python 3.11 and Python 3.12, including all v0.8 and prior regression gates.
-
-The v0.9 planning core at head `759f69a7e60a8a0bbb0dc234f8294e14d98155e4` first passed workflow `34169181283` on Python 3.11 and Python 3.12 after the outcome-tag contamination defect was corrected.
-
-The fully wired v0.9 candidate at head `4a39912fb4f4e1ee9ed395d7ed5e3dc7bf556dcf` passed workflow `34169543177` on Python 3.11 and Python 3.12. The documentation contract, focused v0.9 planning evaluation, complete pytest suite, original architecture evaluation, v0.6 regulation evaluation, preserved v0.5/v0.6 simulations, v0.7 thirty-day longitudinal life simulation, v0.8 focused agency evaluation, v0.8 long-horizon agency simulation, and v0.9 long-horizon planning simulation all passed. The persistent host and top-level public package were both exercised against the v0.9 candidate, including a regression test proving learned `OUTCOME` memories cannot become ghost prospective concerns through inherited planning metadata.
-
-The current branch therefore satisfies the v0.9 implementation and integration gates and is eligible for promotion review. This establishes the tested functional behavior only, not phenomenal consciousness or human-equivalent planning.
-
-## Relationship to earlier phases
-
-The v0.7 thirty-day longitudinal life simulation and v0.8 motivated prospective agency remain mandatory regression gates. v0.9 does not replace relationship development, epistemic integrity, homeostatic recovery, adaptive action learning, first-person reinterpretation, commitment continuity, or unfinished-intention competition. It adds a larger causal arc: experience can generate an objective, the objective can organize more than one possible route, a route can unfold through intermediate intentions, and consequence can alter the plan.
-
-The central research question remains what is obviously fake when language fluency is not allowed to hide the architecture. For v0.9 the specific question is whether DUCK can behave like a subject that develops and revises purposes, rather than a chatbot that waits for tasks or a task runner that mistakes its script for reality.
-
-Passing the current tests establishes bounded endogenous goal formation and counterfactual hierarchical planning under the tested scenarios. It does not establish phenomenal consciousness, human-equivalent general intelligence, unrestricted autonomy, or general psychological validity.
-
-## Deliberately unfinished surfaces
-
-The present route library is hand-authored and shallow. Learned causal world models, open-ended goal discovery, generated route candidates with architecture-level verification, deeper planning trees, simultaneous interacting plans, theory-of-mind planning, habits, skill composition, richer embodied affordance discovery, real camera/audio sensing, robotics, XR embodiment, avatar animation, voice interruption, long-duration human evaluation, and polished desktop/mobile shells remain future work.
-
-The v0.8, v0.7, v0.6, v0.5, and v0.1 documents remain preserved as historical architecture. The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` remains non-current donor material.
+Passing current firewall and regression tests establishes only the implemented boundary behavior. It does not establish completion of the full MicroPsiDUCK motive, association, and modulation architecture, phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, or general psychological validity.

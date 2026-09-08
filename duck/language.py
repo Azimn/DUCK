@@ -129,7 +129,7 @@ class ApprovedLanguagePacket:
         selected_action: str,
         character_name: str,
     ) -> "ApprovedLanguagePacket":
-        """Compatibility constructor that immediately strips diagnostic metadata."""
+        """v0.9 compatibility constructor that strips diagnostic metadata."""
         return cls.from_experience(
             ExperientialFrame(_moment_lines(moment)),
             user_text=user_text,
@@ -174,15 +174,21 @@ class OpenAICompatiblePort:
 
 
 class ModelInnerVoice:
-    """Optional LLM inner speech operating only on ExperientialFrame."""
+    """Optional LLM inner speech operating on approved experiential prose.
+
+    v0.10 supplies ExperientialFrame directly. SubjectiveMoment conversion remains
+    only so the promoted v0.9 runtime can continue its regression suite unchanged.
+    """
 
     def __init__(self, port: CompletionPort) -> None:
         self.port = port
         self.last_packet: dict | None = None
 
-    def generate(self, experience: ExperientialFrame) -> InnerCognition:
+    def generate(self, experience: ExperientialFrame | SubjectiveMoment) -> InnerCognition:
+        if isinstance(experience, SubjectiveMoment):
+            experience = ExperientialFrame(_moment_lines(experience))
         if not isinstance(experience, ExperientialFrame):
-            raise TypeError("private cognition requires ExperientialFrame")
+            raise TypeError("private cognition requires experiential state")
         state = list(experience.prose)
         self.last_packet = {"first_person_state": state}
         if not state:

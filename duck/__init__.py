@@ -27,6 +27,16 @@ from .living import (
 from .living_v09 import GoalPlan, LivingDuck as LivingDuckV09, PlanStepSpec
 from .living_v010 import LivingDuck
 from .mechanics import MechanisticSnapshot, RecognitionSignal
+from .motivated_cognition import (
+    ActivationField,
+    AssociativeEdge,
+    AssociativeGraph,
+    CognitiveCycle,
+    CognitiveModulation,
+    MotiveRecord,
+    MotivatedCognitionEngine,
+    MotivatedCognitionState,
+)
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
     AccessibleTendency,
@@ -40,10 +50,15 @@ LivingDuckV010 = LivingDuck
 
 __all__ = [
     "AccessibleTendency",
+    "ActivationField",
     "AdaptiveSelfCore",
     "ApprovedLanguagePacket",
+    "AssociativeEdge",
+    "AssociativeGraph",
     "BeliefRecord",
     "BeliefStance",
+    "CognitiveCycle",
+    "CognitiveModulation",
     "CommitmentRecord",
     "DeterministicExpression",
     "DeterministicInnerVoice",
@@ -64,6 +79,9 @@ __all__ = [
     "MemoryRecord",
     "ModelExpression",
     "ModelInnerVoice",
+    "MotiveRecord",
+    "MotivatedCognitionEngine",
+    "MotivatedCognitionState",
     "OpenAICompatiblePort",
     "PersistentDuckHost",
     "PersistentDuckHostV010",

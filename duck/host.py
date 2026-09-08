@@ -9,32 +9,25 @@ from typing import Any
 
 from .language import ApprovedLanguagePacket, DeterministicExpression, ExpressionProvider
 from .living import LivingStep, RuleEventInterpreter, SubjectState, WorldEvent
-from .living_v010 import LivingDuck
-from .subjective import PrivateInteriorState
+from .living_v09 import LivingDuck
 from .temporal import stamp
 
 
 @dataclass(frozen=True)
 class InteractionResult:
-    """Public interaction result.
-
-    Private thought and private experiential state are deliberately absent. Public
-    output is the renderer result plus nonprivate interaction metadata.
-    """
-
     response_text: str
     selected_action: str
     action_id: str
+    private_thought: str | None
+    subjective_state: tuple[str, ...]
     tick: int
 
 
 class PersistentDuckHost:
-    """Owns durable state, private interior persistence, and public rendering.
+    """Owns durable state, event journaling, wall time, and user interaction.
 
     Persistence and wall-clock time are host authority. The simulated subject does
-    not read its state files or clock implementation as introspection. The renderer
-    may read a controlled prose-only view of private interior state, but public host
-    results never return that private state directly.
+    not read its state file or clock implementation as introspection.
     """
 
     def __init__(
@@ -48,12 +41,10 @@ class PersistentDuckHost:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.state_path = self.root / "subject.json"
-        self.interior_path = self.root / "private_interior.json"
         self.journal_path = self.root / "events.jsonl"
         self.duck = duck
         self.expression = expression or DeterministicExpression()
         self.interpreter = interpreter or RuleEventInterpreter()
-        self.private_interior = self._load_private_interior()
 
     @classmethod
     def open(
@@ -79,44 +70,13 @@ class PersistentDuckHost:
             interpreter=interpreter,
         )
 
-    def _load_private_interior(self) -> PrivateInteriorState | None:
-        if not self.interior_path.exists():
-            return None
-        payload = json.loads(self.interior_path.read_text(encoding="utf-8"))
-        return PrivateInteriorState.from_dict(payload)
-
-    def _capture_private_interior(self, step: LivingStep) -> None:
-        self.private_interior = PrivateInteriorState.capture(
-            self.duck.last_experience,
-            step.inner_cognition.thought,
-        )
-
-    @staticmethod
-    def _atomic_write(path: Path, payload: str) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            delete=False,
-            dir=path.parent,
-            prefix=path.stem + ".",
-            suffix=".tmp",
-        ) as handle:
+    def save(self) -> None:
+        payload = json.dumps(self.duck.state.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+        self.root.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False, dir=self.root, prefix="subject.", suffix=".tmp") as handle:
             handle.write(payload)
             temp_name = handle.name
-        Path(temp_name).replace(path)
-
-    def save(self) -> None:
-        state_payload = json.dumps(self.duck.state.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
-        self._atomic_write(self.state_path, state_payload)
-        if self.private_interior is not None:
-            interior_payload = json.dumps(
-                self.private_interior.to_dict(),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            )
-            self._atomic_write(self.interior_path, interior_payload)
+        Path(temp_name).replace(self.state_path)
 
     def _append_journal(self, event: dict[str, Any]) -> None:
         record = dict(event)
@@ -124,15 +84,25 @@ class PersistentDuckHost:
         with self.journal_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
+    @staticmethod
+    def _subjective_lines(step: LivingStep) -> tuple[str, ...]:
+        moment = step.subjective_moment
+        lines: list[str] = [item.content for item in moment.impressions]
+        lines.extend(item.felt_as for item in moment.tendencies)
+        lines.extend(moment.recollections)
+        lines.extend(moment.beliefs)
+        lines.extend(moment.concerns)
+        lines.extend(moment.temporal_context)
+        lines.extend(moment.self_context)
+        return tuple(dict.fromkeys(line for line in lines if line))
+
     def interact(self, text: str, *, speaker: str = "user", allow_inner_speech: bool = True) -> InteractionResult:
         event = self.interpreter.interpret(text, source=speaker)
         step = self.duck.step(event, allow_inner_speech=allow_inner_speech)
-        self._capture_private_interior(step)
-        if self.private_interior is None:
-            raise RuntimeError("private interior capture failed")
-        packet = ApprovedLanguagePacket.from_private_interior(
-            self.private_interior,
+        packet = ApprovedLanguagePacket.from_moment(
+            step.subjective_moment,
             user_text=text,
+            private_thought=step.inner_cognition.thought,
             selected_action=step.selected_action,
             character_name=self.duck.state.name,
         )
@@ -150,11 +120,17 @@ class PersistentDuckHost:
             }
         )
         self.save()
-        return InteractionResult(response, step.selected_action, step.action_id, step.tick)
+        return InteractionResult(
+            response,
+            step.selected_action,
+            step.action_id,
+            step.inner_cognition.thought,
+            self._subjective_lines(step),
+            step.tick,
+        )
 
     def observe(self, event: WorldEvent, *, allow_inner_speech: bool = True) -> LivingStep:
         step = self.duck.step(event, allow_inner_speech=allow_inner_speech)
-        self._capture_private_interior(step)
         self._append_journal(
             {
                 "type": "world_event",
@@ -172,13 +148,13 @@ class PersistentDuckHost:
         for _ in range(max(0, int(count))):
             step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
             steps.append(step)
-            self._capture_private_interior(step)
             self._append_journal(
                 {
                     "type": "heartbeat",
                     "tick": step.tick,
                     "selected_action": step.selected_action,
                     "action_id": step.action_id,
+                    "private_thought": step.inner_cognition.thought,
                 }
             )
         self.save()
@@ -224,5 +200,4 @@ class PersistentDuckHost:
             "completed_plan_count": len(self.duck.plans(status="completed")),
             "pending_action": state.pending_action.name if state.pending_action else None,
             "recent_actions": list(state.recent_actions[-8:]),
-            "private_interior_schema": self.private_interior.schema_version if self.private_interior else None,
         }

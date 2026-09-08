@@ -2,8 +2,14 @@
 
 from .access import SubjectAccessFirewall
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
+from .endogenous import (
+    ENDOGENOUS_STATE_SCHEMA,
+    EndogenousDynamicsState,
+    EndogenousEventGenerator,
+    EndogenousSignal,
+)
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
-from .host import InteractionResult, PersistentDuckHost
+from .host import InteractionResult, PersistentDuckHost, PersistentDuckHostCurrent
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .language import (
     ApprovedLanguagePacket,
@@ -26,7 +32,7 @@ from .living import (
     WorldEvent,
 )
 from .living_v09 import GoalPlan, LivingDuck as LivingDuckV09, PlanStepSpec
-from .living_v010 import LivingDuck
+from .living_v010 import LivingDuck as LivingDuckMotivatedCoreV010
 from .mechanics import MechanisticSnapshot, RecognitionSignal
 from .motivated_cognition import (
     ActivationField,
@@ -38,6 +44,7 @@ from .motivated_cognition import (
     MotivatedCognitionEngine,
     MotivatedCognitionState,
 )
+from .organism_v010 import LivingDuck
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
     AccessibleTendency,
@@ -65,6 +72,10 @@ __all__ = [
     "DeterministicExpression",
     "DeterministicInnerVoice",
     "DuckRuntime",
+    "ENDOGENOUS_STATE_SCHEMA",
+    "EndogenousDynamicsState",
+    "EndogenousEventGenerator",
+    "EndogenousSignal",
     "ExecutiveCognitionProvider",
     "ExecutiveProposal",
     "ExperientialFrame",
@@ -75,6 +86,7 @@ __all__ = [
     "InteractionResult",
     "InteractionResultV010",
     "LivingDuck",
+    "LivingDuckMotivatedCoreV010",
     "LivingDuckV09",
     "LivingDuckV010",
     "LivingStep",
@@ -88,6 +100,7 @@ __all__ = [
     "MotivatedCognitionState",
     "OpenAICompatiblePort",
     "PersistentDuckHost",
+    "PersistentDuckHostCurrent",
     "PersistentDuckHostV010",
     "PlanStepSpec",
     "PrivateInteriorState",

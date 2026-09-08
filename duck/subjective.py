@@ -65,7 +65,7 @@ class SubjectiveMoment:
 
 _TELEMETRY_PATTERNS = (
     re.compile(r"\b\d+\.\d+\b"),
-    re.compile(r"\b\d+(?:\.\d+)?%\b"),
+    re.compile(r"\b\d+(?:\.\d+)?\s*%"),
     re.compile(r"\b(?:activation|edge weight|node id|route score|retrieval score|motive strength|need magnitude|latent vector|telemetry)\b", re.I),
     re.compile(r"\b(?:concern_id|plan_id|memory_id|action_id)\s*[:=]", re.I),
     re.compile(r"\b(?:pc_|pl_|m\d{6}\b|a-[0-9]+-[0-9a-f]+\b)"),

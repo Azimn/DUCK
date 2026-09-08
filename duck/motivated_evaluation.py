@@ -89,6 +89,40 @@ def modulation_regimes() -> dict:
     }
 
 
+def coherence_appraisal() -> dict:
+    state = _state("eval-coherence")
+    state.needs["curiosity"] = 0.20
+    state.needs["competence"] = 0.85
+    state.needs["autonomy"] = 0.85
+    duck = LivingDuck(state)
+    step = duck.step(
+        WorldEvent(
+            "observation",
+            "world",
+            "The map says the north gate is open, but the gate in front of me is sealed.",
+            ("contradiction", "expectation_violation", "map", "gate"),
+            -0.05,
+            0.80,
+        ),
+        allow_inner_speech=False,
+    )
+    motives = [m for m in duck.cognitive_state.motives.values() if m.theme == "coherence"]
+    dominant = duck.control.dominant_motive()
+    coherence = motives[0] if motives else None
+    return {
+        "name": "coherence_appraisal",
+        "passed": bool(
+            coherence
+            and coherence.source == "appraisal:inconsistency"
+            and dominant
+            and dominant.theme == "coherence"
+            and step.inner_cognition.thought is None
+        ),
+        "source": coherence.source if coherence else None,
+        "dominant": dominant.theme if dominant else None,
+    }
+
+
 def persistence_roundtrip() -> dict:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory) / "state"
@@ -138,6 +172,7 @@ def run_all() -> dict:
         motive_competition(),
         associative_bridge(),
         modulation_regimes(),
+        coherence_appraisal(),
         persistence_roundtrip(),
         language_lesion(),
     ]

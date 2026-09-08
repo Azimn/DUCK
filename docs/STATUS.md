@@ -12,54 +12,84 @@ Preserved promoted baseline: DUCK v0.9 on `main`
 
 ## Scope of the current implementation
 
-MicroPsiDUCK v0.10 is now treated as a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The branch public package points to the v0.10 runtime and persistent host. The v0.9 organism remains explicitly importable for comparison and remains preserved unchanged as the promoted baseline on `main`.
+MicroPsiDUCK v0.10 is a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The branch public package points to the v0.10 organism and persistent host. The v0.9 organism remains explicitly importable for comparison and remains preserved as the promoted baseline on `main`.
 
-The current implementation hardens the first-person boundary before the full motive, associative-graph, and global-modulation control spine is implemented.
-
-The new private-cognition contract is `ExperientialFrame`. It is immutable and contains only approved first-person experiential prose. Structured `SubjectiveMoment` data may still exist inside inherited implementation layers as diagnostic scaffolding, but the v0.10 runtime converts it through the experiential firewall before a private cognition provider receives it.
-
-The experiential validator rejects raw decimal telemetry, percentages used as magnitude or confidence reports, machine identifiers, key-value telemetry, activation reports, route scores, retrieval scores, motive strengths, need magnitudes, and related implementation leakage.
-
-Private interior state is persisted separately in a versioned `PrivateInteriorState` envelope. The current schema is `duck.private-interior.v1`. The persistence envelope stores approved experiential prose and optional private thought, while mechanistic affect, need state, action scores, graph state, and other developer telemetry remain outside it. Unsupported private-interior schema versions fail explicitly.
-
-The v0.10 persistent host writes canonical subject state and private interior state separately. Public interaction results no longer include private-thought or subjective-state fields. Ordinary interaction and heartbeat journals do not publish private interior content.
-
-The renderer contract now receives prose-only experiential state, optional private thought as controlled rendering context, and a first-person action-intent sentence. Machine action identifiers are translated before entering the renderer packet. The renderer remains an expression surface and cannot become canonical subject authority.
-
-The branch CLI has been aligned with that boundary. Ordinary tick and demo output no longer print private thought. The package metadata identifies the candidate as `micropsi-duck` version `0.10.0`, with both `micropsiduck` and historical `duck` command aliases targeting the v0.10 CLI.
+The current implementation now contains the central motivated-cognition control spine rather than only the experiential boundary. Implemented mechanisms include persistent motives, bounded motive competition, a bounded typed associative graph, transient global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, outcome learning, restart persistence, and the experiential firewall.
 
 No donor package is a runtime dependency.
 
-## Architecture still to implement
+## Persistent motivated cognition
 
-The binding v0.10 architecture now defines the next control spine: continuous state dynamics, need-driven persistent motives, motive competition, a bounded active motive set, typed associative activation, global cognitive modulation, a cognitive field, automatic policy, executive recruitment, planning, action, outcome, and recursive learning.
+Current needs, affect, commitments, relationship conditions, threat, obstacles, novelty, and coherence disruption can generate persistent motives. Implemented motive families include safety, energy, affiliation, curiosity, competence, coherence, autonomy, repair, and commitment.
 
-The motive system, typed associative graph, modernized global modulators, and dedicated long-horizon MicroPsiDUCK simulation are not yet complete merely because the experiential firewall is implemented. The v0.10 milestone remains open until those mechanisms and their required experiments pass.
+Motive identity is canonical by `(theme, target)`. Repeated pressure reactivates an existing motive instead of manufacturing an unbounded series of equivalent records. Legacy duplicates can be merged, resolved contextual motives can retire, stale graph references are removed, and the motive store has a hard upper bound. The active set is also bounded so one dominant organizing motive can coexist with a small number of active competitors while other motives remain inhibited, latent, satisfied, or impossible.
 
-The v0.9 planner is not architecturally privileged in v0.10. It may be reused, refactored, or replaced if a different bounded planning design better fits the motive and modulation control spine.
+Coherence can be recruited by explicit appraisal of contradiction, inconsistency, expectation violation, or prediction error. The longitudinal scenario therefore exercises coherence through a contradictory event rather than by manually lowering a coherence scalar.
 
-## Experiential firewall verification targets
+## Associative activation and modulation
 
-The v0.10 tests require the full candidate runtime to deliver an `ExperientialFrame` to private cognition rather than structured diagnostic state. They verify that the frame has only a prose field, that no raw float telemetry appears, that disguised telemetry is rejected, and that language-lesion operation still refreshes experiential state.
+MicroPsiDUCK now has a typed associative overlay that references canonical memories, people, concepts, motives, actions, beliefs, and other subject entities without becoming a second authority for those entities. Propagation depth, fan-out, active nodes, retained edges, and graph growth are bounded.
 
-The persistence tests require private interior state to survive restart with the same supported schema and prose content. They verify that the private-interior file does not contain canonical affect, needs, or machine action selection state.
+The associative bridge test demonstrates indirect retrieval: a present cue can activate a memory through intermediate associations even when direct lexical retrieval does not surface that memory. The retrieved memory retains its canonical provenance and epistemic status.
 
-Renderer tests require first-person action intent rather than machine action tags and verify that renderer packets do not contain private schema metadata or selected-action identifiers.
+The global modulation layer changes computation before final action selection. Threat narrows associative propagation and retrieval, reduces exploration and route branching, increases interruption sensitivity, and favors safety-preserving or familiar strategies. Fatigue reduces planning depth and resolution. Curiosity permits broader exploration when safety allows it. Low competence increases familiarity bias. The same external event under different internal regimes therefore produces different pre-action cognitive structure.
 
-Public-boundary tests verify that interaction results omit private thought and subjective state and that ordinary event journals do not publish private interior fields.
+## Cognitive field, automatic policy, and selective executive recruitment
+
+Each v0.10 action cycle can assemble a transient mechanistic `CognitiveField` from current context, active motives, associative availability, modulation, and candidate affordances. The field is developer-visible and may contain scores, IDs, tags, activations, and other machinery. It is not introspectively accessible and is not persisted as subject state.
+
+Routine endogenous cycles remain on the automatic path. Severe safety interruption can also remain automatic rather than recruiting deliberative cognition. Novelty, coherence disruption, obstacles, repair conflicts, close affordance competition, and motive conflict can recruit an optional executive provider when conditions justify the additional computation.
+
+`ExecutiveCognitionProvider` is an optional runtime service. It never receives `CognitiveField`. Its input is only an `ExperientialFrame` containing validated first-person experiential prose. It may return an `ExecutiveProposal`, but the proposal is not subject authority. The runtime validates a proposed action against currently available canonical affordances, rejects invalid or unavailable proposals, and falls back to automatic policy when the provider is absent, disabled, fails, or returns an invalid result.
+
+Executive intention prose is not automatically written to autobiographical memory, self-narrative, goals, plans, motives, beliefs, or identity. Provider configuration is host/runtime configuration rather than persistent cognitive identity. Reopening a saved organism without supplying a provider restores the same subject and cognitive state without restoring the provider itself or a previous transient cognitive field.
+
+Private inner voice and executive proposal are separate roles. The deterministic or model-backed inner-cognition provider may generate private first-person thought after experiential projection. The executive provider is recruited selectively before final action selection and may only propose bounded action/intention content.
+
+Current language-lesion operation disables optional language-dependent executive recruitment as well as inner speech while preserving motive generation, competition, associative propagation, modulation, planning, action selection, learning, persistence, and experiential projection. A future nonlinguistic executive could use a separate enablement control if that becomes a research target.
+
+## Experiential firewall
+
+The private-cognition contract is `ExperientialFrame`. It is immutable and contains only approved first-person experiential prose. Structured `SubjectiveMoment` data may still exist inside inherited implementation layers as diagnostic scaffolding, but v0.10 converts it through the experiential firewall before private cognition or an executive provider receives it.
+
+The experiential validator rejects raw decimal telemetry, percentages used as magnitude or confidence reports, machine identifiers, key-value telemetry, activation reports, route scores, retrieval scores, motive strengths, need magnitudes, and related implementation leakage. Current-world text that resembles machinery is not blindly copied across the boundary; executive experiential projection falls back to qualitative first-person content when necessary.
+
+Private interior state is persisted separately in a versioned `PrivateInteriorState` envelope. The current schema is `duck.private-interior.v1`. The persistence envelope stores approved experiential prose and optional private thought, while mechanistic affect, needs, action scores, cognitive fields, graph state, executive provider configuration, and other developer telemetry remain outside it. Unsupported private-interior schema versions fail explicitly.
+
+The v0.10 persistent host writes canonical subject state, motivated-cognition state, and private interior state separately. Public interaction results do not include private-thought or subjective-state fields. Ordinary interaction and heartbeat journals do not publish private interior content.
+
+The renderer receives prose-only experiential state, optional private thought as controlled rendering context, and a first-person action-intent sentence. Machine action identifiers are translated before entering the renderer packet. The renderer remains an expression surface and cannot become canonical subject authority.
+
+## Planning and longitudinal validation
+
+The current v0.10 runtime still reuses portions of the v0.9 bounded planner, but route ordering and planning breadth now consume motive and modulation context. The v0.9 planner is not architecturally privileged and may be refactored or replaced if a cleaner planner better fits the control spine.
+
+The dedicated MicroPsiDUCK longitudinal simulation now exercises seventeen architecture gates, including associative bridge retrieval, contradiction-driven coherence, endogenous curiosity planning, failed-plan replanning, motive-driven obstacle goals, restart persistence, safety dominance, post-threat regime recovery, fatigue and recovery, repair, commitment pressure, major motive-family coverage, bounded quiet time, language lesion, and subject-access cleanliness.
+
+The current configured CI matrix runs documentation validation, focused regulation/planning/motivated evaluations, v0.9 planning simulation, the v0.10 motivated longitudinal simulation, the full pytest suite, and designated historical simulation/evaluation suites on Python 3.11 and 3.12.
+
+## Remaining architectural work
+
+The central v0.10 motive, association, modulation, cognitive-field, firewall, and selective-executive mechanisms now exist, but the development line is not frozen.
+
+The most immediate control-flow cleanup is to make accepted executive selection an explicit action-selection hook rather than using an inherited candidate-ordering compatibility bridge. The current bridge keeps provider authority bounded and tested, but the final architecture should preserve original affordance utilities and represent executive selection as a separate validated decision step.
+
+Continuous organism dynamics can also be strengthened beyond the inherited heartbeat/homeostatic mechanisms. Future work can add richer endogenous event generation from changing body, environment, expectations, commitments, goals, and social context while keeping executive recruitment sparse.
+
+Executive proposals may eventually support validated goal or plan proposals in addition to immediate action proposals, but any such extension must preserve canonical subject authority. A provider may suggest; the organism must validate, adopt, reject, revise, persist, and learn through its own state machinery.
+
+Historical regression harnesses remain useful, but their version binding needs continued cleanup. The v0.7 thirty-day harness is now explicitly pinned to a v0.7 persistence host. Some older v0.5/v0.6/v0.8/v0.9 simulation modules still import the branch-public host and should be pinned or parameterized before their version labels are treated as exact implementation provenance rather than broad behavioral regression evidence.
 
 ## Preserved scientific and behavioral invariants
 
-The v0.10 branch may change implementation structure, but it continues to protect substantive invariants that remain useful from DUCK: persistent subject identity, autobiographical provenance, world and belief separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, and the experiential firewall.
+The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, and the experiential firewall.
 
-Earlier long-horizon regulation, life simulation, agency, and planning harnesses remain valuable regression evidence while the new control spine is built. They are historical behavioral tests, not authorities over v0.10 internal design.
+Earlier long-horizon regulation, life simulation, agency, and planning harnesses remain useful regression evidence while the new architecture is refined. They are historical behavioral tests, not authorities over v0.10 internal design.
 
 ## Relationship to DUCK v0.9
 
 DUCK v0.9 remains the stable comparison point on `main`. It established endogenous goal formation, counterfactual route selection, hierarchical subgoals, outcome-driven replanning, and a persistent planning lifecycle.
 
-MicroPsiDUCK v0.10 changes the research question. The target is no longer only whether lived experience can create and revise goals. The target is whether needs create persistent motives, motives organize cognition, associative activation makes relevant material available without explicit search, internal condition changes the computational regime, and the subject experiences the consequences of those mechanisms without gaining introspective access to the machinery.
+MicroPsiDUCK v0.10 changes the research question. The target is whether needs create persistent motives, motives organize cognition, associative activation makes relevant material available without explicit search, internal condition changes the computational regime, automatic behavior handles routine conditions, richer cognition is selectively recruited when necessary, and the subject experiences the consequences of those mechanisms without gaining introspective access to the machinery.
 
-The subject-access firewall remains mandatory, now strengthened as the experiential firewall.
-
-Passing current firewall and regression tests establishes only the implemented boundary behavior. It does not establish completion of the full MicroPsiDUCK motive, association, and modulation architecture, phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, or general psychological validity.
+Passing the current architecture and regression tests establishes the implemented behavior under the defined simulations. It does not establish phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, or general psychological validity.

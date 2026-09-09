@@ -4,8 +4,9 @@ This module does not claim causal certainty from temporal adjacency. It stores a
 small subject-owned predictive model of how reliably one enacted plan action has
 been followed by success or failure of the next action in the same canonical route.
 Ordinary sequence observations and explicitly marked intervention evidence are kept
-distinct. The model can bias later route evaluation while remaining subordinate to
-motive, modulation, affordance validity, and actual outcome learning.
+distinct. Intervention evidence only gains a stronger causal interpretation when it
+can be compared with an ordinary plan-start baseline for the same target action.
+Even then the result remains a defeasible contrast, not proof of causal necessity.
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from typing import Mapping
 from .living import _clamp
 
 CAUSAL_STATE_SCHEMA = "micropsi-duck.causal.v1"
+PLAN_START = "__plan_start__"
 MAX_TRANSITIONS = 96
 MAX_PLAN_CONTEXTS = 32
 MAX_PENDING_INTERVENTIONS = 32
@@ -26,6 +28,12 @@ def _norm_action(value: str) -> str:
 
 def transition_key(prior_action: str, next_action: str) -> str:
     return f"{_norm_action(prior_action)}->{_norm_action(next_action)}"
+
+
+def _smoothed_reliability(fulfilled: int, violated: int) -> float:
+    fulfilled = max(0, int(fulfilled))
+    violated = max(0, int(violated))
+    return _clamp((4.2 + fulfilled) / (6.0 + fulfilled + violated))
 
 
 @dataclass
@@ -58,23 +66,34 @@ class ActionTransitionCalibration:
         return self.intervention_fulfilled + self.intervention_violated
 
     @property
+    def observational_fulfilled(self) -> int:
+        return self.fulfilled - self.intervention_fulfilled
+
+    @property
+    def observational_violated(self) -> int:
+        return self.violated - self.intervention_violated
+
+    @property
     def observational_evidence(self) -> int:
-        return self.evidence - self.intervention_evidence
+        return self.observational_fulfilled + self.observational_violated
 
     @property
     def reliability(self) -> float:
-        """Smoothed conditional reliability with the same neutral 0.70 prior."""
+        """Smoothed conditional reliability using all registered evidence."""
 
-        return _clamp((4.2 + self.fulfilled) / (6.0 + self.evidence))
+        return _smoothed_reliability(self.fulfilled, self.violated)
+
+    @property
+    def observational_reliability(self) -> float:
+        """Smoothed reliability from ordinary, non-intervention observations only."""
+
+        return _smoothed_reliability(self.observational_fulfilled, self.observational_violated)
 
     @property
     def intervention_reliability(self) -> float:
         """Smoothed reliability using only explicitly marked intervention evidence."""
 
-        return _clamp(
-            (4.2 + self.intervention_fulfilled)
-            / (6.0 + self.intervention_evidence)
-        )
+        return _smoothed_reliability(self.intervention_fulfilled, self.intervention_violated)
 
     def record(self, outcome: str, tick: int, *, intervention: bool = False) -> None:
         if outcome == "fulfilled":
@@ -107,6 +126,20 @@ class ActionTransitionCalibration:
         )
         row.normalize()
         return row
+
+
+@dataclass(frozen=True)
+class CausalContrastEstimate:
+    """Defeasible intervention-versus-baseline comparison for one target action."""
+
+    prior_action: str
+    target_action: str
+    intervention_evidence: int
+    baseline_evidence: int
+    intervention_reliability: float
+    baseline_reliability: float
+    delta: float
+    eligible: bool
 
 
 @dataclass
@@ -267,6 +300,40 @@ class CausalSequenceState:
         self.normalize()
         return self.transitions[key]
 
+    def estimate_intervention_contrast(
+        self,
+        prior_action: str,
+        target_action: str,
+        *,
+        min_evidence: int = 2,
+    ) -> CausalContrastEstimate | None:
+        """Compare intervention-supported sequencing with direct plan-start baseline.
+
+        This is not a randomized causal effect. It is a conservative within-model
+        contrast requiring both intervention evidence for ``prior -> target`` and
+        ordinary, non-intervention evidence for ``plan_start -> target``.
+        """
+
+        treated = self.transition(prior_action, target_action)
+        baseline = self.transition(PLAN_START, target_action)
+        if treated is None or baseline is None:
+            return None
+        treated_n = treated.intervention_evidence
+        baseline_n = baseline.observational_evidence
+        intervention_reliability = treated.intervention_reliability
+        baseline_reliability = baseline.observational_reliability
+        threshold = max(1, int(min_evidence))
+        return CausalContrastEstimate(
+            prior_action=_norm_action(prior_action),
+            target_action=_norm_action(target_action),
+            intervention_evidence=treated_n,
+            baseline_evidence=baseline_n,
+            intervention_reliability=intervention_reliability,
+            baseline_reliability=baseline_reliability,
+            delta=intervention_reliability - baseline_reliability,
+            eligible=treated_n >= threshold and baseline_n >= threshold,
+        )
+
     def register_intervention(self, action_id: str, hypothesis: str, *, tick: int) -> PendingIntervention:
         action_id = str(action_id).strip()
         hypothesis = str(hypothesis).strip()
@@ -358,7 +425,9 @@ class CausalSequenceState:
 
 __all__ = [
     "CAUSAL_STATE_SCHEMA",
+    "PLAN_START",
     "ActionTransitionCalibration",
+    "CausalContrastEstimate",
     "CausalSequenceState",
     "PendingIntervention",
     "PlanSequenceContext",

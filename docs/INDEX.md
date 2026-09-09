@@ -18,6 +18,8 @@ This file defines which documents govern the current development branch and how 
 
 `IMPROVEMENT_BACKLOG_v0.10.md` is the living weakness and failure register. Architectural review findings and meaningful DUCK Discriminator failures must create or update an item there with severity, evidence, reproduction information, and explicit criteria for declaring the weakness fixed. Closed items remain in the document as research history.
 
+`IMPROVEMENT_LOOP_v0.10.md` defines the remediation-first development process. Known weaknesses are fixed through targeted hostile verification before expensive broad discriminator discovery. Broad discriminator findings are classified as NEW, KNOWN, REGRESSION, or ACCEPTED so existing backlog items are updated rather than rediscovered as duplicate work.
+
 `MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi and MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, experiential-firewall, expectation, or causal-prediction contracts.
 
 `STATUS.md` records what is actually implemented and what CI has verified. A green ordinary CI run does not erase open items in the improvement backlog and does not substitute for the DUCK Discriminator release profile once that profile is executable.
@@ -26,11 +28,13 @@ This file defines which documents govern the current development branch and how 
 
 ## Evaluation doctrine
 
-Normal CI and the DUCK Discriminator answer different questions.
+Normal CI, targeted remediation verification, and broad DUCK Discriminator discovery answer different questions.
 
 Normal CI verifies that implemented contracts and established regressions still hold.
 
-The DUCK Discriminator attempts to find cases where the architecture's claims are brittle, confounded, leaked, unbounded, provenance-unsafe, or overfit to friendly demonstrations.
+Targeted remediation verification attacks a known weakness while it is being fixed and checks neighboring invariants likely to regress. It is engineering evidence and may know the weakness in advance.
+
+Broad DUCK Discriminator discovery attempts to find cases where the architecture's claims are brittle, confounded, leaked, unbounded, provenance-unsafe, or overfit to friendly demonstrations after the high-priority known weakness queue has been substantially cleared.
 
 A discriminator failure must be dispositioned through `IMPROVEMENT_BACKLOG_v0.10.md`. The preferred response is to correct the mechanism and retain the hostile test. If a discriminator gate is itself invalid, its revision requires a documented rationale rather than silent weakening.
 

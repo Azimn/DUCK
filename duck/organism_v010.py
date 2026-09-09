@@ -57,10 +57,13 @@ class LivingDuck(MotivatedLivingDuck):
         bonuses: dict[str, float] = {}
         reason = ""
         if "fatigue_signal" in tags:
-            # A threshold-crossing depletion alarm should tip the already-active
-            # energy motive from passive waiting toward explicit recovery. This is
-            # a local affordance bias, not a replacement for motive competition.
-            bonuses = {"rest": 0.54}
+            # A threshold-crossing or cooldown-reasserted depletion alarm should
+            # keep recovery competitive while the underlying deficit remains. The
+            # extra term scales only inside the explicit fatigue-signal path, so it
+            # does not alter ordinary quiet-heartbeat arbitration.
+            energy = max(0.0, min(1.0, float(self.state.needs.get("energy", 0.85))))
+            deficit = max(0.0, 0.28 - energy)
+            bonuses = {"rest": 0.62 + 0.90 * deficit, "wait": -0.04}
             reason = "endogenous_energy"
         elif "affiliation_signal" in tags:
             bonuses = {"seek_connection": 0.40, "wait": -0.04}

@@ -5,6 +5,7 @@ import json
 import pytest
 
 from duck import LivingDuck, PersistentDuckHost
+from duck.authoritative_organism_v010 import LivingDuck as AuthoritativeLivingDuck
 from duck.expectations_v010 import ExpectationLedgerState
 from duck.living import SubjectState, WorldEvent
 from duck.predictive_organism_v010 import LivingDuck as PredictiveLivingDuck
@@ -35,7 +36,8 @@ def _mystery(text: str = "A patterned signal is coming from the old panel.") -> 
 
 
 def test_public_living_duck_is_action_predictive_composition():
-    assert LivingDuck is PredictiveLivingDuck
+    assert LivingDuck is AuthoritativeLivingDuck
+    assert issubclass(AuthoritativeLivingDuck, PredictiveLivingDuck)
 
 
 def test_canonical_plan_step_automatically_predicts_its_own_outcome():

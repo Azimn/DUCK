@@ -10,14 +10,15 @@ causal-sequence model learns whether the next action in an enacted canonical pla
 tends to succeed after the previous action. Temporal adjacency is a bounded
 predictive hypothesis, not proof of causal necessity. Deliberately marked plan
 actions are retained as intervention evidence separately from ordinary sequence
-observation.
+observation. Intervention-specific route influence requires a matched direct-plan
+baseline for the same target action.
 """
 from __future__ import annotations
 
 from dataclasses import replace
 from typing import Iterable
 
-from .causal_v010 import CausalSequenceState, PendingIntervention
+from .causal_v010 import CausalSequenceState, PLAN_START, PendingIntervention
 from .expectations_v010 import (
     ActionExpectationResolution,
     ActionOutcomeExpectation,
@@ -86,8 +87,36 @@ class LivingDuck(ContinuousLivingDuck):
             adjustment += centered_reliability * 0.80 * evidence_weight
         return max(-0.20, min(0.20, adjustment))
 
+    def _intervention_contrast_route_adjustment(self, kind: str, route: str) -> float:
+        """Add only bounded contrast evidence that has a matched direct baseline.
+
+        Merely marking an action as an intervention grants no extra weight. A route
+        receives intervention-specific influence only when at least two deliberate
+        observations support ``prior -> target`` and at least two ordinary first-step
+        observations provide ``plan_start -> target`` for comparison.
+        """
+
+        steps = self._ROUTES.get(kind, {}).get(route, ())
+        if len(steps) < 2:
+            return 0.0
+        adjustment = 0.0
+        for prior, following in zip(steps, steps[1:]):
+            contrast = self.causal_state.estimate_intervention_contrast(
+                prior.preferred_action,
+                following.preferred_action,
+                min_evidence=2,
+            )
+            if contrast is None or not contrast.eligible:
+                continue
+            evidence_weight = min(
+                1.0,
+                min(contrast.intervention_evidence, contrast.baseline_evidence) / 4.0,
+            )
+            adjustment += contrast.delta * 0.45 * evidence_weight
+        return max(-0.10, min(0.10, adjustment))
+
     def _route_score(self, kind: str, route: str) -> float:
-        """Blend action and sequence reliability into motivated route evaluation."""
+        """Blend predictive evidence into motivated route evaluation."""
 
         score = super()._route_score(kind, route)
         features = self._ROUTE_FEATURES.get(route, {})
@@ -96,6 +125,7 @@ class LivingDuck(ContinuousLivingDuck):
             score
             + self._action_prediction_route_adjustment(action)
             + self._sequence_prediction_route_adjustment(kind, route)
+            + self._intervention_contrast_route_adjustment(kind, route)
         )
 
     def register_action_outcome_expectation(
@@ -270,7 +300,7 @@ class LivingDuck(ContinuousLivingDuck):
         action_was_intervention: bool,
         intervention_hypothesis: str,
     ) -> None:
-        """Update only clearly resolved adjacent steps in one canonical plan route."""
+        """Update clearly resolved first-step baselines and adjacent plan transitions."""
 
         if linked is None or not action_name:
             return
@@ -279,24 +309,31 @@ class LivingDuck(ContinuousLivingDuck):
         route = old_plan.current_route or ""
         context = self.causal_state.context_for(plan_id)
 
+        outcome = None
+        if success >= 0.60:
+            outcome = "fulfilled"
+        elif success <= 0.38:
+            outcome = "violated"
+
+        if outcome is not None and old_plan.step_index == 0:
+            self.causal_state.observe_transition(
+                PLAN_START,
+                action_name,
+                outcome=outcome,
+                tick=self.state.tick,
+                intervention=action_was_intervention,
+            )
+
         if context is not None:
             adjacent = (
                 context.route == route
                 and context.previous_step_index + 1 == old_plan.step_index
             )
-            if adjacent and success >= 0.60:
+            if adjacent and outcome is not None:
                 self.causal_state.observe_transition(
                     context.previous_action,
                     action_name,
-                    outcome="fulfilled",
-                    tick=self.state.tick,
-                    intervention=context.previous_was_intervention,
-                )
-            elif adjacent and success <= 0.38:
-                self.causal_state.observe_transition(
-                    context.previous_action,
-                    action_name,
-                    outcome="violated",
+                    outcome=outcome,
                     tick=self.state.tick,
                     intervention=context.previous_was_intervention,
                 )

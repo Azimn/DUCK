@@ -16,6 +16,8 @@ from .environment_v010 import (
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .expectations_v010 import (
     EXPECTATION_STATE_SCHEMA,
+    ActionExpectationResolution,
+    ActionOutcomeExpectation,
     ExpectationCalibration,
     ExpectationLedgerState,
     ExpectationRecord,
@@ -56,7 +58,8 @@ from .motivated_cognition import (
     MotivatedCognitionEngine,
     MotivatedCognitionState,
 )
-from .organism_v010 import LivingDuck
+from .organism_v010 import LivingDuck as LivingDuckContinuousV010
+from .predictive_organism_v010 import LivingDuck
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
     AccessibleTendency,
@@ -70,6 +73,8 @@ LivingDuckV010 = LivingDuck
 
 __all__ = [
     "AccessibleTendency",
+    "ActionExpectationResolution",
+    "ActionOutcomeExpectation",
     "ActivationField",
     "AdaptiveSelfCore",
     "ApprovedLanguagePacket",
@@ -105,6 +110,7 @@ __all__ = [
     "InteractionResult",
     "InteractionResultV010",
     "LivingDuck",
+    "LivingDuckContinuousV010",
     "LivingDuckMotivatedCoreV010",
     "LivingDuckV09",
     "LivingDuckV010",

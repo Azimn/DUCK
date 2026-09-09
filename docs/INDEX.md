@@ -12,11 +12,29 @@ This file defines which documents govern the current development branch and how 
 
 `EXPECTATIONS_v0.10.md` is a supporting technical contract for prediction semantics. It defines the separation among world truth, subject belief, and subject expectation; perceived-evidence requirements; overdue versus violated predictions; calibration; revision lineage; and the evidence boundary for action-outcome expectations. It cannot override the architecture or milestone documents.
 
-`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi and MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, experiential-firewall, or expectation contracts.
+`CAUSAL_PREDICTION_v0.10.md` is a supporting technical contract for action reliability, sequence-conditioned evidence, explicit intervention evidence, matched direct baselines, and the boundary between defeasible predictive contrast and stronger causal claims. It cannot override the architecture or milestone documents.
 
-`STATUS.md` records what is actually implemented and what CI has verified.
+`DUCK_DISCRIMINATOR_v0.10.md` is the adversarial evaluation specification. It defines how MicroPsiDUCK should be attacked through randomized holdouts, metamorphic tests, mechanism ablations, parameter perturbation, persistence crash injection, epistemic attacks, firewall/prompt-injection attacks, long-run boundedness, counterfactual provenance tests, causal-confound scenarios, and historical-provenance audits. It does not redefine architecture; it attempts to falsify architectural claims.
+
+`IMPROVEMENT_BACKLOG_v0.10.md` is the living weakness and failure register. Architectural review findings and meaningful DUCK Discriminator failures must create or update an item there with severity, evidence, reproduction information, and explicit criteria for declaring the weakness fixed. Closed items remain in the document as research history.
+
+`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi and MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, experiential-firewall, expectation, or causal-prediction contracts.
+
+`STATUS.md` records what is actually implemented and what CI has verified. A green ordinary CI run does not erase open items in the improvement backlog and does not substitute for the DUCK Discriminator release profile once that profile is executable.
 
 `DONOR_AUDIT_v0.1.md` remains nonbinding research context. Donor mechanisms do not become MicroPsiDUCK requirements merely because they appear there.
+
+## Evaluation doctrine
+
+Normal CI and the DUCK Discriminator answer different questions.
+
+Normal CI verifies that implemented contracts and established regressions still hold.
+
+The DUCK Discriminator attempts to find cases where the architecture's claims are brittle, confounded, leaked, unbounded, provenance-unsafe, or overfit to friendly demonstrations.
+
+A discriminator failure must be dispositioned through `IMPROVEMENT_BACKLOG_v0.10.md`. The preferred response is to correct the mechanism and retain the hostile test. If a discriminator gate is itself invalid, its revision requires a documented rationale rather than silent weakening.
+
+A future v0.10 freeze should require both ordinary release CI and the current discriminator release profile, except for explicitly documented accepted limitations.
 
 ## Preserved DUCK v0.9 baseline
 

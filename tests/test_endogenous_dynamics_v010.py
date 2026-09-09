@@ -31,6 +31,7 @@ def test_low_energy_crossing_emits_once_and_recruits_rest_affordance():
     state = _state("endogenous-energy")
     state.needs["energy"] = 0.18
     duck = LivingDuck(state)
+    memory_count = len(duck.state.memories)
 
     first = duck.heartbeat(allow_inner_speech=False)
     first_trace = _dynamics(first)
@@ -39,11 +40,28 @@ def test_low_energy_crossing_emits_once_and_recruits_rest_affordance():
     assert first.selected_action == "rest"
     assert first.inner_cognition.thought is None
     assert duck.endogenous_state.emission_counts["energy"] == 1
+    assert len(duck.state.memories) == memory_count
 
     second = duck.heartbeat(allow_inner_speech=False)
     second_trace = _dynamics(second)
     assert second_trace["emitted"] is False
     assert duck.endogenous_state.emission_counts["energy"] == 1
+
+
+def test_unresolved_energy_pressure_reasserts_after_cooldown_not_every_tick():
+    state = _state("endogenous-energy-repeat")
+    state.needs["energy"] = 0.18
+    duck = LivingDuck(state)
+
+    first = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(first)["signal"]["kind"] == "energy"
+    for _ in range(7):
+        quiet = duck.heartbeat(allow_inner_speech=False)
+        assert _dynamics(quiet)["emitted"] is False
+    repeated = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(repeated)["signal"]["kind"] == "energy"
+    assert repeated.selected_action == "rest"
+    assert duck.endogenous_state.emission_counts["energy"] == 2
 
 
 def test_recovery_rearms_energy_signal_for_a_later_real_crossing():

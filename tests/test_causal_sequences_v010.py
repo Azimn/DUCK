@@ -5,7 +5,7 @@ import json
 import pytest
 
 from duck import LivingDuck, PersistentDuckHost
-from duck.causal_v010 import CausalSequenceState
+from duck.causal_v010 import CausalSequenceState, PLAN_START
 from duck.living import SubjectState
 
 
@@ -87,6 +87,9 @@ def test_enacted_adjacent_plan_steps_train_transition_and_clear_context_on_compl
     assert context is not None
     assert context.previous_action == "ask"
     assert context.previous_step_index == 0
+    baseline = duck.causal_state.transition(PLAN_START, "ask")
+    assert baseline is not None
+    assert baseline.fulfilled == 1
     assert duck.causal_state.transition("ask", "explore") is None
 
     second = duck.heartbeat(allow_inner_speech=False)
@@ -171,7 +174,8 @@ def test_plan_sequence_context_survives_public_host_restart_and_trains_once(tmp_
     payload = json.loads((root / "causal_v010.json").read_text(encoding="utf-8"))
     assert payload["schema_version"] == "micropsi-duck.causal.v1"
     assert plan.plan_id in payload["plan_contexts"]
-    assert payload["transitions"] == {}
+    assert f"{PLAN_START}->ask" in payload["transitions"]
+    assert "ask->explore" not in payload["transitions"]
 
     reopened = PersistentDuckHost.open(root)
     context = reopened.duck.causal_state.context_for(plan.plan_id)
@@ -194,4 +198,4 @@ def test_plan_sequence_context_survives_public_host_restart_and_trains_once(tmp_
     assert learned.fulfilled == 1
     assert learned.violated == 0
     assert reopened.duck.causal_state.context_for(plan.plan_id) is None
-    assert reopened.status()["learned_action_transition_count"] == 1
+    assert reopened.status()["learned_action_transition_count"] == 2

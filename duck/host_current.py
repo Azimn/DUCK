@@ -11,7 +11,7 @@ from .expectations_v010 import ExpectationLedgerState
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .living import SubjectState, WorldEvent
 from .motivated_cognition import MotivatedCognitionState
-from .organism_v010 import LivingDuck
+from .predictive_organism_v010 import LivingDuck
 
 
 class PersistentDuckHostCurrent(PersistentDuckHostV010):
@@ -211,6 +211,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 "endogenous_emission_counts": dict(sorted(self.duck.endogenous_state.emission_counts.items())),
                 "expectation_schema": self.duck.expectation_state.schema_version,
                 "active_expectation_count": len(self.duck.expectation_state.active()),
+                "active_action_expectation_count": len(self.duck.expectation_state.active_actions()),
                 "environment_schema": self.environment.schema_version,
                 "scheduled_world_event_count": len(self.environment.scheduled),
             }

@@ -1,10 +1,10 @@
 """Host-owned external world dynamics for MicroPsiDUCK v0.10.
 
 The simulated subject may generate endogenous pressures, but it must not author
-external reality. This module therefore keeps scheduled environmental changes in a
-separate host-owned persistence envelope. Observable changes are delivered to the
-organism as WorldEvents. Unperceived changes update world truth without becoming
-subject belief or autobiographical experience.
+external reality. This module therefore keeps both authoritative world facts and
+scheduled environmental changes in a separate host-owned persistence envelope.
+Observable changes are delivered to the organism as WorldEvents. Unperceived changes
+update world truth without becoming subject belief or autobiographical experience.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from .living import WorldEvent
 
 ENVIRONMENT_STATE_SCHEMA = "micropsi-duck.environment.v1"
 MAX_SCHEDULED_WORLD_EVENTS = 128
+MAX_WORLD_FACTS = 1024
 
 
 def _event_to_dict(event: WorldEvent) -> dict[str, object]:
@@ -74,16 +75,28 @@ class ScheduledWorldEvent:
 
 @dataclass
 class EnvironmentDynamicsState:
-    """Versioned host authority for future external events."""
+    """Versioned host authority for current external truth and future events."""
 
     schema_version: str = ENVIRONMENT_STATE_SCHEMA
     event_counter: int = 0
+    world_facts: dict[str, str] = field(default_factory=dict)
     scheduled: list[ScheduledWorldEvent] = field(default_factory=list)
 
     def normalize(self) -> None:
         if self.schema_version != ENVIRONMENT_STATE_SCHEMA:
             raise ValueError(f"unsupported environment dynamics schema: {self.schema_version}")
         self.event_counter = max(0, int(self.event_counter))
+        normalized_facts = {
+            str(key): str(value)
+            for key, value in self.world_facts.items()
+            if str(key).strip()
+        }
+        if len(normalized_facts) > MAX_WORLD_FACTS:
+            # Dict insertion order is meaningful enough for bounded host truth here;
+            # retain the most recently inserted tail rather than growing without bound.
+            normalized_facts = dict(list(normalized_facts.items())[-MAX_WORLD_FACTS:])
+        self.world_facts = normalized_facts
+
         unique: dict[str, ScheduledWorldEvent] = {}
         for record in self.scheduled:
             if not record.event_id:
@@ -93,6 +106,20 @@ class EnvironmentDynamicsState:
             unique.values(),
             key=lambda row: (row.due_tick, row.created_tick, row.event_id),
         )[:MAX_SCHEDULED_WORLD_EVENTS]
+
+    def set_fact(self, key: str, value: str) -> None:
+        key = str(key).strip()
+        if not key:
+            raise ValueError("world fact key is required")
+        self.world_facts[key] = str(value)
+        self.normalize()
+
+    def apply_event_facts(self, event: WorldEvent) -> None:
+        for key, value in event.world_facts:
+            self.set_fact(key, value)
+
+    def fact(self, key: str) -> str | None:
+        return self.world_facts.get(str(key))
 
     def schedule(self, current_tick: int, event: WorldEvent, *, due_in: int = 1) -> ScheduledWorldEvent:
         if event.source == "self" or event.kind == "endogenous":
@@ -130,6 +157,7 @@ class EnvironmentDynamicsState:
         return {
             "schema_version": self.schema_version,
             "event_counter": self.event_counter,
+            "world_facts": dict(self.world_facts),
             "scheduled": [record.to_dict() for record in self.scheduled],
         }
 
@@ -138,6 +166,10 @@ class EnvironmentDynamicsState:
         state = cls(
             schema_version=str(data.get("schema_version", ENVIRONMENT_STATE_SCHEMA)),
             event_counter=int(data.get("event_counter", 0)),
+            world_facts={
+                str(key): str(value)
+                for key, value in data.get("world_facts", {}).items()
+            },
             scheduled=[ScheduledWorldEvent.from_dict(row) for row in data.get("scheduled", ())],
         )
         state.normalize()
@@ -146,6 +178,7 @@ class EnvironmentDynamicsState:
 
 __all__ = [
     "ENVIRONMENT_STATE_SCHEMA",
+    "MAX_WORLD_FACTS",
     "EnvironmentDynamicsState",
     "ScheduledWorldEvent",
 ]

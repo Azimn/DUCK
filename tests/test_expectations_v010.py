@@ -43,6 +43,7 @@ def test_perceived_matching_fact_fulfills_expectation():
     assert resolved.observed_value == "open"
     assert step.developer_trace["expectations"]["resolved"][0]["outcome"] == "fulfilled"
     assert any("expectation_fulfilled" in memory.tags for memory in duck.state.memories)
+    assert duck.state.world_facts == {}
     assert step.inner_cognition.thought is None
 
 
@@ -69,6 +70,7 @@ def test_perceived_counterevidence_violates_expectation_and_recruits_coherence_s
     assert any(motive.theme == "coherence" for motive in duck.cognitive_state.motives.values())
     assert any("expectation_violation" in memory.tags for memory in duck.state.memories)
     assert any("What happened did not match what I expected" in memory.text for memory in duck.state.memories)
+    assert duck.state.world_facts == {}
     assert step.inner_cognition.thought is None
 
 
@@ -87,6 +89,7 @@ def test_unrelated_perceived_fact_does_not_resolve_expectation():
         allow_inner_speech=False,
     )
     assert duck.expectation_state.get(record.expectation_id).status == "open"
+    assert duck.state.world_facts == {}
 
 
 def test_deadline_passage_marks_overdue_not_violated_and_becomes_sparse_uncertainty_pressure():
@@ -204,7 +207,8 @@ def test_hidden_world_change_cannot_resolve_subject_expectation(tmp_path):
         due_in=1,
     )
     host.heartbeat(1, allow_inner_speech=False)
-    assert host.duck.state.world_facts["archive_door"] == "locked"
+    assert host.environment.world_facts["archive_door"] == "locked"
+    assert host.duck.state.world_facts == {}
     unresolved = host.duck.expectation_state.get(record.expectation_id)
     assert unresolved.status == "open"
     assert unresolved.observed_value == ""
@@ -228,6 +232,8 @@ def test_perceived_scheduled_world_event_can_resolve_expectation(tmp_path):
         due_in=1,
     )
     step = host.heartbeat(1, allow_inner_speech=False)[0]
+    assert host.environment.fact("workshop_light") == "on"
+    assert host.duck.state.world_facts == {}
     assert host.duck.expectation_state.get(record.expectation_id).status == "fulfilled"
     assert step.developer_trace["expectations"]["resolved"][0]["expectation_id"] == record.expectation_id
 
@@ -254,6 +260,7 @@ def test_expectation_ledger_survives_restart_separately_from_environment(tmp_pat
     assert restored.proposition == record.proposition
     assert restored.expected_value == "table"
     assert restored.confidence == pytest.approx(0.86)
+    assert reopened.duck.state.world_facts == {}
     assert reopened.status()["active_expectation_count"] == 1
 
 

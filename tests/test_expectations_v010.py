@@ -31,21 +31,13 @@ def test_perceived_matching_fact_fulfills_expectation():
         expected_value="open",
         confidence=0.84,
     )
-
     step = duck.step(
         WorldEvent(
-            "environment",
-            "world",
-            "The garden door is open.",
-            ("observation",),
-            0.05,
-            0.35,
-            (("garden_door", "open"),),
-            True,
+            "environment", "world", "The garden door is open.", ("observation",),
+            0.05, 0.35, (("garden_door", "open"),), True,
         ),
         allow_inner_speech=False,
     )
-
     resolved = duck.expectation_state.get(record.expectation_id)
     assert resolved.status == "fulfilled"
     assert resolved.observed_value == "open"
@@ -62,21 +54,13 @@ def test_perceived_counterevidence_violates_expectation_and_recruits_coherence_s
         expected_value="open",
         confidence=0.91,
     )
-
     step = duck.step(
         WorldEvent(
-            "environment",
-            "world",
-            "The garden door is locked.",
-            ("observation",),
-            -0.05,
-            0.45,
-            (("garden_door", "locked"),),
-            True,
+            "environment", "world", "The garden door is locked.", ("observation",),
+            -0.05, 0.45, (("garden_door", "locked"),), True,
         ),
         allow_inner_speech=False,
     )
-
     resolved = duck.expectation_state.get(record.expectation_id)
     assert resolved.status == "violated"
     assert resolved.observed_value == "locked"
@@ -97,21 +81,15 @@ def test_unrelated_perceived_fact_does_not_resolve_expectation():
     )
     duck.step(
         WorldEvent(
-            "environment",
-            "world",
-            "The hall light came on.",
-            ("observation",),
-            0.0,
-            0.30,
-            (("hall_light", "on"),),
-            True,
+            "environment", "world", "The hall light came on.", ("observation",),
+            0.0, 0.30, (("hall_light", "on"),), True,
         ),
         allow_inner_speech=False,
     )
     assert duck.expectation_state.get(record.expectation_id).status == "open"
 
 
-def test_deadline_passage_marks_overdue_not_violated():
+def test_deadline_passage_marks_overdue_not_violated_and_becomes_sparse_uncertainty_pressure():
     duck = LivingDuck(_quiet_state("expectation-overdue"))
     record = duck.register_expectation(
         "I expect the delivery to be here soon.",
@@ -129,7 +107,60 @@ def test_deadline_passage_marks_overdue_not_violated():
     overdue = duck.expectation_state.get(record.expectation_id)
     assert overdue.status == "overdue"
     assert record.expectation_id in second.developer_trace["expectations"]["became_overdue"]
+    signal = second.developer_trace["endogenous_dynamics"]["signal"]
+    assert signal["kind"] == "expectation"
+    assert signal["key"] == f"expectation:{record.expectation_id}"
+    assert "expectation_pressure" in signal["tags"]
+    assert "expectation_violation" not in signal["tags"]
+    assert second.developer_trace["executive_recruitment"]["invoked"] is False
     assert not any("expectation_violation" in memory.tags for memory in duck.state.memories)
+
+    third = duck.heartbeat(allow_inner_speech=False)
+    assert third.developer_trace["endogenous_dynamics"]["emitted"] is False
+    assert duck.endogenous_state.emission_counts[f"expectation:{record.expectation_id}"] == 1
+
+
+def test_low_confidence_overdue_expectation_does_not_force_endogenous_inquiry():
+    duck = LivingDuck(_quiet_state("expectation-low-confidence"))
+    record = duck.register_expectation(
+        "I tentatively expect the package to arrive.",
+        fact_key="package_status",
+        expected_value="arrived",
+        due_in=1,
+        confidence=0.40,
+    )
+    duck.heartbeat(allow_inner_speech=False)
+    second = duck.heartbeat(allow_inner_speech=False)
+    assert duck.expectation_state.get(record.expectation_id).status == "overdue"
+    assert second.developer_trace["endogenous_dynamics"]["emitted"] is False
+    assert f"expectation:{record.expectation_id}" not in duck.endogenous_state.emission_counts
+
+
+def test_resolving_overdue_expectation_retires_its_scheduler_pressure():
+    duck = LivingDuck(_quiet_state("expectation-pressure-resolution"))
+    record = duck.register_expectation(
+        "I expect the signal light to turn green.",
+        fact_key="signal_light",
+        expected_value="green",
+        due_in=1,
+        confidence=0.90,
+    )
+    duck.heartbeat(allow_inner_speech=False)
+    duck.heartbeat(allow_inner_speech=False)
+    key = f"expectation:{record.expectation_id}"
+    assert key in duck.endogenous_state.latched_signals
+
+    duck.step(
+        WorldEvent(
+            "environment", "world", "The signal light turns green.", ("observation",),
+            0.05, 0.30, (("signal_light", "green"),), True,
+        ),
+        allow_inner_speech=False,
+    )
+    assert duck.expectation_state.get(record.expectation_id).status == "fulfilled"
+    assert key not in duck.endogenous_state.latched_signals
+    assert key not in duck.endogenous_state.last_emitted_tick
+    assert key not in duck.endogenous_state.emission_counts
 
 
 def test_revision_preserves_prediction_lineage():
@@ -148,7 +179,6 @@ def test_revision_preserves_prediction_lineage():
         due_in=3,
         confidence=0.81,
     )
-
     assert duck.expectation_state.get(original.expectation_id).status == "superseded"
     assert revised.revision_of == original.expectation_id
     assert revised.expected_value == "closed"
@@ -168,20 +198,12 @@ def test_hidden_world_change_cannot_resolve_subject_expectation(tmp_path):
     )
     host.schedule_world_event(
         WorldEvent(
-            "environment",
-            "world",
-            "The archive door locks while Aster is elsewhere.",
-            ("door", "lock"),
-            0.0,
-            0.40,
-            (("archive_door", "locked"),),
-            False,
+            "environment", "world", "The archive door locks while Aster is elsewhere.",
+            ("door", "lock"), 0.0, 0.40, (("archive_door", "locked"),), False,
         ),
         due_in=1,
     )
-
     host.heartbeat(1, allow_inner_speech=False)
-
     assert host.duck.state.world_facts["archive_door"] == "locked"
     unresolved = host.duck.expectation_state.get(record.expectation_id)
     assert unresolved.status == "open"
@@ -200,18 +222,11 @@ def test_perceived_scheduled_world_event_can_resolve_expectation(tmp_path):
     )
     host.schedule_world_event(
         WorldEvent(
-            "environment",
-            "world",
-            "The workshop light turns on.",
-            ("observation",),
-            0.0,
-            0.35,
-            (("workshop_light", "on"),),
-            True,
+            "environment", "world", "The workshop light turns on.", ("observation",),
+            0.0, 0.35, (("workshop_light", "on"),), True,
         ),
         due_in=1,
     )
-
     step = host.heartbeat(1, allow_inner_speech=False)[0]
     assert host.duck.expectation_state.get(record.expectation_id).status == "fulfilled"
     assert step.developer_trace["expectations"]["resolved"][0]["expectation_id"] == record.expectation_id
@@ -228,7 +243,6 @@ def test_expectation_ledger_survives_restart_separately_from_environment(tmp_pat
         confidence=0.86,
     )
     host.save()
-
     path = root / "expectations_v010.json"
     assert path.exists()
     payload = json.loads(path.read_text(encoding="utf-8"))

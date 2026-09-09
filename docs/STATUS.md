@@ -10,6 +10,10 @@ Prediction contract: `docs/EXPECTATIONS_v0.10.md`
 
 Causal prediction contract: `docs/CAUSAL_PREDICTION_v0.10.md`
 
+Adversarial evaluation specification: `docs/DUCK_DISCRIMINATOR_v0.10.md`
+
+Living improvement backlog: `docs/IMPROVEMENT_BACKLOG_v0.10.md`
+
 Development branch: `motivated-cognition-v0.10`
 
 Preserved promoted baseline: DUCK v0.9 on `main`
@@ -18,7 +22,7 @@ Preserved promoted baseline: DUCK v0.9 on `main`
 
 MicroPsiDUCK v0.10 is a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The public package on this branch points to the composed v0.10 predictive organism and current persistent host. DUCK v0.9 remains preserved on `main` and remains explicitly importable as a historical comparison point.
 
-The implemented v0.10 control spine includes persistent motives, bounded motive competition, typed associative activation, global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, validated action selection, bounded planning, sparse endogenous dynamics, subject-owned world expectations, exact-action outcome expectations, learned prediction calibration, sequence-conditioned predictive calibration, explicit intervention evidence, matched causal contrasts, host-owned external world scheduling, outcome learning, restart persistence, and the experiential firewall.
+The implemented v0.10 control spine includes persistent motives, bounded motive competition, typed associative activation, global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, validated action selection, bounded planning, sparse endogenous dynamics, subject-owned world expectations, exact-action outcome expectations, learned prediction calibration, sequence-conditioned predictive calibration, explicit intervention evidence, matched causal contrasts, transient counterfactual route comparison, host-owned external world scheduling, outcome learning, restart persistence, and the experiential firewall.
 
 No donor package is a runtime dependency.
 
@@ -68,6 +72,16 @@ This is a defeasible within-model contrast, not a randomized causal effect. Cont
 
 The minimum previous-step context, pending intervention markers, transition evidence, and matched-baseline evidence survive process restart through the causal state file. Plan completion, clear route failure, or abandoned pending actions clear obsolete transient causal context.
 
+## Counterfactual route prediction
+
+Route selection now records a transient developer-side comparison of the routes considered at the decision point. Every route estimate is explicitly provenance-labeled `model_prediction`; exactly one route is selected and the remaining alternatives remain unenacted counterfactuals.
+
+Counterfactual snapshots are intentionally non-persistent. Reading them is side-effect free and does not create autobiographical memory, belief, expectation evidence, causal training data, world truth, relationship evidence, or private experiential history. Reopening the host begins with no counterfactual snapshot.
+
+Counterfactual evidence descriptions may identify which evidence classes informed a route estimate, such as motivated structure, action calibration, sequence calibration, intervention-supported sequence evidence, or an eligible matched intervention contrast. Raw preference scores and causal telemetry remain developer-side.
+
+The counterfactual boundary and non-persistence tests are verified on the current branch. CI run #262 completed successfully on Python 3.11 and Python 3.12 at commit `2959ce945fa59c7d9691b2e4206e5743afdf4cc8`.
+
 ## Associative activation, modulation, and selective executive cognition
 
 The typed associative overlay references canonical memories, people, concepts, motives, actions, beliefs, and other subject entities without becoming a second authority. Propagation depth, fan-out, active nodes, retained edges, and graph growth are bounded. The bridge test verifies indirect retrieval through intermediate associations when direct lexical retrieval does not surface the target memory.
@@ -80,7 +94,7 @@ Language-lesion operation disables optional language-dependent executive recruit
 
 ## Experiential firewall
 
-The private cognition boundary remains mandatory. `ExperientialFrame` is immutable and contains first-person experiential prose only. Mechanistic numbers, machine identifiers, motive strengths, activations, route scores, retrieval scores, expectation confidence, action calibration, transition evidence counts, transition reliability, intervention markers, baseline symbols, plan IDs, step indices, contrast deltas, and causal route adjustments do not cross the experiential firewall.
+The private cognition boundary remains mandatory. `ExperientialFrame` is immutable and contains first-person experiential prose only. Mechanistic numbers, machine identifiers, motive strengths, activations, route scores, retrieval scores, expectation confidence, action calibration, transition evidence counts, transition reliability, intervention markers, baseline symbols, plan IDs, step indices, contrast deltas, causal route adjustments, and counterfactual preference scores do not cross the experiential firewall.
 
 Private interior state is persisted separately under `duck.private-interior.v1`. The public host separately persists canonical subject state, motivated cognition, endogenous scheduler state, expectation state, causal sequence state, environment state, and private interior state. Public interaction results and ordinary journals do not expose private thought or mechanistic interior state.
 
@@ -90,15 +104,21 @@ The renderer is an expression surface, not subject authority. It receives contro
 
 The configured CI matrix runs documentation validation, focused regulation/planning/motivated evaluations, the v0.9 planning simulation, the v0.10 motivated longitudinal simulation, the full pytest suite, and designated historical simulation/evaluation suites on Python 3.11 and Python 3.12.
 
-Focused tests cover the experiential firewall, motive persistence and competition, associative bridge retrieval, modulation regimes, selective executive recruitment, sparse endogenous scheduling, host-owned world events, hidden-world nonleakage, expectation fulfillment and violation, overdue uncertainty, revision lineage, learned expectation calibration, exact-action predictions, action reliability effects on route scoring, sequence-conditioned causal learning, restart persistence, intervention marking, intervention restart, abandoned-intervention nonlearning, matched-baseline eligibility, and positive and negative causal-contrast effects.
+Focused tests cover the experiential firewall, motive persistence and competition, associative bridge retrieval, modulation regimes, selective executive recruitment, sparse endogenous scheduling, host-owned world events, hidden-world nonleakage, expectation fulfillment and violation, overdue uncertainty, revision lineage, learned expectation calibration, exact-action predictions, action reliability effects on route scoring, sequence-conditioned causal learning, restart persistence, intervention marking, intervention restart, abandoned-intervention nonlearning, matched-baseline eligibility, positive and negative causal-contrast effects, transient counterfactual route comparison, counterfactual side-effect purity, counterfactual non-persistence, and counterfactual firewall/status nonleakage.
+
+The current full configured matrix passed on both Python versions at commit `2959ce945fa59c7d9691b2e4206e5743afdf4cc8` in CI run #262.
 
 The explicit intervention suite passed on both Python versions at commit `853cf1801e918c17ea667044d7f946c48654100c` in CI run #249. The sequence-conditioned causal suite passed on both Python versions at commit `5a8e1e1fb8ae7285b687fca23422173e048001a2` in CI run #244. The action-reliability route-scoring suite passed on both Python versions at commit `380a0c5a75dd1a6713cb9bde64fc652e731f304c` in CI run #240.
 
+Normal CI is not the same as adversarial validation. `DUCK_DISCRIMINATOR_v0.10.md` now defines a separate falsification-oriented evaluation program, and `IMPROVEMENT_BACKLOG_v0.10.md` records the weaknesses and discriminator failures that remain to be addressed.
+
 ## Remaining architectural work
 
-The central v0.10 motive, association, modulation, cognitive-field, firewall, selective-executive, explicit action-selection, expectation, action-prediction, sequence-causal, intervention-aware, endogenous-dynamics, and host-world scheduling mechanisms exist, but the development line is not frozen.
+The central v0.10 motive, association, modulation, cognitive-field, firewall, selective-executive, explicit action-selection, expectation, action-prediction, sequence-causal, intervention-aware, counterfactual-route, endogenous-dynamics, and host-world scheduling mechanisms exist, but the development line is not frozen.
 
-The next predictive extensions should move beyond exact equality and simple adjacent transitions. Candidate work includes source-specific expectations, probabilistic alternatives, temporal windows, context-conditioned transition models, multi-step causal hypotheses, stronger comparison designs, and explicitly labeled counterfactual predictions about routes considered but not enacted. Counterfactual model output must never be stored as observed history.
+The next predictive extensions should move beyond exact equality and simple adjacent transitions. Candidate work includes source-specific expectations, probabilistic alternatives, temporal windows, context-conditioned transition models, multi-step causal hypotheses, stronger comparison designs, and richer counterfactual models. Counterfactual model output must continue to remain distinct from observed history.
+
+The highest-priority hardening work is tracked in `IMPROVEMENT_BACKLOG_v0.10.md`. Current items include transactional persistence, stronger world/subject state separation, runtime composition cleanup, semantic experiential-firewall hardening, parameter sensitivity, convergent associative activation, context-conditioned causal learning, adversarial validation, and historical harness provenance.
 
 A later environment extension can generate external events from richer simulated-world policies rather than only explicit host scheduling. Those policies must remain independently replaceable world authority rather than becoming subject-authored reality.
 
@@ -110,6 +130,6 @@ Historical regression harnesses remain useful, but some older simulation modules
 
 ## Preserved scientific and behavioral invariants
 
-The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, prediction and world separation, observational and intervention evidence separation, defeasible causal learning rather than fabricated causal certainty, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, sparse endogenous dynamics, external-world authority separation, and the experiential firewall.
+The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, prediction and world separation, observational and intervention evidence separation, defeasible causal learning rather than fabricated causal certainty, counterfactual and observed-history separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, sparse endogenous dynamics, external-world authority separation, and the experiential firewall.
 
 Passing the current architecture and regression tests establishes implemented behavior under the defined simulations. It does not establish phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, randomized causal identification, causal correctness outside tested domains, or general psychological validity.

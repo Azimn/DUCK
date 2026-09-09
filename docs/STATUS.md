@@ -14,7 +14,7 @@ Preserved promoted baseline: DUCK v0.9 on `main`
 
 MicroPsiDUCK v0.10 is a structural redesign rather than a compatibility-preserving patch to DUCK v0.9. The branch public package points to the v0.10 organism and persistent host. The v0.9 organism remains explicitly importable for comparison and remains preserved as the promoted baseline on `main`.
 
-The current implementation contains the central motivated-cognition control spine. Implemented mechanisms include persistent motives, bounded motive competition, a bounded typed associative graph, transient global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, explicit validated action selection, sparse persistent endogenous scheduling, host-owned external environment scheduling, outcome learning, restart persistence, and the experiential firewall.
+The current implementation contains the central motivated-cognition control spine. Implemented mechanisms include persistent motives, bounded motive competition, a bounded typed associative graph, transient global cognitive modulation, a transient cognitive field, automatic affordance policy, selective executive recruitment, explicit validated action selection, sparse persistent endogenous scheduling, a persistent subject-owned expectation ledger with learned calibration, host-owned external environment scheduling, outcome learning, restart persistence, and the experiential firewall.
 
 No donor package is a runtime dependency.
 
@@ -28,29 +28,45 @@ Coherence can be recruited by explicit appraisal of contradiction, inconsistency
 
 ## Continuous organism dynamics and endogenous scheduling
 
-The public v0.10 organism is composed in `organism_v010.py` above the motivated-cognition core. The continuously evolving organism does not require a continuously active language model. Canonical subject state, motive state, prospective concerns and plans, and a small mechanistic endogenous scheduler are sufficient to make internally important conditions recur into cognition over time.
+The public v0.10 organism is composed in `organism_v010.py` above the motivated-cognition core. The continuously evolving organism does not require a continuously active language model. Canonical subject state, motive state, expectations, prospective concerns and plans, and a small mechanistic endogenous scheduler are sufficient to make internally important conditions recur into cognition over time.
 
 The scheduler state is separately versioned as `micropsi-duck.endogenous.v1`. It persists only anti-chatter machinery: latched signal keys, last-emission ticks, and emission counts. These values are developer-side mechanism and never enter `ExperientialFrame`.
 
-Implemented endogenous sources currently include energy depletion, affiliation/loneliness pressure, unresolved safety pressure, high curiosity when safety permits, recent contradiction or unresolved coherence pressure, approaching or overdue commitments, and persistently blocked active plans. Signals are hysteretic and rate-limited. Recovery or resolution rearms a signal; an unresolved pressure may reassert after a bounded cooldown rather than firing on every heartbeat.
+Implemented endogenous sources currently include energy depletion, affiliation/loneliness pressure, unresolved safety pressure, high curiosity when safety permits, recent contradiction or unresolved coherence pressure, approaching or overdue commitments, high-confidence overdue expectations, and persistently blocked active plans. Signals are hysteretic and rate-limited. Recovery or resolution rearms a signal; an unresolved pressure may reassert after a bounded cooldown rather than firing on every heartbeat.
 
-Actionable prospective concerns have priority over generic endogenous signals because they already represent concrete intentions. Body, social, safety, curiosity, coherence, and commitment threshold events are considered next. A blocked active plan becomes endogenously salient only after repeated deferral and only for genuine inability to advance, such as insufficient energy, missing required context, blocked context, or safety override. A concern intentionally scheduled for a future time is not classified as a stalled plan.
+Actionable prospective concerns have priority over generic endogenous signals because they already represent concrete intentions. Body, social, safety, curiosity, coherence, and commitment threshold events are considered next. Overdue expectations and stalled plans can then become salient without creating duplicate goals or predictions.
 
-Stalled-plan pressure does not create a second goal or plan. It references the existing canonical plan through host-side scheduler state and produces only a transient qualitative event such as the felt fact that something remains unresolved. When the plan resolves or becomes actionable again, its scheduler record is retired and ordinary prospective agency resumes control.
+A high-confidence overdue expectation produces uncertainty pressure such as the qualitative fact that something expected by now is still unconfirmed. This is explicitly not a prediction error. Lack of evidence does not become contradiction. Low-confidence overdue expectations do not automatically force inquiry. Once an overdue expectation is resolved, revised, or retired, its scheduler record is removed.
 
-Endogenous signals use the automatic policy path. They do not recruit the optional executive merely because an internal threshold crossed. Severe safety, fatigue recovery, social need, curiosity, coherence, commitment, and stalled-plan reactions therefore remain testable under language lesion.
+A blocked active plan becomes endogenously salient only after repeated deferral and only for genuine inability to advance, such as insufficient energy, missing required context, blocked context, or safety override. A concern intentionally scheduled for a future time is not classified as a stalled plan.
+
+Endogenous signals use the automatic policy path. They do not recruit the optional executive merely because an internal threshold crossed. Severe safety, fatigue recovery, social need, curiosity, coherence, commitment, expectation uncertainty, and stalled-plan reactions therefore remain testable under language lesion.
 
 ## Host-owned environment dynamics
 
-External reality is not authored by the simulated subject. MicroPsiDUCK now has a separate host-owned environment scheduler in `environment_v010.py`, versioned as `micropsi-duck.environment.v1`. Its queue is persisted separately from canonical subject state, motivated-cognition state, endogenous scheduler state, and private interior state.
+External reality is not authored by the simulated subject. MicroPsiDUCK has a separate host-owned environment scheduler in `environment_v010.py`, versioned as `micropsi-duck.environment.v1`. Its queue is persisted separately from canonical subject state, motivated-cognition state, expectation state, endogenous scheduler state, and private interior state.
 
-The host can schedule a future external `WorldEvent` for a later organism tick. Observable scheduled events are delivered to the organism through the ordinary external-event path, so they can be appraised, remembered, associated, and acted on without requiring a new user message. The subject does not control their occurrence.
+The host can schedule a future external `WorldEvent` for a later organism tick. Observable scheduled events are delivered to the organism through the ordinary external-event path, so they can be appraised, remembered, associated, used as expectation evidence, and acted on without requiring a new user message. The subject does not control their occurrence.
 
-Unperceived environmental change follows a stricter path. Host/world truth may change without delivering the hidden event to appraisal. The host updates the relevant world-fact state and then advances the organism with a normal heartbeat. Hidden event text therefore does not become autobiographical memory, belief, or experiential prose merely because the environment scheduler knew it happened.
+Unperceived environmental change follows a stricter path. Host/world truth may change without delivering the hidden event to appraisal. The host updates the relevant world-fact state and then advances the organism with a normal heartbeat. Hidden event text therefore does not become autobiographical memory, belief, expectation evidence, calibration evidence, or experiential prose merely because the environment scheduler knew it happened.
 
 The scheduler rejects self-authored endogenous events. This enforces the authority boundary: endogenous cognition can alter the subject and its actions, while external-world state changes must originate from host/world authority or another explicit environment source.
 
 The environment queue survives restart and is bounded independently of subject memory. Scheduled event IDs and future event payloads are not stored as subject identity. The public host exposes scheduling and cancellation operations while status reports only scheduler schema and queue count rather than future-event content.
+
+## Prediction and expectation ledger
+
+MicroPsiDUCK now has a subject-owned persistent expectation ledger in `expectations_v010.py`, versioned as `micropsi-duck.expectations.v1`. Expectations are predictions held by the subject. They are neither world truth nor beliefs that the predicted outcome has already occurred.
+
+Each expectation has stable identity, a qualitative proposition, a target world-fact key, an expected value, creation/update time, optional deadline, confidence, status, optional observed evidence, and revision lineage. The ledger is bounded and persists separately from host/world scheduling.
+
+Active expectation states are `open` and `overdue`. Final states include `fulfilled`, `violated`, `superseded`, and `retired`. Deadline passage alone moves an expectation from `open` to `overdue`; it never fabricates a violation. Only perceived evidence for the expectation's fact key can fulfill or violate it. Unrelated observations do not resolve it.
+
+When perceived evidence contradicts an active expectation, the live event is tagged with `expectation_violation`, `prediction_error`, and `inconsistency` before motivated appraisal. The coherence machinery can therefore respond in the same cognitive cycle. The subject also receives a qualitative self-reflective memory of the mismatch. Fulfilled expectations receive a corresponding confirmation record. Numeric confidence and machine IDs remain developer-side.
+
+Revision preserves lineage rather than mutating history. Revising an active expectation marks the previous prediction `superseded` and creates a new expectation that references it. Resolution does not rewrite the prior proposition or its confidence.
+
+The ledger also learns bounded calibration per fact domain. Fulfilled and violated predictions update a smoothed reliability estimate. New expectations with no explicit confidence use that learned calibration as their prior confidence. A miss can lower later default confidence about that domain; a later hit can recover it. Explicitly supplied confidence is preserved while still contributing evidence to domain calibration. Calibration updates only from perceived evidence.
 
 ## Associative activation and modulation
 
@@ -70,21 +86,21 @@ Routine endogenous cycles remain on the automatic path. Severe safety interrupti
 
 Accepted executive choices pass through an explicit `_select_candidate(...)` seam. Historical runtimes inherit the original max-utility selection unchanged. MicroPsiDUCK can choose a validated executive proposal at the selection layer without modifying the underlying affordance utilities. Regression tests require the complete candidate-utility map and the transient cognitive field to remain identical between equivalent provider and no-provider runs even when the accepted executive action differs from the automatic winner.
 
-Executive intention prose is not automatically written to autobiographical memory, self-narrative, goals, plans, motives, beliefs, or identity. Provider configuration is host/runtime configuration rather than persistent cognitive identity. Reopening a saved organism without supplying a provider restores the same subject and cognitive state without restoring the provider itself or a previous transient cognitive field.
+Executive intention prose is not automatically written to autobiographical memory, self-narrative, goals, plans, motives, beliefs, expectations, or identity. Provider configuration is host/runtime configuration rather than persistent cognitive identity. Reopening a saved organism without supplying a provider restores the same subject and cognitive state without restoring the provider itself or a previous transient cognitive field.
 
 Private inner voice and executive proposal are separate roles. The deterministic or model-backed inner-cognition provider may generate private first-person thought after experiential projection. The executive provider is recruited selectively before final action selection and may only propose bounded action/intention content.
 
-Current language-lesion operation disables optional language-dependent executive recruitment as well as inner speech while preserving motive generation, competition, associative propagation, modulation, endogenous scheduling, environment-event delivery, planning, action selection, learning, persistence, and experiential projection. A future nonlinguistic executive could use a separate enablement control if that becomes a research target.
+Current language-lesion operation disables optional language-dependent executive recruitment as well as inner speech while preserving motive generation, competition, associative propagation, modulation, expectation maturation/resolution, endogenous scheduling, environment-event delivery, planning, action selection, learning, persistence, and experiential projection.
 
 ## Experiential firewall
 
 The private-cognition contract is `ExperientialFrame`. It is immutable and contains only approved first-person experiential prose. Structured `SubjectiveMoment` data may still exist inside inherited implementation layers as diagnostic scaffolding, but v0.10 converts it through the experiential firewall before private cognition or an executive provider receives it.
 
-The experiential validator rejects raw decimal telemetry, percentages used as magnitude or confidence reports, machine identifiers, key-value telemetry, activation reports, route scores, retrieval scores, motive strengths, need magnitudes, and related implementation leakage. Current-world text that resembles machinery is not blindly copied across the boundary; executive experiential projection falls back to qualitative first-person content when necessary.
+The experiential validator rejects raw decimal telemetry, percentages used as magnitude or confidence reports, machine identifiers, key-value telemetry, activation reports, route scores, retrieval scores, motive strengths, need magnitudes, expectation confidence, learned calibration scores, and related implementation leakage. Current-world text that resembles machinery is not blindly copied across the boundary; executive experiential projection falls back to qualitative first-person content when necessary.
 
-Private interior state is persisted separately in a versioned `PrivateInteriorState` envelope. The current schema is `duck.private-interior.v1`. The persistence envelope stores approved experiential prose and optional private thought, while mechanistic affect, needs, action scores, cognitive fields, graph state, executive provider configuration, endogenous scheduler state, environment scheduler state, and other developer telemetry remain outside it. Unsupported private-interior schema versions fail explicitly.
+Private interior state is persisted separately in a versioned `PrivateInteriorState` envelope. The current schema is `duck.private-interior.v1`. The persistence envelope stores approved experiential prose and optional private thought, while mechanistic affect, needs, action scores, cognitive fields, graph state, expectation machinery, executive provider configuration, endogenous scheduler state, environment scheduler state, and other developer telemetry remain outside it.
 
-The v0.10 persistent host writes canonical subject state, motivated-cognition state, endogenous scheduler state, environment scheduler state, and private interior state separately. Public interaction results do not include private-thought or subjective-state fields. Ordinary interaction and heartbeat journals do not publish private interior content.
+The v0.10 persistent host writes canonical subject state, motivated-cognition state, expectation state, endogenous scheduler state, environment scheduler state, and private interior state separately. Public interaction results do not include private-thought or subjective-state fields. Ordinary interaction and heartbeat journals do not publish private interior content.
 
 The renderer receives prose-only experiential state, optional private thought as controlled rendering context, and a first-person action-intent sentence. Machine action identifiers are translated before entering the renderer packet. The renderer remains an expression surface and cannot become canonical subject authority.
 
@@ -94,17 +110,19 @@ The current v0.10 runtime still reuses portions of the v0.9 bounded planner, but
 
 The dedicated MicroPsiDUCK longitudinal simulation exercises seventeen architecture gates, including associative bridge retrieval, contradiction-driven coherence, endogenous curiosity planning, failed-plan replanning, motive-driven obstacle goals, restart persistence, safety dominance, post-threat regime recovery, fatigue and recovery, repair, commitment pressure, major motive-family coverage, bounded quiet time, language lesion, and subject-access cleanliness.
 
-Focused endogenous tests verify threshold crossing, cooldown reassertion, recovery rearming, safety-gated curiosity, contradiction-driven coherence pressure, prospective-concern priority, stalled-plan salience, future-scheduled-plan exclusion, plan resumption when context returns, language-lesion operation, and scheduler persistence across restart.
+Focused endogenous tests verify threshold crossing, cooldown reassertion, recovery rearming, safety-gated curiosity, contradiction-driven coherence pressure, prospective-concern priority, stalled-plan salience, future-scheduled-plan exclusion, plan resumption when context returns, expectation uncertainty pressure, language-lesion operation, and scheduler persistence across restart.
 
-Focused environment tests verify autonomous observable external events, hidden world-fact change without belief or memory leakage, separate queue persistence, restart delivery, language-lesion operation, and rejection of subject-authored external events.
+Focused environment tests verify autonomous observable external events, hidden world-fact change without belief, memory, expectation, or calibration leakage, separate queue persistence, restart delivery, language-lesion operation, and rejection of subject-authored external events.
+
+Focused expectation tests verify fulfillment, perceived violation, same-cycle coherence recruitment, unrelated-evidence nonresolution, overdue-without-false-violation semantics, sparse overdue uncertainty, revision lineage, pressure retirement after resolution, restart persistence, schema rejection, learned calibration, calibration persistence, explicit-confidence preservation, and the rule that unperceived evidence cannot train the predictor.
 
 The configured CI matrix runs documentation validation, focused regulation/planning/motivated evaluations, v0.9 planning simulation, the v0.10 motivated longitudinal simulation, the full pytest suite, and designated historical simulation/evaluation suites on Python 3.11 and 3.12.
 
 ## Remaining architectural work
 
-The central v0.10 motive, association, modulation, cognitive-field, firewall, selective-executive, explicit action-selection, sparse endogenous-dynamics, and host-world scheduling mechanisms exist, but the development line is not frozen.
+The central v0.10 motive, association, modulation, cognitive-field, firewall, selective-executive, explicit action-selection, expectation, sparse endogenous-dynamics, and host-world scheduling mechanisms exist, but the development line is not frozen.
 
-The next continuous-dynamics target is learned expectation maturation and failure across time. The current architecture can receive scheduled external events and can generate coherence pressure from contradiction, but it does not yet have a purpose-built expectation ledger whose predictions mature, expire, succeed, or fail independently of a direct conversational prompt. That should be added without collapsing host truth, subject belief, and prediction into one store.
+The next expectation target is richer predictive structure beyond exact world-fact equality. Useful extensions include source-specific expectations, probabilistic alternatives, temporal windows, expected action outcomes linked to plans, and explicit causal hypotheses. These should build on the existing ledger rather than returning to loose event tags as prediction state.
 
 A later environment extension can add policies that generate scheduled events from richer simulated-world state rather than only explicit host scheduling. Those policies must remain external-world authority and should be independently replaceable from the subject model.
 
@@ -116,7 +134,7 @@ Historical regression harnesses remain useful, but their version binding needs c
 
 ## Preserved scientific and behavioral invariants
 
-The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, sparse endogenous dynamics, external-world authority separation, and the experiential firewall.
+The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, prediction and world separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, sparse endogenous dynamics, external-world authority separation, and the experiential firewall.
 
 Earlier long-horizon regulation, life simulation, agency, and planning harnesses remain useful regression evidence while the new architecture is refined. They are historical behavioral tests, not authorities over v0.10 internal design.
 
@@ -124,6 +142,6 @@ Earlier long-horizon regulation, life simulation, agency, and planning harnesses
 
 DUCK v0.9 remains the stable comparison point on `main`. It established endogenous goal formation, counterfactual route selection, hierarchical subgoals, outcome-driven replanning, and a persistent planning lifecycle.
 
-MicroPsiDUCK v0.10 changes the research question. The target is whether needs create persistent motives, motives organize cognition, associative activation makes relevant material available without explicit search, internal condition changes the computational regime, automatic behavior handles routine conditions, continuing internal pressures become salient without external prompting, external reality can continue changing without being authored by the subject, richer cognition is selectively recruited when necessary, and the subject experiences the consequences of those mechanisms without gaining introspective access to the machinery.
+MicroPsiDUCK v0.10 changes the research question. The target is whether needs create persistent motives, motives organize cognition, associative activation makes relevant material available without explicit search, internal condition changes the computational regime, predictions persist and learn from perceived outcomes, automatic behavior handles routine conditions, continuing internal pressures become salient without external prompting, external reality can continue changing without being authored by the subject, richer cognition is selectively recruited when necessary, and the subject experiences the consequences of those mechanisms without gaining introspective access to the machinery.
 
 Passing the current architecture and regression tests establishes the implemented behavior under the defined simulations. It does not establish phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, or general psychological validity.

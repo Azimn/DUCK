@@ -174,3 +174,95 @@ def test_endogenous_signal_path_operates_under_language_lesion():
     assert step.inner_cognition.thought is None
     assert step.developer_trace["executive_recruitment"]["invoked"] is False
     assert duck.current_cycle is not None
+
+
+def test_curiosity_pressure_can_initiate_exploration_once_when_safe():
+    state = _state("endogenous-curiosity")
+    state.needs["curiosity"] = 0.93
+    duck = LivingDuck(state)
+
+    first = duck.heartbeat(allow_inner_speech=False)
+    trace = _dynamics(first)
+    assert trace["emitted"] is True
+    assert trace["signal"]["kind"] == "curiosity"
+    assert first.selected_action == "explore"
+    assert first.developer_trace["executive_recruitment"]["invoked"] is False
+    assert duck.endogenous_state.emission_counts["curiosity"] == 1
+
+    second = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(second)["emitted"] is False
+    assert duck.endogenous_state.emission_counts["curiosity"] == 1
+
+
+def test_safety_pressure_blocks_curiosity_signal_until_conditions_recover():
+    state = _state("endogenous-curiosity-safety")
+    state.needs["curiosity"] = 0.95
+    state.needs["safety"] = 0.20
+    state.affect["fear"] = 0.88
+    duck = LivingDuck(state)
+
+    threatened = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(threatened)["signal"]["kind"] == "safety"
+    assert duck.endogenous_state.emission_counts.get("curiosity", 0) == 0
+
+    duck.state.needs["safety"] = 0.92
+    duck.state.affect["fear"] = 0.08
+    recovered = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(recovered)["signal"]["kind"] == "curiosity"
+    assert recovered.selected_action == "explore"
+
+
+def test_recent_contradiction_can_become_endogenous_coherence_pressure():
+    state = _state("endogenous-coherence")
+    state.add_memory(
+        "The new observation contradicts what I expected.",
+        tags=("observation", "contradiction"),
+        valence=-0.20,
+        arousal=0.55,
+        importance=0.75,
+        source="world",
+    )
+    duck = LivingDuck(state)
+
+    step = duck.heartbeat(allow_inner_speech=False)
+    trace = _dynamics(step)
+    assert trace["emitted"] is True
+    assert trace["signal"]["kind"] == "coherence"
+    assert step.selected_action == "ask"
+    assert step.developer_trace["executive_recruitment"]["invoked"] is False
+    assert duck.control.dominant_motive() is not None
+    assert duck.control.dominant_motive().theme == "coherence"
+
+
+def test_coherence_signal_rearms_only_after_resolution_and_a_new_disruption():
+    state = _state("endogenous-coherence-rearm")
+    state.add_memory(
+        "Something does not fit the explanation I had.",
+        tags=("inconsistency",),
+        valence=-0.10,
+        arousal=0.45,
+        importance=0.70,
+        source="world",
+    )
+    duck = LivingDuck(state)
+    duck.heartbeat(allow_inner_speech=False)
+    assert duck.endogenous_state.emission_counts["coherence"] == 1
+
+    duck.state.needs["coherence"] = 0.86
+    duck.state.affect["unease"] = 0.05
+    duck.state.tick += 9
+    quiet = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(quiet)["emitted"] is False
+    assert "coherence" not in duck.endogenous_state.latched_signals
+
+    duck.state.add_memory(
+        "A later observation conflicts with the repaired explanation.",
+        tags=("expectation_violation",),
+        valence=-0.10,
+        arousal=0.45,
+        importance=0.70,
+        source="world",
+    )
+    repeated = duck.heartbeat(allow_inner_speech=False)
+    assert _dynamics(repeated)["signal"]["kind"] == "coherence"
+    assert duck.endogenous_state.emission_counts["coherence"] == 2

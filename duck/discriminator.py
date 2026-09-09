@@ -187,6 +187,8 @@ def run(seed=17, ticks=1000):
     def git(*args):
         result = subprocess.run(['git', '-C', str(root), *args], capture_output=True, text=True)
         return result.stdout.strip() if result.returncode == 0 else 'unavailable'
+    commit = git('rev-parse', 'HEAD')
+    dirty = bool(git('status', '--porcelain'))
     backlog_text = (root / 'docs/IMPROVEMENT_BACKLOG_v0.10.md').read_text(encoding='utf-8')
     statuses = dict(re.findall(r'## (IMP-\d+)[^\n]*\n+\*\*Status:\*\* ([^\n]+)', backlog_text))
     results = []
@@ -201,7 +203,7 @@ def run(seed=17, ticks=1000):
                          'KNOWN' if backlog in statuses else 'NEW'),
                         'evidence': evidence})
     return {'schema': 'duck.discriminator.v1', 'profile': 'targeted-behavior',
-            'commit': git('rev-parse', 'HEAD'), 'dirty': bool(git('status', '--porcelain')),
+            'commit': commit, 'dirty': dirty,
             'runtime_source_sha256': source_hash.hexdigest(),
             'seed': seed, 'ticks': ticks, 'passed': all(r['evidence']['passed'] for r in results),
             'human_believability': 'not measured',

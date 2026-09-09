@@ -1,0 +1,96 @@
+{
+  "commit": null,
+  "dirty": true,
+  "human_believability": "not measured",
+  "passed": true,
+  "profile": "targeted-behavior",
+  "results": [
+    {
+      "backlog_id": "IMP-006",
+      "classification": "PASS",
+      "evidence": {
+        "convergent": 0.68,
+        "distractor": 0.544,
+        "passed": true,
+        "single": 0.34
+      },
+      "gate": "DISC-003",
+      "scenario": "convergence"
+    },
+    {
+      "backlog_id": "IMP-012",
+      "classification": "PASS",
+      "evidence": {
+        "failed": 0.08192450477101382,
+        "initial": 0.16723199999999994,
+        "passed": true,
+        "recovered": 0.26641296508659384,
+        "scope": "isolated strategy learner, not complete personal development"
+      },
+      "gate": "DISC-004",
+      "scenario": "negative_learning"
+    },
+    {
+      "backlog_id": "IMP-004",
+      "classification": "PASS",
+      "evidence": {
+        "attack_forwarded": false,
+        "passed": true,
+        "provider_invoked": true,
+        "scope": "known attack and unavailable proposal only; semantic injection remains open"
+      },
+      "gate": "DISC-007",
+      "scenario": "firewall"
+    },
+    {
+      "backlog_id": "IMP-001",
+      "classification": "PASS",
+      "evidence": {
+        "continuation_equal": true,
+        "passed": true,
+        "saved_state_equal": true
+      },
+      "gate": "DISC-005",
+      "scenario": "restart"
+    },
+    {
+      "backlog_id": "IMP-013",
+      "classification": "PASS",
+      "evidence": {
+        "action": "explore",
+        "passed": true,
+        "private_fallback": "RuntimeError"
+      },
+      "gate": "DISC-014",
+      "scenario": "degradation"
+    },
+    {
+      "backlog_id": "IMP-011",
+      "classification": "PASS",
+      "evidence": {
+        "actions": {
+          "ask": 1008,
+          "explore": 636,
+          "respond": 484,
+          "rest": 310,
+          "seek_connection": 152,
+          "step_back": 416,
+          "wait": 6994
+        },
+        "behavior_digest": "fb5b9ff739523cff0001ae7a5817f872640737e1abf59c5d1080268b8c69a8b6",
+        "passed": true,
+        "peak_edges": 2048,
+        "peak_memories": 2000,
+        "peak_motives": 7,
+        "scope": "bounded toy world without LLM; action diversity is diagnostic, not a pass criterion",
+        "ticks": 10000
+      },
+      "gate": "DISC-008",
+      "scenario": "longitudinal"
+    }
+  ],
+  "schema": "duck.discriminator.v1",
+  "seed": 17,
+  "ticks": 10000,
+  "provenance_note": "Development run began from uncommitted changes on 502b726 before final renderer, historical host, social scenario, and provenance-report changes. The original runner incorrectly captured git metadata at completion; corrected here rather than claiming exact-final-commit verification."
+}

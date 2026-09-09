@@ -137,3 +137,5 @@ Passing the current architecture and regression tests establishes implemented be
 ## Behavior-first hardening, 2026-09-09
 
 Current work adds distinct-cue associative convergence, provenance-aware experiential projection, negative strategy penalties, private-provider fallback, exact pending-action tag restoration, and a contextual deterministic renderer that does not automatically publish recollections. The targeted executable discriminator is available as `python -m duck.discriminator`. See `BEHAVIOR_FIRST_v0.10.md` for scope and validation limits. Human believability and all-metrics 9/10 are not established.
+
+Local validation passed 182 tests on Python 3.12, the documentation contract, and all configured evaluation/simulation commands. A development 10,000-tick seed-17 run passed boundedness with peaks of 2,000 memories, 2,048 graph edges, and seven motives; `evidence/behavior-first-10000-development.json` explicitly records its development provenance. The clean `5fb6492` commit separately passed the seven-scenario targeted profile at seed 91 over 200 ticks. GitHub publication was blocked by automatic approval review, so no remote CI success is claimed.

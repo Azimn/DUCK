@@ -73,7 +73,7 @@ class LivingDuck(MotivatedLivingDuck):
         fact_key: str,
         expected_value: str,
         due_in: int | None = None,
-        confidence: float = 0.70,
+        confidence: float | None = None,
     ) -> ExpectationRecord:
         return self.expectation_ledger.register(
             self.state.tick,

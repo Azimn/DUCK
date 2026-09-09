@@ -11,11 +11,15 @@ from dataclasses import replace
 
 from .access import SubjectAccessFirewall
 from .cognition import InnerCognitionProvider
-from .endogenous import EndogenousDynamicsState, EndogenousEventGenerator
+from .endogenous import EndogenousDynamicsState, EndogenousEventGenerator, EndogenousSignal
 from .executive import ExecutiveCognitionProvider
 from .living import ActionCandidate, MemoryRecord, RelationshipState, SubjectState, WorldEvent
 from .living_v010 import LivingDuck as MotivatedLivingDuck
 from .motivated_cognition import MotivatedCognitionState
+
+
+_STALLED_PLAN_REASONS = frozenset({"low_energy", "context_missing", "context_blocked", "safety_override"})
+_PLAN_PRESSURE_REPEAT_AFTER = 10
 
 
 class LivingDuck(MotivatedLivingDuck):
@@ -80,6 +84,18 @@ class LivingDuck(MotivatedLivingDuck):
         elif "curiosity_signal" in tags:
             bonuses = {"explore": 0.38, "ask": 0.16, "wait": -0.05}
             reason = "endogenous_curiosity"
+        elif "plan_pressure" in tags:
+            if "stall_low_energy" in tags:
+                bonuses = {"rest": 0.42, "wait": 0.05}
+            elif "stall_context_missing" in tags:
+                bonuses = {"ask": 0.22, "wait": 0.12}
+            elif "stall_context_blocked" in tags:
+                bonuses = {"wait": 0.20, "ask": 0.10}
+            elif "stall_safety_override" in tags:
+                bonuses = {"step_back": 0.18, "wait": 0.18, "explore": -0.10}
+            else:
+                bonuses = {"wait": 0.12}
+            reason = "endogenous_plan_pressure"
         if not bonuses:
             return rows
 
@@ -104,6 +120,81 @@ class LivingDuck(MotivatedLivingDuck):
                 return True
         return False
 
+    def _refresh_plan_pressure_state(self) -> None:
+        """Retire scheduler keys when a plan resolves or becomes actionable again."""
+
+        active = {plan.plan_id: plan for plan in self.plans(status="active")}
+        known_keys = set(self.endogenous_state.latched_signals)
+        known_keys.update(self.endogenous_state.last_emitted_tick)
+        known_keys.update(self.endogenous_state.emission_counts)
+        for key in list(known_keys):
+            if key.startswith("plan:") and key.split(":", 1)[1] not in active:
+                self.endogenous_state.forget(key)
+
+        context_tags = self._recent_context_tags()
+        for plan in active.values():
+            key = f"plan:{plan.plan_id}"
+            if not plan.pending_concern_id:
+                self.endogenous_state.forget(key)
+                continue
+            try:
+                concern = self._concern_from_memory(self._concern_memory(plan.pending_concern_id))
+            except KeyError:
+                self.endogenous_state.forget(key)
+                continue
+            available, reason = self._concern_viability(concern, context_tags)
+            if available or reason not in _STALLED_PLAN_REASONS:
+                self.endogenous_state.forget(key)
+
+    @staticmethod
+    def _stalled_plan_text(reason: str) -> str:
+        if reason == "low_energy":
+            return "I keep coming back to something I want to do, but I don't have the energy for it yet."
+        if reason == "context_missing":
+            return "I keep coming back to something I want to do, but something I need is still missing."
+        if reason == "context_blocked":
+            return "I keep coming back to something I want to do, but the situation still blocks it."
+        if reason == "safety_override":
+            return "I keep coming back to something I want to do, but it still doesn't feel safe enough."
+        return "I keep coming back to something I still haven't been able to move forward."
+
+    def _stalled_plan_signal(self) -> EndogenousSignal | None:
+        """Surface a persistently blocked canonical plan without creating a new goal."""
+
+        context_tags = self._recent_context_tags()
+        rows: list[tuple[float, str, object, str]] = []
+        for plan in self.plans(status="active"):
+            if not plan.pending_concern_id:
+                continue
+            try:
+                concern = self._concern_from_memory(self._concern_memory(plan.pending_concern_id))
+            except KeyError:
+                continue
+            available, reason = self._concern_viability(concern, context_tags)
+            if available or reason not in _STALLED_PLAN_REASONS or concern.deferrals < 2:
+                continue
+            salience = 0.44 + 0.18 * concern.priority + 0.12 * concern.urgency
+            salience += min(0.12, concern.deferrals * 0.025)
+            if reason == "safety_override":
+                salience += 0.12
+            elif reason == "low_energy":
+                salience += 0.08
+            rows.append((min(0.86, salience), plan.plan_id, concern, reason))
+
+        if not rows:
+            return None
+        rows.sort(key=lambda row: (row[0], row[1]), reverse=True)
+        salience, plan_id, concern, reason = rows[0]
+        return self.endogenous.claim_signal(
+            self.state,
+            key=f"plan:{plan_id}",
+            kind="plan",
+            text=self._stalled_plan_text(reason),
+            tags=("plan_pressure", "blocked_intention", f"stall_{reason}", "planning"),
+            salience=salience,
+            repeat_after=_PLAN_PRESSURE_REPEAT_AFTER,
+        )
+
     @staticmethod
     def _annotate_heartbeat(result, payload: dict[str, object]):
         trace = dict(result.developer_trace)
@@ -113,13 +204,15 @@ class LivingDuck(MotivatedLivingDuck):
     def heartbeat(self, *, allow_inner_speech: bool = True):
         """Advance the organism and recruit the strongest appropriate endogenous event.
 
-        Existing actionable prospective concerns have priority because they already
-        represent concrete intentions. When no such concern is actionable, newly
-        crossed body/social/safety/commitment pressures can create a sparse internal
-        event. Otherwise the inherited quiet heartbeat runs unchanged.
+        Concrete actionable prospective concerns have first priority. Generic body,
+        social, safety, coherence, curiosity, and commitment pressures are handled
+        next. A repeatedly blocked active plan can become salient only after those
+        more immediate endogenous sources have had their chance. Otherwise the
+        inherited quiet heartbeat runs unchanged.
         """
 
         self.endogenous.refresh(self.state)
+        self._refresh_plan_pressure_state()
         if self._has_actionable_concern():
             result = super().heartbeat(allow_inner_speech=allow_inner_speech)
             return self._annotate_heartbeat(
@@ -132,6 +225,8 @@ class LivingDuck(MotivatedLivingDuck):
             )
 
         signal = self.endogenous.next_signal(self.state)
+        if signal is None:
+            signal = self._stalled_plan_signal()
         if signal is not None:
             result = self.step(signal.event, allow_inner_speech=allow_inner_speech)
             return self._annotate_heartbeat(

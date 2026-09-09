@@ -6,23 +6,25 @@ resolved by perceived world evidence. Action expectations are resolved only by
 ``resolve_outcome`` for the exact action ID they reference.
 
 Resolved action predictions influence later route evaluation. A separate persistent
-causal-sequence model also learns whether the next action in an enacted canonical
-plan tends to succeed after the previous action. Temporal adjacency is treated as a
-bounded predictive hypothesis, not proof of causal necessity. Motive and modulation
-remain the organizing control system.
+causal-sequence model learns whether the next action in an enacted canonical plan
+tends to succeed after the previous action. Temporal adjacency is a bounded
+predictive hypothesis, not proof of causal necessity. Deliberately marked plan
+actions are retained as intervention evidence separately from ordinary sequence
+observation.
 """
 from __future__ import annotations
 
 from dataclasses import replace
 from typing import Iterable
 
-from .causal_v010 import CausalSequenceState
+from .causal_v010 import CausalSequenceState, PendingIntervention
 from .expectations_v010 import (
     ActionExpectationResolution,
     ActionOutcomeExpectation,
 )
 from .living import MemoryProvenance, WorldEvent
 from .organism_v010 import LivingDuck as ContinuousLivingDuck
+from .subjective import ExperientialFrame
 
 
 class LivingDuck(ContinuousLivingDuck):
@@ -39,13 +41,23 @@ class LivingDuck(ContinuousLivingDuck):
             rows = [record for record in rows if record.status == str(status)]
         return rows
 
-    def _action_prediction_route_adjustment(self, action: str) -> float:
-        """Return a bounded evidence-weighted route prior from action calibration.
+    def mark_pending_action_as_intervention(self, hypothesis: str) -> PendingIntervention:
+        """Mark one exact pending canonical plan action as a deliberate causal test."""
 
-        The ledger's 0.70 smoothed prior is neutral. Sparse evidence has a small
-        effect; repeated evidence can matter more, but cannot dominate motive and
-        modulation by itself.
-        """
+        pending = self.state.pending_action
+        if pending is None:
+            raise ValueError("an action must be pending before it can be marked as an intervention")
+        if self._plan_for_pending_action(pending.action_id) is None:
+            raise ValueError("only a canonical pending plan action can be marked as an intervention")
+        validated = ExperientialFrame((str(hypothesis).strip(),)).prose[0]
+        return self.causal_state.register_intervention(
+            pending.action_id,
+            validated,
+            tick=self.state.tick,
+        )
+
+    def _action_prediction_route_adjustment(self, action: str) -> float:
+        """Return a bounded evidence-weighted route prior from action calibration."""
 
         key = f"action:{str(action).strip().lower()}"
         row = self.expectation_ledger.calibration.get(key)
@@ -177,7 +189,7 @@ class LivingDuck(ContinuousLivingDuck):
         )
 
     def step(self, event: WorldEvent, *, allow_inner_speech: bool = True):
-        """Retire abandoned action predictions and predict canonical plan-step outcomes."""
+        """Retire predictions/tests for abandoned actions and predict plan-step outcomes."""
 
         previous_pending = self.state.pending_action
         if previous_pending is not None:
@@ -185,6 +197,7 @@ class LivingDuck(ContinuousLivingDuck):
                 previous_pending.action_id,
                 self.state.tick + 1,
             )
+            self.causal_state.consume_intervention(previous_pending.action_id)
 
         is_plan_step, concern_text = self._canonical_plan_step(event)
         result = super().step(event, allow_inner_speech=allow_inner_speech)
@@ -254,6 +267,8 @@ class LivingDuck(ContinuousLivingDuck):
         *,
         action_name: str,
         success: float,
+        action_was_intervention: bool,
+        intervention_hypothesis: str,
     ) -> None:
         """Update only clearly resolved adjacent steps in one canonical plan route."""
 
@@ -275,6 +290,7 @@ class LivingDuck(ContinuousLivingDuck):
                     action_name,
                     outcome="fulfilled",
                     tick=self.state.tick,
+                    intervention=context.previous_was_intervention,
                 )
             elif adjacent and success <= 0.38:
                 self.causal_state.observe_transition(
@@ -282,6 +298,7 @@ class LivingDuck(ContinuousLivingDuck):
                     action_name,
                     outcome="violated",
                     tick=self.state.tick,
+                    intervention=context.previous_was_intervention,
                 )
 
         if success >= 0.60:
@@ -297,6 +314,8 @@ class LivingDuck(ContinuousLivingDuck):
                     previous_action=action_name,
                     previous_step_index=old_plan.step_index,
                     tick=self.state.tick,
+                    previous_was_intervention=action_was_intervention,
+                    intervention_hypothesis=intervention_hypothesis,
                 )
             else:
                 self.causal_state.clear_context(plan_id)
@@ -312,7 +331,7 @@ class LivingDuck(ContinuousLivingDuck):
         description: str,
         tags: Iterable[str] = (),
     ) -> None:
-        """Resolve action predictions and learn bounded within-plan transitions."""
+        """Resolve action predictions and learn observational/intervention transitions."""
 
         linked = self._plan_for_pending_action(action_id)
         pending = self.state.pending_action
@@ -321,6 +340,7 @@ class LivingDuck(ContinuousLivingDuck):
             if pending is not None and pending.action_id == action_id
             else ""
         )
+        intervention = self.causal_state.intervention_for(action_id)
         success_value = max(0.0, min(1.0, float(success)))
         resolutions = self.expectation_ledger.evaluate_action_outcome(
             action_id,
@@ -335,10 +355,14 @@ class LivingDuck(ContinuousLivingDuck):
             description=description,
             tags=tags,
         )
+        consumed = self.causal_state.consume_intervention(action_id)
+        intervention = consumed or intervention
         self._learn_plan_transition(
             linked,
             action_name=action_name,
             success=success_value,
+            action_was_intervention=intervention is not None,
+            intervention_hypothesis=(intervention.hypothesis if intervention is not None else ""),
         )
         self._record_action_expectation_resolutions(resolutions)
 

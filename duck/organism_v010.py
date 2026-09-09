@@ -1,9 +1,10 @@
 """Current MicroPsiDUCK v0.10 organism composition.
 
 The motivated-cognition core remains in ``living_v010``. This layer owns continuous
-heartbeat scheduling and sparse endogenous signal generation. Keeping scheduling
-separate prevents body/social/commitment dynamics from becoming another set of
-hard-coded executive rules inside the motive engine.
+heartbeat scheduling, sparse endogenous signal generation, and subject-owned
+expectation evaluation. Keeping those responsibilities explicit prevents body,
+social, planning, and prediction dynamics from collapsing into hard-coded executive
+rules inside the motive engine.
 """
 from __future__ import annotations
 
@@ -13,7 +14,15 @@ from .access import SubjectAccessFirewall
 from .cognition import InnerCognitionProvider
 from .endogenous import EndogenousDynamicsState, EndogenousEventGenerator, EndogenousSignal
 from .executive import ExecutiveCognitionProvider
-from .living import ActionCandidate, MemoryRecord, RelationshipState, SubjectState, WorldEvent
+from .expectations_v010 import ExpectationLedgerState, ExpectationRecord, ExpectationResolution
+from .living import (
+    ActionCandidate,
+    MemoryProvenance,
+    MemoryRecord,
+    RelationshipState,
+    SubjectState,
+    WorldEvent,
+)
 from .living_v010 import LivingDuck as MotivatedLivingDuck
 from .motivated_cognition import MotivatedCognitionState
 
@@ -23,7 +32,7 @@ _PLAN_PRESSURE_REPEAT_AFTER = 10
 
 
 class LivingDuck(MotivatedLivingDuck):
-    """v0.10 organism with persistent motivated cognition and endogenous scheduling."""
+    """v0.10 organism with motivated cognition, expectations, and endogenous scheduling."""
 
     def __init__(
         self,
@@ -34,6 +43,7 @@ class LivingDuck(MotivatedLivingDuck):
         executive: ExecutiveCognitionProvider | None = None,
         cognitive_state: MotivatedCognitionState | None = None,
         endogenous_state: EndogenousDynamicsState | None = None,
+        expectation_state: ExpectationLedgerState | None = None,
     ) -> None:
         super().__init__(
             state,
@@ -43,10 +53,133 @@ class LivingDuck(MotivatedLivingDuck):
             cognitive_state=cognitive_state,
         )
         self.endogenous = EndogenousEventGenerator(endogenous_state)
+        self.expectation_ledger = expectation_state or ExpectationLedgerState()
+        self.expectation_ledger.normalize()
 
     @property
     def endogenous_state(self) -> EndogenousDynamicsState:
         return self.endogenous.state
+
+    @property
+    def expectation_state(self) -> ExpectationLedgerState:
+        return self.expectation_ledger
+
+    def register_expectation(
+        self,
+        proposition: str,
+        *,
+        fact_key: str,
+        expected_value: str,
+        due_in: int | None = None,
+        confidence: float = 0.70,
+    ) -> ExpectationRecord:
+        """Create a persistent prediction held by the subject."""
+
+        return self.expectation_ledger.register(
+            self.state.tick,
+            proposition,
+            fact_key=fact_key,
+            expected_value=expected_value,
+            due_in=due_in,
+            confidence=confidence,
+        )
+
+    def expectations(self, *, status: str | None = None) -> list[ExpectationRecord]:
+        rows = list(self.expectation_ledger.records)
+        if status is not None:
+            rows = [record for record in rows if record.status == str(status)]
+        return rows
+
+    def revise_expectation(
+        self,
+        expectation_id: str,
+        *,
+        proposition: str | None = None,
+        expected_value: str | None = None,
+        due_in: int | None = None,
+        confidence: float | None = None,
+    ) -> ExpectationRecord:
+        """Supersede an active prediction while preserving revision lineage."""
+
+        return self.expectation_ledger.revise(
+            expectation_id,
+            self.state.tick,
+            proposition=proposition,
+            expected_value=expected_value,
+            due_in=due_in,
+            confidence=confidence,
+        )
+
+    def retire_expectation(self, expectation_id: str) -> ExpectationRecord:
+        return self.expectation_ledger.retire(expectation_id, self.state.tick)
+
+    def _expectation_aware_event(
+        self,
+        event: WorldEvent,
+    ) -> tuple[WorldEvent, tuple[ExpectationResolution, ...]]:
+        """Attach appraisal consequences only when perceived evidence resolves a prediction."""
+
+        resolutions = self.expectation_ledger.evaluate_event(event, self.state.tick + 1)
+        if not resolutions:
+            return event, ()
+        tags = list(event.tags)
+        if any(row.outcome == "violated" for row in resolutions):
+            tags.extend(("expectation_violation", "prediction_error", "inconsistency"))
+        if any(row.outcome == "fulfilled" for row in resolutions):
+            tags.extend(("expectation_fulfilled", "prediction_confirmed"))
+        return replace(event, tags=tuple(dict.fromkeys(tags))), resolutions
+
+    def _record_expectation_resolutions(
+        self,
+        resolutions: tuple[ExpectationResolution, ...],
+    ) -> tuple[str, ...]:
+        memory_ids: list[str] = []
+        for row in resolutions:
+            if row.outcome == "violated":
+                text = f"What happened did not match what I expected: {row.proposition}"
+                tags = ("expectation", "expectation_violation", "prediction_error", "inconsistency")
+                valence = -0.22
+                arousal = 0.56
+            else:
+                text = f"What happened matched what I expected: {row.proposition}"
+                tags = ("expectation", "expectation_fulfilled", "prediction_confirmed")
+                valence = 0.12
+                arousal = 0.28
+            memory = self.state.add_memory(
+                text,
+                tags=tags,
+                valence=valence,
+                arousal=arousal,
+                importance=max(0.48, min(0.88, 0.46 + 0.34 * row.confidence)),
+                provenance=MemoryProvenance.SELF_REFLECTION,
+                source="self",
+                confidence=row.confidence,
+            )
+            memory_ids.append(memory.memory_id)
+        return tuple(memory_ids)
+
+    def step(self, event: WorldEvent, *, allow_inner_speech: bool = True):
+        """Evaluate predictions before appraisal, then persist qualitative resolution memory."""
+
+        prepared, resolutions = self._expectation_aware_event(event)
+        result = super().step(prepared, allow_inner_speech=allow_inner_speech)
+        memory_ids = self._record_expectation_resolutions(resolutions)
+        trace = dict(result.developer_trace)
+        trace["expectations"] = {
+            "resolved": [
+                {
+                    "expectation_id": row.expectation_id,
+                    "outcome": row.outcome,
+                    "expected_value": row.expected_value,
+                    "observed_value": row.observed_value,
+                    "confidence": row.confidence,
+                }
+                for row in resolutions
+            ],
+            "resolution_memory_ids": list(memory_ids),
+            "active_count": len(self.expectation_ledger.active()),
+        }
+        return replace(result, developer_trace=trace)
 
     def _candidates(
         self,
@@ -61,10 +194,6 @@ class LivingDuck(MotivatedLivingDuck):
         bonuses: dict[str, float] = {}
         reason = ""
         if "fatigue_signal" in tags:
-            # A threshold-crossing or cooldown-reasserted depletion alarm should
-            # keep recovery competitive while the underlying deficit remains. The
-            # extra term scales only inside the explicit fatigue-signal path, so it
-            # does not alter ordinary quiet-heartbeat arbitration.
             energy = max(0.0, min(1.0, float(self.state.needs.get("energy", 0.85))))
             deficit = max(0.0, 0.28 - energy)
             bonuses = {"rest": 0.62 + 0.90 * deficit, "wait": -0.04}
@@ -105,9 +234,7 @@ class LivingDuck(MotivatedLivingDuck):
             reasons = candidate.reasons
             if bonus != 0.0 and reason:
                 reasons = tuple(dict.fromkeys((*reasons, reason)))
-            adjusted.append(
-                ActionCandidate(candidate.name, candidate.utility + bonus, reasons)
-            )
+            adjusted.append(ActionCandidate(candidate.name, candidate.utility + bonus, reasons))
         return adjusted
 
     def _has_actionable_concern(self) -> bool:
@@ -202,49 +329,42 @@ class LivingDuck(MotivatedLivingDuck):
         return replace(result, developer_trace=trace)
 
     def heartbeat(self, *, allow_inner_speech: bool = True):
-        """Advance the organism and recruit the strongest appropriate endogenous event.
+        """Advance the organism and recruit the strongest appropriate endogenous event."""
 
-        Concrete actionable prospective concerns have first priority. Generic body,
-        social, safety, coherence, curiosity, and commitment pressures are handled
-        next. A repeatedly blocked active plan can become salient only after those
-        more immediate endogenous sources have had their chance. Otherwise the
-        inherited quiet heartbeat runs unchanged.
-        """
-
+        overdue = self.expectation_ledger.advance(self.state.tick + 1)
         self.endogenous.refresh(self.state)
         self._refresh_plan_pressure_state()
         if self._has_actionable_concern():
             result = super().heartbeat(allow_inner_speech=allow_inner_speech)
-            return self._annotate_heartbeat(
-                result,
-                {
-                    "emitted": False,
-                    "reason": "prospective_concern_priority",
-                    "latched_signals": sorted(self.endogenous_state.latched_signals),
-                },
-            )
-
-        signal = self.endogenous.next_signal(self.state)
-        if signal is None:
-            signal = self._stalled_plan_signal()
-        if signal is not None:
-            result = self.step(signal.event, allow_inner_speech=allow_inner_speech)
-            return self._annotate_heartbeat(
-                result,
-                {
+            trace = {
+                "emitted": False,
+                "reason": "prospective_concern_priority",
+                "latched_signals": sorted(self.endogenous_state.latched_signals),
+            }
+        else:
+            signal = self.endogenous.next_signal(self.state)
+            if signal is None:
+                signal = self._stalled_plan_signal()
+            if signal is not None:
+                result = self.step(signal.event, allow_inner_speech=allow_inner_speech)
+                trace = {
                     "emitted": True,
                     "signal": signal.to_developer_dict(),
                     "latched_signals": sorted(self.endogenous_state.latched_signals),
                     "emission_count": self.endogenous_state.emission_counts.get(signal.key, 0),
-                },
-            )
-
-        result = super().heartbeat(allow_inner_speech=allow_inner_speech)
-        return self._annotate_heartbeat(
-            result,
-            {
-                "emitted": False,
-                "reason": "no_threshold_crossing",
-                "latched_signals": sorted(self.endogenous_state.latched_signals),
-            },
-        )
+                }
+            else:
+                result = super().heartbeat(allow_inner_speech=allow_inner_speech)
+                trace = {
+                    "emitted": False,
+                    "reason": "no_threshold_crossing",
+                    "latched_signals": sorted(self.endogenous_state.latched_signals),
+                }
+        result = self._annotate_heartbeat(result, trace)
+        if overdue:
+            developer_trace = dict(result.developer_trace)
+            expectation_trace = dict(developer_trace.get("expectations", {}))
+            expectation_trace["became_overdue"] = [record.expectation_id for record in overdue]
+            developer_trace["expectations"] = expectation_trace
+            result = replace(result, developer_trace=developer_trace)
+        return result

@@ -10,7 +10,9 @@ This file defines which documents govern the current development branch and how 
 
 `EXPERIENTIAL_FIREWALL_v0.10.md` is a binding interface contract. It requires a prose-only experiential data contract for private cognition, versioned persistence of private interior state, and a renderer that may read controlled private prose without publishing private state.
 
-`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi and MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, or experiential-firewall contract.
+`EXPECTATIONS_v0.10.md` is a supporting technical contract for prediction semantics. It defines the separation among world truth, subject belief, and subject expectation; perceived-evidence requirements; overdue versus violated predictions; calibration; revision lineage; and the evidence boundary for action-outcome expectations. It cannot override the architecture or milestone documents.
+
+`MICROPSI_MODERNIZATION_v0.10.md` is supporting design context describing which Psi and MicroPsi principles are being preserved and which historical implementation details are deliberately not copied. It is nonbinding and cannot override the architecture, milestone, experiential-firewall, or expectation contracts.
 
 `STATUS.md` records what is actually implemented and what CI has verified.
 
@@ -43,6 +45,8 @@ The older `DUCK_Unified_Subject_Architecture_Design_Spec_v0.3` from `Azimn/perso
 DUCK v0.5 through v0.9 progressively established a persistent individual with autobiographical continuity, relationship trajectories, regulation, prospective agency, endogenous goals, planning, and outcome-driven change.
 
 MicroPsiDUCK v0.10 changes the organization of cognition itself. Needs generate persistent competing motives. Motives organize associative activation and planning. Global modulation changes the operating regime of cognition. Continuous state dynamics generate endogenous events even when no language model is active.
+
+The v0.10 phase also adds explicit prediction state. World truth, subject belief, and subject expectation remain separate authorities. Expectations mature over time, are resolved only by appropriate evidence, preserve revision history, and learn calibration from outcomes the subject actually perceived. A hidden world change cannot silently train or correct the subject's predictor.
 
 The v0.10 phase also hardens first-person architecture. Mechanistic state may causally shape experience, but private cognition receives only an immutable `ExperientialFrame` containing approved first-person experiential prose. Private interior state is versioned and persistent. Public expression is rendered from a controlled prose-only view rather than canonical subject machinery.
 

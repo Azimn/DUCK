@@ -179,6 +179,36 @@ class EndogenousEventGenerator:
             return True
         return next_tick - last >= max(1, int(repeat_after))
 
+    def claim_signal(
+        self,
+        subject: SubjectState,
+        *,
+        key: str,
+        kind: str,
+        text: str,
+        tags: tuple[str, ...],
+        salience: float,
+        repeat_after: int,
+    ) -> EndogenousSignal | None:
+        """Rate-limit and record a composed endogenous source using this scheduler.
+
+        Higher organism layers can identify domain-specific pressures such as a
+        persistently blocked canonical plan without creating another clock, latch
+        store, or persistence authority. The returned event remains transient.
+        """
+
+        next_tick = subject.tick + 1
+        if not self._ready(key, next_tick, repeat_after):
+            return None
+        signal = EndogenousSignal(
+            str(key),
+            str(kind),
+            _clamp(salience),
+            self._signal_event(str(kind), str(text), tuple(tags), salience),
+        )
+        self.state.record(signal.key, next_tick)
+        return signal
+
     def refresh(self, subject: SubjectState) -> None:
         """Re-arm recovered pressures and retire resolved commitment alarms."""
 

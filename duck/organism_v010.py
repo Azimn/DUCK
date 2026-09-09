@@ -29,6 +29,8 @@ from .motivated_cognition import MotivatedCognitionState
 
 _STALLED_PLAN_REASONS = frozenset({"low_energy", "context_missing", "context_blocked", "safety_override"})
 _PLAN_PRESSURE_REPEAT_AFTER = 10
+_EXPECTATION_PRESSURE_REPEAT_AFTER = 12
+_EXPECTATION_PRESSURE_MIN_CONFIDENCE = 0.65
 
 
 class LivingDuck(MotivatedLivingDuck):
@@ -73,8 +75,6 @@ class LivingDuck(MotivatedLivingDuck):
         due_in: int | None = None,
         confidence: float = 0.70,
     ) -> ExpectationRecord:
-        """Create a persistent prediction held by the subject."""
-
         return self.expectation_ledger.register(
             self.state.tick,
             proposition,
@@ -99,8 +99,6 @@ class LivingDuck(MotivatedLivingDuck):
         due_in: int | None = None,
         confidence: float | None = None,
     ) -> ExpectationRecord:
-        """Supersede an active prediction while preserving revision lineage."""
-
         return self.expectation_ledger.revise(
             expectation_id,
             self.state.tick,
@@ -117,8 +115,6 @@ class LivingDuck(MotivatedLivingDuck):
         self,
         event: WorldEvent,
     ) -> tuple[WorldEvent, tuple[ExpectationResolution, ...]]:
-        """Attach appraisal consequences only when perceived evidence resolves a prediction."""
-
         resolutions = self.expectation_ledger.evaluate_event(event, self.state.tick + 1)
         if not resolutions:
             return event, ()
@@ -159,11 +155,10 @@ class LivingDuck(MotivatedLivingDuck):
         return tuple(memory_ids)
 
     def step(self, event: WorldEvent, *, allow_inner_speech: bool = True):
-        """Evaluate predictions before appraisal, then persist qualitative resolution memory."""
-
         prepared, resolutions = self._expectation_aware_event(event)
         result = super().step(prepared, allow_inner_speech=allow_inner_speech)
         memory_ids = self._record_expectation_resolutions(resolutions)
+        self._refresh_expectation_pressure_state()
         trace = dict(result.developer_trace)
         trace["expectations"] = {
             "resolved": [
@@ -187,8 +182,6 @@ class LivingDuck(MotivatedLivingDuck):
         relation: RelationshipState,
         memories: list[MemoryRecord],
     ) -> list[ActionCandidate]:
-        """Add local affordance support for explicit endogenous threshold signals."""
-
         rows = super()._candidates(event, relation, memories)
         tags = {str(tag).lower() for tag in event.tags}
         bonuses: dict[str, float] = {}
@@ -213,6 +206,9 @@ class LivingDuck(MotivatedLivingDuck):
         elif "curiosity_signal" in tags:
             bonuses = {"explore": 0.38, "ask": 0.16, "wait": -0.05}
             reason = "endogenous_curiosity"
+        elif "expectation_pressure" in tags:
+            bonuses = {"ask": 0.28, "explore": 0.12, "wait": 0.04}
+            reason = "endogenous_expectation_uncertainty"
         elif "plan_pressure" in tags:
             if "stall_low_energy" in tags:
                 bonuses = {"rest": 0.42, "wait": 0.05}
@@ -238,8 +234,6 @@ class LivingDuck(MotivatedLivingDuck):
         return adjusted
 
     def _has_actionable_concern(self) -> bool:
-        """Check whether the inherited prospective-agency path should run first."""
-
         context_tags = self._recent_context_tags()
         for concern in self.concerns(status="open"):
             available, _ = self._concern_viability(concern, context_tags)
@@ -247,14 +241,43 @@ class LivingDuck(MotivatedLivingDuck):
                 return True
         return False
 
-    def _refresh_plan_pressure_state(self) -> None:
-        """Retire scheduler keys when a plan resolves or becomes actionable again."""
+    def _scheduler_keys(self) -> set[str]:
+        keys = set(self.endogenous_state.latched_signals)
+        keys.update(self.endogenous_state.last_emitted_tick)
+        keys.update(self.endogenous_state.emission_counts)
+        return keys
 
+    def _refresh_expectation_pressure_state(self) -> None:
+        overdue = {record.expectation_id for record in self.expectations(status="overdue")}
+        for key in list(self._scheduler_keys()):
+            if key.startswith("expectation:") and key.split(":", 1)[1] not in overdue:
+                self.endogenous_state.forget(key)
+
+    def _overdue_expectation_signal(self) -> EndogenousSignal | None:
+        rows: list[tuple[float, ExpectationRecord]] = []
+        for record in self.expectations(status="overdue"):
+            if record.confidence < _EXPECTATION_PRESSURE_MIN_CONFIDENCE:
+                continue
+            overdue_age = max(0, self.state.tick + 1 - (record.due_tick or self.state.tick + 1))
+            salience = min(0.82, 0.42 + 0.30 * record.confidence + min(0.12, overdue_age * 0.025))
+            rows.append((salience, record))
+        if not rows:
+            return None
+        rows.sort(key=lambda row: (row[0], row[1].expectation_id), reverse=True)
+        salience, record = rows[0]
+        return self.endogenous.claim_signal(
+            self.state,
+            key=f"expectation:{record.expectation_id}",
+            kind="expectation",
+            text="I expected something by now, and I still don't know whether it happened.",
+            tags=("expectation_pressure", "expectation_overdue", "uncertainty", "question"),
+            salience=salience,
+            repeat_after=_EXPECTATION_PRESSURE_REPEAT_AFTER,
+        )
+
+    def _refresh_plan_pressure_state(self) -> None:
         active = {plan.plan_id: plan for plan in self.plans(status="active")}
-        known_keys = set(self.endogenous_state.latched_signals)
-        known_keys.update(self.endogenous_state.last_emitted_tick)
-        known_keys.update(self.endogenous_state.emission_counts)
-        for key in list(known_keys):
+        for key in list(self._scheduler_keys()):
             if key.startswith("plan:") and key.split(":", 1)[1] not in active:
                 self.endogenous_state.forget(key)
 
@@ -286,8 +309,6 @@ class LivingDuck(MotivatedLivingDuck):
         return "I keep coming back to something I still haven't been able to move forward."
 
     def _stalled_plan_signal(self) -> EndogenousSignal | None:
-        """Surface a persistently blocked canonical plan without creating a new goal."""
-
         context_tags = self._recent_context_tags()
         rows: list[tuple[float, str, object, str]] = []
         for plan in self.plans(status="active"):
@@ -329,10 +350,9 @@ class LivingDuck(MotivatedLivingDuck):
         return replace(result, developer_trace=trace)
 
     def heartbeat(self, *, allow_inner_speech: bool = True):
-        """Advance the organism and recruit the strongest appropriate endogenous event."""
-
         overdue = self.expectation_ledger.advance(self.state.tick + 1)
         self.endogenous.refresh(self.state)
+        self._refresh_expectation_pressure_state()
         self._refresh_plan_pressure_state()
         if self._has_actionable_concern():
             result = super().heartbeat(allow_inner_speech=allow_inner_speech)
@@ -343,6 +363,8 @@ class LivingDuck(MotivatedLivingDuck):
             }
         else:
             signal = self.endogenous.next_signal(self.state)
+            if signal is None:
+                signal = self._overdue_expectation_signal()
             if signal is None:
                 signal = self._stalled_plan_signal()
             if signal is not None:

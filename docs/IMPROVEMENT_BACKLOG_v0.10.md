@@ -99,7 +99,7 @@ The append-only developer/event journal is not canonical subject state and is no
 
 ## IMP-002 Authoritative world truth still physically inhabits SubjectState
 
-**Status:** OPEN  
+**Status:** FIXED  
 **Priority:** P1  
 **Affected subsystem:** environment / epistemic authority  
 **Discriminator gates:** DISC-006  
@@ -107,22 +107,46 @@ The append-only developer/event journal is not canonical subject state and is no
 
 ### Problem
 
-Hidden world changes are correctly prevented from becoming subject perception or expectation evidence, but authoritative `world_facts` are still mutated through the subject state object.
+The historical substrate stores `world_facts` inside `SubjectState`. Although hidden world changes were already prevented from becoming beliefs or memories, the current host still used that subject-owned field as authoritative external truth.
 
-### Why it matters
+### Resolution
 
-The architecture conceptually separates WORLD from SUBJECT. Keeping authoritative external truth inside `SubjectState` weakens that boundary and increases the chance that later code accidentally treats omniscient host facts as subject-accessible facts.
+`EnvironmentDynamicsState` now owns canonical `world_facts` alongside scheduled world events. The public v0.10 host is the supported authority for external truth mutation through `set_world_fact`, scheduled events, and observed world events.
 
-### Improvement direction
+The current public organism is wrapped by `authoritative_organism_v010.py`. It preserves the historical `SubjectState.world_facts` field only for serialization/migration compatibility and keeps it empty before and after current v0.10 cognitive steps. Perceived facts may still create ordinary autobiographical evidence and beliefs, and expectation evaluation still consumes the perceived event, but external truth does not remain in subject-owned state.
 
-Move authoritative world facts into environment/world state. Subject state should contain beliefs, remembered percepts, and other subject-owned representations only.
+Opening legacy subject state migrates any old `world_facts` into environment authority and clears them from the subject. Hidden host changes update only environment truth and advance the subject through an ordinary heartbeat. Direct public-organism attempts to mutate world truth are rejected and redirected to the host authority.
 
-### Fixed when
+### Targeted hostile verification
 
-- external truth has a separate canonical store
-- hidden world mutation never writes subject-owned state
-- perception explicitly transfers only allowed evidence into subject processing
-- DISC-006 cannot force hidden truth into memory, belief, expectations, calibration, or experience
+The updated environment and expectation suites verify:
+
+- hidden environment change updates `EnvironmentDynamicsState.world_facts` while `SubjectState.world_facts` remains empty
+- hidden truth does not create beliefs, memories, expectation resolution, or experiential prose
+- perceived world facts update environment truth and subject belief as separate effects
+- direct public-organism construction clears legacy truth and never retains event facts
+- direct organism `set_world_fact` cannot author external truth
+- the public host is the supported mutation path
+- legacy embedded world facts migrate into environment authority on reopen
+- perceived and hidden expectation paths preserve their prior epistemic distinctions
+- language-lesion behavior and the full motivated longitudinal simulation remain intact
+
+### Verification evidence
+
+Implementation/test commits:
+
+- `41cdba45da47aa053b5af72eb6420c405d08ca3d` moved world facts into environment state
+- `3771220e25083c6896a48620cf0acb0cdc39955c` added the current subject/world authority enforcement layer
+- `c3d020b7c41aabe9660a9348040dbd5b19072c12` promoted that layer as the public v0.10 organism
+- `d51af0bbe5ca319e3f0bc67aa16f2b21aebed85f` made the public host the world-truth authority and added migration
+- `943a94491b01b393208e5dc221255645d6bddde4` and `b43c2d93a8677055ceb42bd30d65d4f6a3c1b603` updated the focused environment/expectation boundary tests
+- `0be1d71b7b62da2f4000ec1877f675d6d35c7e08`, `a0d3e0abeb00d14b8748aaa9c9a2fa3485a28ea5`, and `8da85540726733ca34bc8bf31261bdc84c437d71` corrected stale public-composition and integrated epistemic assumptions exposed by neighboring pytest regressions
+
+CI run #282 passed the v0.10 longitudinal simulation, full pytest suite, and all configured historical/current evaluation and simulation suites on Python 3.11 and Python 3.12 at exact head `8da85540726733ca34bc8bf31261bdc84c437d71`.
+
+### Residual note
+
+The historical base class still contains the old `world_facts` implementation so preserved runtimes remain reproducible. The current authority wrapper clears any temporary compatibility writes made inside the inherited historical step. IMP-003 should ultimately remove the need for that temporary inheritance-based compatibility behavior through explicit current-runtime composition.
 
 ---
 

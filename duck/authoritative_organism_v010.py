@@ -16,6 +16,8 @@ class LivingDuck(PredictiveLivingDuck):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        if self.state.pending_action is not None:
+            self.state.pending_action.tags = tuple(self.state.pending_action.tags)
         # A host opening historical state migrates these facts to environment state
         # before construction. Direct current-organism construction has no external
         # world authority, so legacy truth cannot remain canonical in the subject.
@@ -40,9 +42,10 @@ class LivingDuck(PredictiveLivingDuck):
         """
 
         self.state.world_facts.clear()
-        result = super().step(event, allow_inner_speech=allow_inner_speech)
-        self.state.world_facts.clear()
-        return result
+        try:
+            return super().step(event, allow_inner_speech=allow_inner_speech)
+        finally:
+            self.state.world_facts.clear()
 
 
 __all__ = ["LivingDuck"]

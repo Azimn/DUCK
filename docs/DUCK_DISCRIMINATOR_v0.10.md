@@ -271,3 +271,7 @@ A future v0.10 freeze should require both ordinary CI and the current discrimina
 An accepted limitation must have a rationale. "The test is inconvenient" is not a rationale.
 
 The discriminator should become progressively harder as the architecture improves. Its purpose is to prevent a growing test suite from becoming a ceremony that only confirms what the developers already expect.
+
+## Targeted executable profile
+
+`python -m duck.discriminator --seed 17 --ticks 1000 --output report.json` runs the initial targeted behavior profile. Its JSON output includes per-check evidence, commit provenance, and `backlog_updates` classified against the living backlog. This is partial implementation of the program above. `BEHAVIOR_FIRST_v0.10.md` specifies coverage and remaining limits.

@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from .host import PersistentDuckHost
+from .host_v05 import PersistentDuckHostV05 as PersistentDuckHost
 from .living import AdaptiveSelfCore, LivingDuck, SubjectState, WorldEvent
 
 

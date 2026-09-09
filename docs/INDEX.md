@@ -79,3 +79,7 @@ The new public runtime on this development branch may therefore diverge structur
 ## Future modalities
 
 Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and richer embodiment remain future surfaces. Machine representations must cross the same experiential firewall before they become available to the simulated subject.
+
+## Behavior-first evaluation
+
+`BEHAVIOR_FIRST_v0.10.md` defines goal alignment, the targeted executable discriminator, donor scope, and the limits of automated believability claims.

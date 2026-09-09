@@ -214,40 +214,48 @@ class AssociativeGraph:
         self, seeds: Mapping[str, float], *, depth: int, fanout: int,
         decay: float = 0.68, max_active: int = 64,
     ) -> ActivationField:
+        # Sum distinct cue contributions, while retaining only the strongest path
+        # from each cue. A loop or duplicate relation is not another experience.
         depth = max(0, min(5, int(depth)))
         fanout = max(1, min(10, int(fanout)))
-        scores = {
+        max_active = max(0, min(64, int(max_active)))
+        decay = max(0.0, min(1.0, float(decay)))
+        def bounded(rows):
+            return dict(sorted(rows.items(), key=lambda row: (-row[1], row[0]))[:max_active])
+
+        seeds = bounded({
             str(node): max(0.0, min(1.0, float(value)))
             for node, value in seeds.items() if float(value) > 0
-        }
-        frontier = dict(scores)
-        expanded = 0
-        adjacency: dict[str, list[AssociativeEdge]] = {}
+        })
+        adjacency: dict[str, dict[str, float]] = {}
         for edge in self.edges.values():
-            adjacency.setdefault(edge.source, []).append(edge)
-        for rows in adjacency.values():
-            rows.sort(key=lambda e: (e.weight, e.count, e.updated_tick), reverse=True)
-
-        for _ in range(depth):
-            next_frontier: dict[str, float] = {}
-            for source, activation in sorted(frontier.items(), key=lambda row: row[1], reverse=True):
-                expanded += 1
-                for edge in adjacency.get(source, ())[:fanout]:
-                    propagated = activation * edge.weight * decay
-                    if propagated < 0.035:
-                        continue
-                    if propagated > scores.get(edge.target, 0.0):
-                        scores[edge.target] = propagated
-                    if propagated > next_frontier.get(edge.target, 0.0):
-                        next_frontier[edge.target] = propagated
-            if not next_frontier:
-                break
-            if len(scores) > max_active:
-                kept = sorted(scores.items(), key=lambda row: row[1], reverse=True)[:max_active]
-                scores = dict(kept)
-                next_frontier = {k: v for k, v in next_frontier.items() if k in scores}
-            frontier = next_frontier
-        return ActivationField(scores=scores, propagation_depth=depth, expanded_nodes=expanded)
+            targets = adjacency.setdefault(edge.source, {})
+            targets[edge.target] = max(targets.get(edge.target, 0.0), edge.weight)
+        neighbors = {
+            source: sorted(targets.items(), key=lambda row: (-row[1], row[0]))[:fanout]
+            for source, targets in adjacency.items()
+        }
+        scores: dict[str, float] = {}
+        expanded = 0
+        for seed, activation in seeds.items():
+            strongest = {seed: activation}
+            frontier = dict(strongest)
+            for _ in range(depth):
+                next_frontier: dict[str, float] = {}
+                for source, value in sorted(frontier.items()):
+                    expanded += 1
+                    for target, weight in neighbors.get(source, ()):
+                        propagated = value * weight * decay
+                        if propagated < 0.035 or propagated <= strongest.get(target, 0.0):
+                            continue
+                        next_frontier[target] = max(next_frontier.get(target, 0.0), propagated)
+                if not next_frontier:
+                    break
+                strongest = bounded({**strongest, **next_frontier})
+                frontier = {node: value for node, value in next_frontier.items() if node in strongest}
+            for node, value in strongest.items():
+                scores[node] = min(1.0, scores.get(node, 0.0) + value)
+        return ActivationField(scores=bounded(scores), propagation_depth=depth, expanded_nodes=expanded)
 
     def to_dict(self) -> dict:
         return {"edges": [edge.to_dict() for edge in self.edges.values()]}

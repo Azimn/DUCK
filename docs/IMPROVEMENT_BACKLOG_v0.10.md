@@ -183,7 +183,7 @@ Move toward explicit composition/orchestration of motivated control, planning, e
 
 ## IMP-004 Experiential firewall is structurally strong but semantically under-specified
 
-**Status:** OPEN  
+**Status:** IN PROGRESS
 **Priority:** P1  
 **Affected subsystem:** experiential firewall / executive boundary / security  
 **Discriminator gates:** DISC-007, DISC-014  
@@ -242,7 +242,7 @@ Create systematic parameter-sensitivity sweeps and identify cliff effects. Separ
 
 ## IMP-006 Associative graph uses strongest-path style propagation rather than convergent activation
 
-**Status:** OPEN  
+**Status:** IN PROGRESS
 **Priority:** P2  
 **Affected subsystem:** associative activation  
 **Discriminator gates:** DISC-003, DISC-004  
@@ -300,7 +300,7 @@ Add bounded context-conditioned transition models with deliberately coarse conte
 
 ## IMP-008 Current validation is still too friendly
 
-**Status:** IN PROGRESS  
+**Status:** IN PROGRESS
 **Priority:** P1  
 **Affected subsystem:** evaluation methodology  
 **Discriminator gates:** DISC-001 through DISC-014  
@@ -326,7 +326,7 @@ This item is not closed by creating the discriminator file. It is fixed for the 
 
 ## IMP-009 Historical regression provenance is incomplete
 
-**Status:** OPEN  
+**Status:** IN PROGRESS
 **Priority:** P2  
 **Affected subsystem:** historical evaluation / versioning  
 **Discriminator gates:** DISC-011  
@@ -378,7 +378,7 @@ This was a documentation-only defect; the underlying counterfactual behavior was
 
 ## IMP-011 Build the executable DUCK Discriminator harness
 
-**Status:** OPEN  
+**Status:** IN PROGRESS
 **Priority:** P1  
 **Affected subsystem:** evaluation infrastructure  
 **Discriminator gates:** all  
@@ -465,3 +465,45 @@ Commit/run: pending
 When an item is fixed, retain it in this document. Change its status to `FIXED` and record the verification commit/run. The backlog is also a research history of which architectural assumptions failed and how they were corrected.
 
 Do not delete embarrassing failures. They are evidence.
+
+## IMP-012 Negative strategy outcomes discarded during scoring
+
+**Status:** FIXED
+**Priority:** P2
+
+The strategy learner stored negative experience, but the v0.10 candidate and route scorers clamped that evidence to zero. Both now retain signed strategy influence. The targeted negative-learning scenario verifies suppression followed by recovery under contrary evidence. `tests/test_behavioral_hardening_v010.py` contains the neighboring regression. This is a local learning correction, not full procedural learning.
+
+## IMP-013 Private provider failure interrupts continuing cognition
+
+**Status:** FIXED
+**Priority:** P1
+
+Private cognition exceptions or invalid return contracts previously escaped the step after canonical processing. The current runtime now uses its deterministic private voice and records only the exception type in diagnostics. The current world-authority wrapper clears compatibility truth in a finally block. The targeted degradation scenario and regression tests verify continued action without successful language services.
+
+## IMP-014 Pending-action tag type changes after restart
+
+**Status:** FIXED
+**Priority:** P2
+
+The initial discriminator run at base `502b726` with local hardening changes found a mismatch in exact reconstructed subject state. JSON restored pending-action tags as a list while the declared live contract uses a tuple. The next-step behavior matched, but exact state did not. Current organism construction normalizes the tags. The restart discriminator and focused regression now require exact state equality and equivalent continuation. No crash-generation failure was observed.
+
+## Behavior-first remediation evidence
+
+IMP-004 now has internal provenance projection, quoted external perception, known-attack screening across recollections and concerns, and private-provider fallback. It remains IN PROGRESS because screening is not a general semantic guarantee and available-action steering remains possible.
+
+IMP-006 now supports bounded distinct-cue convergence, duplicate/cycle resistance, deterministic ordering, and a small parameter-neighborhood check. It remains IN PROGRESS pending broader retrieval quality and hub-bias evidence.
+
+IMP-011 now has a runnable targeted profile and JSON failure intake. It remains IN PROGRESS until the full documented release profile and broader failure mapping exist. IMP-008 also remains open to stronger independent evaluation. IMP-007 is deferred under the goal-alignment policy; its risk is retained, not erased.
+
+The deterministic public renderer now uses approved relationship impressions without automatically publishing a private memory. Actual language-model output leakage and model-swap voice fidelity still require direct evaluation.
+
+## Historical provenance remediation
+
+The baseline evaluation and simulation still imported the moving public host, and the v0.6 wrapper changed only the organism alias. Both baseline harnesses now use a pinned v0.5 host. The v0.6 wrapper substitutes and restores both its organism and host, including on failure. The historical provenance regression opens each v0.5-v0.9 host and checks its actual organism class. IMP-009 remains IN PROGRESS until CI output carries a complete provenance manifest; the known public-host contamination is corrected.
+
+## IMP-015 Continuing character believability lacks independent assessment
+
+**Status:** OPEN
+**Priority:** P1
+
+The targeted social-history scenario now enacts twenty supportive or adverse encounters, allows thirty quiet ticks, and presents the same greeting. It checks whether public expression differs and whether one contrary event leaves the established relationship distinction intact. This demonstrates a narrow history-to-expression path through the deterministic renderer. It does not establish recognizable canonical characters, natural dialogue, model-swap voice fidelity, or lifelong development. Close only after representative blinded interaction evaluation against the declared goal rubric; automated local scores cannot close this item.

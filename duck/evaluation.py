@@ -5,7 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from .host import PersistentDuckHost
+from .host_v05 import PersistentDuckHostV05 as PersistentDuckHost
 from .living import LivingDuck, SubjectState, WorldEvent
 
 
@@ -46,7 +46,7 @@ def persistence_roundtrip() -> dict:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory) / "state"
         host = PersistentDuckHost.open(root, name="Aster", subject_id="eval-persistence")
-        host.interact("Hello.")
+        host.observe(WorldEvent("message", "user", "Hello.", ("social",), 0.0, 0.3))
         first = host.status()
         reopened = PersistentDuckHost.open(root)
         second = reopened.status()

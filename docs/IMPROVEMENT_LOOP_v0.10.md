@@ -226,3 +226,7 @@ This workflow intentionally separates two scientific activities:
 **adversarial discovery** asks what weaknesses remain that we did not already know to look for.
 
 Conflating them makes the discriminator less informative because a large fraction of its output simply restates the development team's own backlog. The remediation-first loop preserves the discriminator's value as a source of genuinely new evidence.
+
+## Goal gate before backlog selection
+
+Apply `BEHAVIOR_FIRST_v0.10.md` before selecting an IMP. Identify the behavior to improve, reuse an existing mechanism when possible, and accept simple authored solutions when observed results support them. Further causal extensions are deferred while basic behavior and evaluation remain incomplete. Do not equate a self-assigned numeric rating with completion.

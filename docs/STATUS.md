@@ -133,3 +133,7 @@ Historical regression harnesses remain useful, but some older simulation modules
 The v0.10 branch may change implementation structure, but it continues to protect persistent subject identity, autobiographical provenance, world and belief separation, prediction and world separation, observational and intervention evidence separation, defeasible causal learning rather than fabricated causal certainty, counterfactual and observed-history separation, relationship continuity, commitments, outcome learning, restart continuity, bounded quiet-time behavior, language-lesion operation, sparse endogenous dynamics, external-world authority separation, and the experiential firewall.
 
 Passing the current architecture and regression tests establishes implemented behavior under the defined simulations. It does not establish phenomenal consciousness, human-equivalent cognition, unrestricted autonomy, randomized causal identification, causal correctness outside tested domains, or general psychological validity.
+
+## Behavior-first hardening, 2026-09-09
+
+Current work adds distinct-cue associative convergence, provenance-aware experiential projection, negative strategy penalties, private-provider fallback, exact pending-action tag restoration, and a contextual deterministic renderer that does not automatically publish recollections. The targeted executable discriminator is available as `python -m duck.discriminator`. See `BEHAVIOR_FIRST_v0.10.md` for scope and validation limits. Human believability and all-metrics 9/10 are not established.

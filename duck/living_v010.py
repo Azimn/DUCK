@@ -10,6 +10,7 @@ from dataclasses import asdict, replace
 from typing import Iterable
 
 from .access import SubjectAccessFirewall
+from .experiential_v010 import ProvenanceFirewall, perceived_prose
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .living import (
@@ -32,7 +33,7 @@ from .motivated_cognition import (
     MotivatedCognitionEngine,
     MotivatedCognitionState,
 )
-from .subjective import ExperientialFrame, SubjectiveMoment
+from .subjective import ExperientialFrame, SubjectiveMoment, validate_experiential_prose
 
 
 class LivingDuck(PlanningLivingDuck):
@@ -68,7 +69,7 @@ class LivingDuck(PlanningLivingDuck):
         executive: ExecutiveCognitionProvider | None = None,
         cognitive_state: MotivatedCognitionState | None = None,
     ) -> None:
-        experiential_firewall = firewall or SubjectAccessFirewall()
+        experiential_firewall = firewall or ProvenanceFirewall()
         self.experiential_firewall = experiential_firewall
         self.private_cognition_provider = cognition or DeterministicInnerVoice()
         self.executive_provider = executive
@@ -160,14 +161,8 @@ class LivingDuck(PlanningLivingDuck):
         text = event.text.strip()
         if not text:
             return None
-        if text.lower().startswith(("i ", "i'm ", "i’ve ", "i've ")):
-            candidate = text
-        elif event.source not in {"", "self", "world", "system"}:
-            candidate = f"I hear or notice this from {event.source}: {text}"
-        else:
-            candidate = f"I notice this: {text}"
         try:
-            return ExperientialFrame((candidate,)).prose[0]
+            return perceived_prose(text, event.source)
         except ValueError:
             tags = {str(tag).lower() for tag in event.tags}
             if tags & {"contradiction", "inconsistency", "expectation_violation", "prediction_error"}:
@@ -458,7 +453,7 @@ class LivingDuck(PlanningLivingDuck):
         for action, utility in base.items():
             motive_term = self._motive_action_weight(action, event)
             learned = self.cognitive_state.strategy_success.get(action, 0.0)
-            learned_term = max(0.0, learned) * 0.20 * modulation.familiar_strategy_bias
+            learned_term = learned * 0.20 * modulation.familiar_strategy_bias
             adaptive = self.state.adaptive.bias(action, event.tags) * 0.18
             rows.append(
                 ActionCandidate(
@@ -582,7 +577,7 @@ class LivingDuck(PlanningLivingDuck):
         score -= (1.0 - modulation.resolution) * 0.34 * complexity
         score += modulation.interruption_sensitivity * 0.65 * safety
         score -= modulation.interruption_sensitivity * 0.35 * novelty
-        learned = max(0.0, self.cognitive_state.strategy_success.get(action, 0.0))
+        learned = self.cognitive_state.strategy_success.get(action, 0.0)
         score += learned * 0.24 * modulation.familiar_strategy_bias
         return score
 
@@ -707,11 +702,18 @@ class LivingDuck(PlanningLivingDuck):
             result.recalled_memory_ids,
         )
         self.last_experience = self.experiential_firewall.experience(moment)
-        thought = (
-            self.private_cognition_provider.generate(self.last_experience)
-            if allow_inner_speech
-            else InnerCognition(None)
-        )
+        thought = InnerCognition(None)
+        private_provider_error = None
+        if allow_inner_speech:
+            try:
+                thought = self.private_cognition_provider.generate(self.last_experience)
+                if not isinstance(thought, InnerCognition):
+                    raise TypeError("private cognition returned an invalid contract")
+                if thought.thought is not None:
+                    validate_experiential_prose((thought.thought,))
+            except Exception as exc:
+                private_provider_error = type(exc).__name__
+                thought = DeterministicInnerVoice().generate(self.last_experience)
 
         self.control.learn_after_step(
             self.state,
@@ -721,6 +723,8 @@ class LivingDuck(PlanningLivingDuck):
             selected_action=result.selected_action,
         )
         trace = dict(result.developer_trace)
+        if private_provider_error is not None:
+            trace["private_provider_error"] = private_provider_error
         trace["motivated_cognition"] = cycle.to_developer_dict()
         trace["motivated_cognition"]["motive_state"] = [
             motive.to_dict()

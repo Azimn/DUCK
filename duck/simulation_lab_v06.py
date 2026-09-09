@@ -12,15 +12,19 @@ from pathlib import Path
 
 from . import simulation_lab as baseline
 from .living_v06 import LivingDuck
+from .host_v06 import PersistentDuckHostV06
 
 
 def run_all() -> dict:
     original = baseline.LivingDuck
+    original_host = baseline.PersistentDuckHost
     baseline.LivingDuck = LivingDuck
+    baseline.PersistentDuckHost = PersistentDuckHostV06
     try:
         report = baseline.run_all()
     finally:
         baseline.LivingDuck = original
+        baseline.PersistentDuckHost = original_host
     return {
         "suite": "DUCK Simulation Lab v0.6 regulated candidate",
         "passed": report["passed"],

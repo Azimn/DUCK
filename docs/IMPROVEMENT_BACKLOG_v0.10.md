@@ -12,6 +12,8 @@ This document answers: **What is weak, risky, incomplete, misleading, or known t
 
 The DUCK Discriminator defined in `DUCK_DISCRIMINATOR_v0.10.md` must add or update entries here whenever it finds a meaningful failure.
 
+`IMPROVEMENT_LOOP_v0.10.md` defines the remediation-first working order. Known high-priority weaknesses are fixed with targeted hostile verification before expensive broad discriminator discovery.
+
 A green ordinary CI run does not automatically close an item in this backlog.
 
 ## Status values
@@ -44,7 +46,7 @@ Every item must contain enough information that a future contributor can answer 
 
 ## IMP-001 Cross-file persistence is not transactionally coherent
 
-**Status:** OPEN  
+**Status:** FIXED  
 **Priority:** P1  
 **Affected subsystem:** persistence / host / continuity  
 **Discriminator gates:** DISC-005  
@@ -52,24 +54,46 @@ Every item must contain enough information that a future contributor can answer 
 
 ### Problem
 
-The current host atomically replaces individual JSON files, but the organism is persisted across multiple files including canonical subject state, motivated cognition, endogenous scheduler state, expectations, causal state, environment state, and private interior state.
+The previous host atomically replaced individual JSON files, but the organism was persisted across multiple files including canonical subject state, motivated cognition, endogenous scheduler state, expectations, causal state, environment state, and private interior state. A crash between file replacements could therefore reopen a mixture of generations.
 
-A process crash between file replacements can reopen a mixture of generations.
+### Resolution
 
-### Why it matters
+The current public host now commits one generation through `SnapshotStore` in `persistence_v010.py`.
 
-Persistent continuity is a central architectural claim. A subject at tick N+1 paired with causal or expectation state from tick N is logically inconsistent even if every individual JSON file is valid.
+A save stages every current component in a generation directory, records SHA-256 hashes in generation metadata, atomically renames the complete staged directory, and only then atomically replaces `snapshot_manifest_v010.json`. The manifest replacement is the persistence commit point.
 
-### Improvement direction
+Root JSON files remain compatibility mirrors for existing tools and tests, but are written only after the transactional commit and are no longer authoritative once a snapshot manifest exists.
 
-Introduce snapshot generations and transactional recovery. Candidate designs include an atomic manifest pointing to generation-stamped state files, a write-ahead journal, or another all-or-nothing snapshot protocol.
+On reopen, the host validates the committed generation and component hashes. If the newest committed generation is corrupt, it falls back to the most recent earlier valid committed generation rather than mixing root mirrors or partial files.
 
-### Fixed when
+Legacy pre-snapshot root state remains readable and migrates to transactional persistence on the next save.
 
-- crash injection between every persistence write cannot reopen mixed-generation state
-- recovery either restores the last complete snapshot or completes the next one safely
-- generation consistency is explicitly validated on open
-- DISC-005 passes across repeated crash points and restart seeds
+### Targeted hostile verification
+
+`tests/test_transactional_persistence_v010.py` injects simulated process failure after each staged canonical component, after generation metadata, after generation rename, and immediately after manifest commit.
+
+The suite also verifies:
+
+- every pre-manifest crash reopens the previous complete generation
+- a crash immediately after manifest replacement reopens the new complete generation
+- tampered root compatibility mirrors cannot override committed snapshot authority
+- a corrupted newest generation falls back to the prior valid generation
+- legacy root persistence migrates cleanly
+- subject, expectation, causal, environment, and private-interior state remain generation-consistent in the crash scenarios
+
+### Verification evidence
+
+Implementation commits:
+
+- `0545709c007f12e095949523bb00423634a81b9d` added the transactional snapshot substrate
+- `b5326ae881f3e28549777579ef97913962f20c86` integrated snapshot authority into the current public host
+- `6a9adaf64b69224f4b4095b80e67ff4ed5ad2f64` added targeted crash-consistency tests
+
+CI run #272 passed the targeted crash suite, full pytest suite, v0.10 longitudinal simulation, and all configured regression/evaluation suites on Python 3.11 and Python 3.12.
+
+### Residual note
+
+The append-only developer/event journal is not canonical subject state and is not part of the transactional snapshot. If the journal later becomes replay authority rather than diagnostic history, it will need an explicit generation/commit relationship rather than being assumed transactionally equivalent to the canonical organism snapshot.
 
 ---
 
@@ -344,7 +368,9 @@ This was a documentation-only defect; the underlying counterfactual behavior was
 
 Implement a dedicated discriminator runner and machine-readable result format without conflating it with ordinary pytest acceptance tests.
 
-Suggested first executable tranche:
+Pieces of the executable discriminator may be implemented early as targeted remediation gates. The expensive broad discovery profile is intentionally deferred until the high-priority known weakness queue is substantially cleared, as specified in `IMPROVEMENT_LOOP_v0.10.md`.
+
+Suggested broad executable tranche:
 
 1. DISC-001 randomized longitudinal holdouts
 2. DISC-002 metamorphic invariance

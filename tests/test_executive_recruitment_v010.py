@@ -53,7 +53,9 @@ def _candidate_utilities(step) -> dict[str, float]:
 
 def test_quiet_heartbeat_stays_automatic_and_does_not_invoke_executive():
     provider = RecordingExecutive("explore")
-    duck = LivingDuck(_state("executive-quiet"), executive=provider)
+    state = _state("executive-quiet")
+    state.needs["curiosity"] = 0.55
+    duck = LivingDuck(state, executive=provider)
     step = duck.heartbeat(allow_inner_speech=True)
 
     trace = step.developer_trace["executive_recruitment"]

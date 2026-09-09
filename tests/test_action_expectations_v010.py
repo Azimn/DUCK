@@ -233,6 +233,58 @@ def test_action_calibration_changes_later_default_action_confidence():
     assert second.confidence == pytest.approx(learned)
 
 
+def test_resolved_causal_reliability_changes_future_route_scores_without_neutral_prior_bias():
+    duck = LivingDuck(_state("action-route-calibration"))
+    base_direct = duck._route_score("investigate", "direct_exploration")
+    base_cautious = duck._route_score("investigate", "cautious_inquiry")
+    assert duck._action_prediction_route_adjustment("explore") == pytest.approx(0.0)
+    assert duck._action_prediction_route_adjustment("ask") == pytest.approx(0.0)
+
+    for index in range(4):
+        action_id = f"explore-fail-{index}"
+        duck.expectation_state.register_action(
+            index,
+            "I expect exploring to work.",
+            action_id=action_id,
+            action_name="explore",
+            min_success=0.55,
+            confidence=None,
+        )
+        duck.expectation_state.evaluate_action_outcome(
+            action_id,
+            success=0.10,
+            valence=-0.20,
+            current_tick=index + 1,
+        )
+
+        action_id = f"ask-hit-{index}"
+        duck.expectation_state.register_action(
+            index,
+            "I expect asking to work.",
+            action_id=action_id,
+            action_name="ask",
+            min_success=0.55,
+            confidence=None,
+        )
+        duck.expectation_state.evaluate_action_outcome(
+            action_id,
+            success=0.90,
+            valence=0.20,
+            current_tick=index + 1,
+        )
+
+    explore_adjustment = duck._action_prediction_route_adjustment("explore")
+    ask_adjustment = duck._action_prediction_route_adjustment("ask")
+    assert explore_adjustment < 0.0
+    assert ask_adjustment > 0.0
+
+    learned_direct = duck._route_score("investigate", "direct_exploration")
+    learned_cautious = duck._route_score("investigate", "cautious_inquiry")
+    assert learned_direct < base_direct
+    assert learned_cautious > base_cautious
+    assert (learned_cautious - learned_direct) > (base_cautious - base_direct) + 0.25
+
+
 def test_pending_action_expectation_survives_public_host_restart_and_resolves(tmp_path):
     root = tmp_path / "predictive-host-restart"
     host = PersistentDuckHost.open(root, name="Aster", subject_id="predictive-host-restart")

@@ -8,6 +8,11 @@ from .endogenous import (
     EndogenousEventGenerator,
     EndogenousSignal,
 )
+from .environment_v010 import (
+    ENVIRONMENT_STATE_SCHEMA,
+    EnvironmentDynamicsState,
+    ScheduledWorldEvent,
+)
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .host import InteractionResult, PersistentDuckHost, PersistentDuckHostCurrent
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
@@ -73,9 +78,11 @@ __all__ = [
     "DeterministicInnerVoice",
     "DuckRuntime",
     "ENDOGENOUS_STATE_SCHEMA",
+    "ENVIRONMENT_STATE_SCHEMA",
     "EndogenousDynamicsState",
     "EndogenousEventGenerator",
     "EndogenousSignal",
+    "EnvironmentDynamicsState",
     "ExecutiveCognitionProvider",
     "ExecutiveProposal",
     "ExperientialFrame",
@@ -107,6 +114,7 @@ __all__ = [
     "RecognitionSignal",
     "RelationshipState",
     "RuleEventInterpreter",
+    "ScheduledWorldEvent",
     "StepResult",
     "SubjectAccessFirewall",
     "SubjectState",

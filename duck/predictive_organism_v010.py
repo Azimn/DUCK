@@ -5,17 +5,18 @@ outcomes of the subject's own canonical actions. World-fact expectations remain
 resolved by perceived world evidence. Action expectations are resolved only by
 ``resolve_outcome`` for the exact action ID they reference.
 
-Resolved action predictions also influence later route evaluation. This is bounded,
-evidence-weighted causal learning rather than a new executive authority: motive and
-modulation still organize planning, while learned predictive reliability makes a
-route somewhat more or less attractive when its first action has repeatedly behaved
-as expected or unexpectedly.
+Resolved action predictions influence later route evaluation. A separate persistent
+causal-sequence model also learns whether the next action in an enacted canonical
+plan tends to succeed after the previous action. Temporal adjacency is treated as a
+bounded predictive hypothesis, not proof of causal necessity. Motive and modulation
+remain the organizing control system.
 """
 from __future__ import annotations
 
 from dataclasses import replace
 from typing import Iterable
 
+from .causal_v010 import CausalSequenceState
 from .expectations_v010 import (
     ActionExpectationResolution,
     ActionOutcomeExpectation,
@@ -25,7 +26,12 @@ from .organism_v010 import LivingDuck as ContinuousLivingDuck
 
 
 class LivingDuck(ContinuousLivingDuck):
-    """v0.10 organism with explicit causal expectations for action outcomes."""
+    """v0.10 organism with explicit action and sequence-conditioned prediction."""
+
+    def __init__(self, *args, causal_state: CausalSequenceState | None = None, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.causal_state = causal_state or CausalSequenceState()
+        self.causal_state.normalize()
 
     def action_expectations(self, *, status: str | None = None) -> list[ActionOutcomeExpectation]:
         rows = list(self.expectation_ledger.action_records)
@@ -34,7 +40,7 @@ class LivingDuck(ContinuousLivingDuck):
         return rows
 
     def _action_prediction_route_adjustment(self, action: str) -> float:
-        """Return a bounded evidence-weighted route prior from causal calibration.
+        """Return a bounded evidence-weighted route prior from action calibration.
 
         The ledger's 0.70 smoothed prior is neutral. Sparse evidence has a small
         effect; repeated evidence can matter more, but cannot dominate motive and
@@ -52,13 +58,33 @@ class LivingDuck(ContinuousLivingDuck):
         centered_reliability = row.reliability - 0.70
         return max(-0.24, min(0.24, centered_reliability * 0.90 * evidence_weight))
 
+    def _sequence_prediction_route_adjustment(self, kind: str, route: str) -> float:
+        """Bias a route from learned reliability of its adjacent action sequence."""
+
+        steps = self._ROUTES.get(kind, {}).get(route, ())
+        if len(steps) < 2:
+            return 0.0
+        adjustment = 0.0
+        for prior, following in zip(steps, steps[1:]):
+            row = self.causal_state.transition(prior.preferred_action, following.preferred_action)
+            if row is None or row.evidence <= 0:
+                continue
+            evidence_weight = min(1.0, row.evidence / 4.0)
+            centered_reliability = row.reliability - 0.70
+            adjustment += centered_reliability * 0.80 * evidence_weight
+        return max(-0.20, min(0.20, adjustment))
+
     def _route_score(self, kind: str, route: str) -> float:
-        """Blend learned causal reliability into the existing motivated route score."""
+        """Blend action and sequence reliability into motivated route evaluation."""
 
         score = super()._route_score(kind, route)
         features = self._ROUTE_FEATURES.get(route, {})
         action = str(features.get("action", "wait"))
-        return score + self._action_prediction_route_adjustment(action)
+        return (
+            score
+            + self._action_prediction_route_adjustment(action)
+            + self._sequence_prediction_route_adjustment(kind, route)
+        )
 
     def register_action_outcome_expectation(
         self,
@@ -222,6 +248,61 @@ class LivingDuck(ContinuousLivingDuck):
             memory_ids.append(memory.memory_id)
         return tuple(memory_ids)
 
+    def _learn_plan_transition(
+        self,
+        linked,
+        *,
+        action_name: str,
+        success: float,
+    ) -> None:
+        """Update only clearly resolved adjacent steps in one canonical plan route."""
+
+        if linked is None or not action_name:
+            return
+        root, old_plan = linked
+        plan_id = old_plan.plan_id
+        route = old_plan.current_route or ""
+        context = self.causal_state.context_for(plan_id)
+
+        if context is not None:
+            adjacent = (
+                context.route == route
+                and context.previous_step_index + 1 == old_plan.step_index
+            )
+            if adjacent and success >= 0.60:
+                self.causal_state.observe_transition(
+                    context.previous_action,
+                    action_name,
+                    outcome="fulfilled",
+                    tick=self.state.tick,
+                )
+            elif adjacent and success <= 0.38:
+                self.causal_state.observe_transition(
+                    context.previous_action,
+                    action_name,
+                    outcome="violated",
+                    tick=self.state.tick,
+                )
+
+        if success >= 0.60:
+            try:
+                refreshed = self._plan_from_memory(root)
+            except Exception:
+                self.causal_state.clear_context(plan_id)
+                return
+            if refreshed.status == "active" and refreshed.current_route == route:
+                self.causal_state.set_context(
+                    plan_id,
+                    route=route,
+                    previous_action=action_name,
+                    previous_step_index=old_plan.step_index,
+                    tick=self.state.tick,
+                )
+            else:
+                self.causal_state.clear_context(plan_id)
+        elif success <= 0.38:
+            self.causal_state.clear_context(plan_id)
+
     def resolve_outcome(
         self,
         action_id: str,
@@ -231,8 +312,16 @@ class LivingDuck(ContinuousLivingDuck):
         description: str,
         tags: Iterable[str] = (),
     ) -> None:
-        """Compare causal predictions before the canonical pending action is cleared."""
+        """Resolve action predictions and learn bounded within-plan transitions."""
 
+        linked = self._plan_for_pending_action(action_id)
+        pending = self.state.pending_action
+        action_name = (
+            pending.name
+            if pending is not None and pending.action_id == action_id
+            else ""
+        )
+        success_value = max(0.0, min(1.0, float(success)))
         resolutions = self.expectation_ledger.evaluate_action_outcome(
             action_id,
             success=success,
@@ -245,6 +334,11 @@ class LivingDuck(ContinuousLivingDuck):
             valence=valence,
             description=description,
             tags=tags,
+        )
+        self._learn_plan_transition(
+            linked,
+            action_name=action_name,
+            success=success_value,
         )
         self._record_action_expectation_resolutions(resolutions)
 

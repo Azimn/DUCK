@@ -3,24 +3,29 @@ from duck.host_current import PersistentDuckHostCurrent
 from duck.living import MemoryProvenance, SubjectState, WorldEvent
 from duck.living_v09 import LivingDuck as V09LivingDuck
 from duck.living_v010 import LivingDuck as MotivatedCoreV010
-from duck.organism_v010 import LivingDuck as OrganismV010
+from duck.organism_v010 import LivingDuck as ContinuousOrganismV010
+from duck.predictive_organism_v010 import LivingDuck as PredictiveOrganismV010
 
 
 def test_public_package_uses_composed_micropsiduck_v010_candidate(tmp_path):
-    assert PublicLivingDuck is OrganismV010
+    assert PublicLivingDuck is PredictiveOrganismV010
     assert PersistentDuckHost is PersistentDuckHostCurrent
-    assert issubclass(OrganismV010, MotivatedCoreV010)
-    assert issubclass(OrganismV010, V09LivingDuck)
+    assert issubclass(PredictiveOrganismV010, ContinuousOrganismV010)
+    assert issubclass(ContinuousOrganismV010, MotivatedCoreV010)
+    assert issubclass(PredictiveOrganismV010, V09LivingDuck)
 
     host = PersistentDuckHost.open(tmp_path / "current", name="Aster", subject_id="current-v010")
     assert type(host) is PersistentDuckHostCurrent
-    assert type(host.duck) is OrganismV010
+    assert type(host.duck) is PredictiveOrganismV010
+    assert isinstance(host.duck, ContinuousOrganismV010)
     assert isinstance(host.duck, MotivatedCoreV010)
     assert isinstance(host.duck, V09LivingDuck)
     status = host.status()
     assert status["subject_id"] == "current-v010"
     assert status["active_plan_count"] == 0
     assert status["endogenous_schema"] == "micropsi-duck.endogenous.v1"
+    assert status["expectation_schema"] == "micropsi-duck.expectations.v1"
+    assert status["active_action_expectation_count"] == 0
 
 
 def test_v09_remains_available_as_explicit_preserved_baseline():

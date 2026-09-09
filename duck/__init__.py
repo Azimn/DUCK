@@ -59,7 +59,7 @@ from .motivated_cognition import (
     MotivatedCognitionState,
 )
 from .organism_v010 import LivingDuck as LivingDuckContinuousV010
-from .predictive_organism_v010 import LivingDuck
+from .authoritative_organism_v010 import LivingDuck
 from .runtime import DuckRuntime, StepResult
 from .subjective import (
     AccessibleTendency,

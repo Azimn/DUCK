@@ -68,15 +68,24 @@ def test_subjective_moment_still_contains_no_raw_floats_in_integrated_runtime():
     assert _contains_float(step.developer_trace["mechanistic_snapshot"])
 
 
-def test_world_truth_is_not_automatically_subject_belief():
-    duck = LivingDuck(SubjectState.create("Duck", "epistemic"))
-    duck.set_world_fact("door", "the blue door is unlocked", perceived=False)
-    assert duck.state.world_facts["door"] == "the blue door is unlocked"
-    assert "door" not in duck.state.beliefs
+def test_world_truth_is_not_automatically_subject_belief(tmp_path):
+    host = PersistentDuckHost.open(tmp_path / "epistemic", name="Duck", subject_id="epistemic")
+    host.set_world_fact("door", "the blue door is unlocked", perceived=False)
+    assert host.world_fact("door") == "the blue door is unlocked"
+    assert host.duck.state.world_facts == {}
+    assert "door" not in host.duck.state.beliefs
 
-    duck.set_world_fact("door", "the blue door is unlocked", perceived=True)
-    assert duck.state.beliefs["door"].stance is BeliefStance.TRUE
-    assert any(memory.provenance.value == "world_fact" for memory in duck.state.memories)
+    host.set_world_fact(
+        "door",
+        "the blue door is unlocked",
+        perceived=True,
+        description="The blue door is unlocked.",
+        allow_inner_speech=False,
+    )
+    assert host.world_fact("door") == "the blue door is unlocked"
+    assert host.duck.state.world_facts == {}
+    assert host.duck.state.beliefs["door"].stance is BeliefStance.TRUE
+    assert any(memory.provenance.value == "world_fact" for memory in host.duck.state.memories)
 
 
 def test_broken_commitment_changes_later_first_person_state():

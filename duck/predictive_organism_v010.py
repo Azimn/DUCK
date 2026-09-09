@@ -12,6 +12,10 @@ predictive hypothesis, not proof of causal necessity. Deliberately marked plan
 actions are retained as intervention evidence separately from ordinary sequence
 observation. Intervention-specific route influence requires a matched direct-plan
 baseline for the same target action.
+
+Route selection also captures a transient developer-side comparison of alternatives.
+Unchosen routes remain model predictions only and are never persisted or trained as
+observed history.
 """
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ from dataclasses import replace
 from typing import Iterable
 
 from .causal_v010 import CausalSequenceState, PLAN_START, PendingIntervention
+from .counterfactual_v010 import CounterfactualRouteEstimate, RouteComparisonSnapshot
 from .expectations_v010 import (
     ActionExpectationResolution,
     ActionOutcomeExpectation,
@@ -29,18 +34,26 @@ from .subjective import ExperientialFrame
 
 
 class LivingDuck(ContinuousLivingDuck):
-    """v0.10 organism with explicit action and sequence-conditioned prediction."""
+    """v0.10 organism with explicit action, causal, and counterfactual prediction."""
 
     def __init__(self, *args, causal_state: CausalSequenceState | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.causal_state = causal_state or CausalSequenceState()
         self.causal_state.normalize()
+        self.last_route_comparison: RouteComparisonSnapshot | None = None
 
     def action_expectations(self, *, status: str | None = None) -> list[ActionOutcomeExpectation]:
         rows = list(self.expectation_ledger.action_records)
         if status is not None:
             rows = [record for record in rows if record.status == str(status)]
         return rows
+
+    def counterfactual_routes(self) -> tuple[CounterfactualRouteEstimate, ...]:
+        """Return unchosen routes from the most recent transient planning comparison."""
+
+        if self.last_route_comparison is None:
+            return ()
+        return self.last_route_comparison.counterfactuals
 
     def mark_pending_action_as_intervention(self, hypothesis: str) -> PendingIntervention:
         """Mark one exact pending canonical plan action as a deliberate causal test."""
@@ -127,6 +140,65 @@ class LivingDuck(ContinuousLivingDuck):
             + self._sequence_prediction_route_adjustment(kind, route)
             + self._intervention_contrast_route_adjustment(kind, route)
         )
+
+    def _route_evidence_basis(self, kind: str, route: str) -> tuple[str, ...]:
+        """Describe developer-side evidence used by a route prediction without telemetry."""
+
+        basis: list[str] = ["motivated_structure"]
+        features = self._ROUTE_FEATURES.get(route, {})
+        action = str(features.get("action", "wait")).strip().lower()
+        action_row = self.expectation_ledger.calibration.get(f"action:{action}")
+        if action_row is not None and (action_row.fulfilled + action_row.violated) > 0:
+            basis.append("action_calibration")
+
+        steps = self._ROUTES.get(kind, {}).get(route, ())
+        for prior, following in zip(steps, steps[1:]):
+            row = self.causal_state.transition(prior.preferred_action, following.preferred_action)
+            if row is None or row.evidence <= 0:
+                continue
+            basis.append("sequence_calibration")
+            if row.intervention_evidence > 0:
+                basis.append("intervention_sequence")
+            contrast = self.causal_state.estimate_intervention_contrast(
+                prior.preferred_action,
+                following.preferred_action,
+                min_evidence=2,
+            )
+            if contrast is not None and contrast.eligible:
+                basis.append("matched_intervention_contrast")
+        return tuple(dict.fromkeys(basis))
+
+    def _ordered_routes(self, kind: str) -> tuple[str, ...]:
+        """Order routes while retaining a transient comparison of unchosen alternatives."""
+
+        options = self._ROUTES.get(kind)
+        if not options:
+            raise ValueError(f"unknown plan kind: {kind}")
+        ranked = sorted(
+            ((route, self._route_score(kind, route)) for route in options),
+            key=lambda row: (row[1], row[0]),
+            reverse=True,
+        )
+        selected_route = ranked[0][0]
+        estimates = tuple(
+            CounterfactualRouteEstimate(
+                kind=kind,
+                route=route,
+                action_sequence=tuple(step.preferred_action for step in options[route]),
+                preference_score=float(score),
+                evidence_basis=self._route_evidence_basis(kind, route),
+                selected=route == selected_route,
+            )
+            for route, score in ranked
+        )
+        self.last_route_comparison = RouteComparisonSnapshot(
+            tick=self.state.tick,
+            kind=kind,
+            selected_route=selected_route,
+            estimates=estimates,
+        )
+        modulation = self.current_cycle.modulation if self.current_cycle is not None else self._idle_modulation()
+        return tuple(route for route, _ in ranked[: max(1, min(len(ranked), modulation.route_branching))])
 
     def register_action_outcome_expectation(
         self,

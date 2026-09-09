@@ -4,6 +4,12 @@ This composition layer extends the continuous organism with predictions about th
 outcomes of the subject's own canonical actions. World-fact expectations remain
 resolved by perceived world evidence. Action expectations are resolved only by
 ``resolve_outcome`` for the exact action ID they reference.
+
+Resolved action predictions also influence later route evaluation. This is bounded,
+evidence-weighted causal learning rather than a new executive authority: motive and
+modulation still organize planning, while learned predictive reliability makes a
+route somewhat more or less attractive when its first action has repeatedly behaved
+as expected or unexpectedly.
 """
 from __future__ import annotations
 
@@ -26,6 +32,33 @@ class LivingDuck(ContinuousLivingDuck):
         if status is not None:
             rows = [record for record in rows if record.status == str(status)]
         return rows
+
+    def _action_prediction_route_adjustment(self, action: str) -> float:
+        """Return a bounded evidence-weighted route prior from causal calibration.
+
+        The ledger's 0.70 smoothed prior is neutral. Sparse evidence has a small
+        effect; repeated evidence can matter more, but cannot dominate motive and
+        modulation by itself.
+        """
+
+        key = f"action:{str(action).strip().lower()}"
+        row = self.expectation_ledger.calibration.get(key)
+        if row is None:
+            return 0.0
+        evidence = row.fulfilled + row.violated
+        if evidence <= 0:
+            return 0.0
+        evidence_weight = min(1.0, evidence / 4.0)
+        centered_reliability = row.reliability - 0.70
+        return max(-0.24, min(0.24, centered_reliability * 0.90 * evidence_weight))
+
+    def _route_score(self, kind: str, route: str) -> float:
+        """Blend learned causal reliability into the existing motivated route score."""
+
+        score = super()._route_score(kind, route)
+        features = self._ROUTE_FEATURES.get(route, {})
+        action = str(features.get("action", "wait"))
+        return score + self._action_prediction_route_adjustment(action)
 
     def register_action_outcome_expectation(
         self,

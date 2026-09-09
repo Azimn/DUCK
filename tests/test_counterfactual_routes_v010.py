@@ -112,8 +112,8 @@ def test_counterfactual_snapshot_is_not_persisted_as_subject_history(tmp_path):
 
 
 def test_counterfactual_snapshot_does_not_enter_private_interior_or_public_status(tmp_path):
-    root = tmp_path / "counterfactual-firewall"
-    host = PersistentDuckHost.open(root, name="Aster", subject_id="counterfactual-firewall")
+    root = tmp_path / "cf-firewall"
+    host = PersistentDuckHost.open(root, name="Aster", subject_id="cf-firewall-subject")
     host.duck.form_goal("investigate", "I want to understand the unfamiliar panel.")
     host.save()
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
+from duck import LivingDuck, PersistentDuckHost
 from duck.expectations_v010 import ExpectationLedgerState
 from duck.living import SubjectState, WorldEvent
-from duck.predictive_organism_v010 import LivingDuck
+from duck.predictive_organism_v010 import LivingDuck as PredictiveLivingDuck
 
 
 def _state(subject_id: str) -> SubjectState:
@@ -29,6 +32,10 @@ def _mystery(text: str = "A patterned signal is coming from the old panel.") -> 
         0.05,
         0.45,
     )
+
+
+def test_public_living_duck_is_action_predictive_composition():
+    assert LivingDuck is PredictiveLivingDuck
 
 
 def test_canonical_plan_step_automatically_predicts_its_own_outcome():
@@ -224,3 +231,34 @@ def test_action_calibration_changes_later_default_action_confidence():
         confidence=None,
     )
     assert second.confidence == pytest.approx(learned)
+
+
+def test_pending_action_expectation_survives_public_host_restart_and_resolves(tmp_path):
+    root = tmp_path / "predictive-host-restart"
+    host = PersistentDuckHost.open(root, name="Aster", subject_id="predictive-host-restart")
+    host.duck.state.needs.update(_state("template").needs)
+    host.duck.state.affect["fear"] = 0.46
+    host.duck.step(_mystery("A strange instrument is blinking in a pattern."), allow_inner_speech=False)
+    attempted = host.duck.heartbeat(allow_inner_speech=False)
+    prediction = host.duck.action_expectations(status="open")[0]
+    assert prediction.action_id == attempted.action_id
+    host.save()
+
+    payload = json.loads((root / "expectations_v010.json").read_text(encoding="utf-8"))
+    assert payload["action_records"][0]["expectation_id"] == prediction.expectation_id
+
+    reopened = PersistentDuckHost.open(root)
+    assert isinstance(reopened.duck, PredictiveLivingDuck)
+    assert reopened.duck.state.pending_action is not None
+    assert reopened.duck.state.pending_action.action_id == attempted.action_id
+    restored = reopened.duck.expectation_state.get_action(prediction.expectation_id)
+    assert restored.status == "open"
+    assert reopened.status()["active_action_expectation_count"] == 1
+
+    reopened.duck.resolve_outcome(
+        attempted.action_id,
+        success=0.86,
+        valence=0.18,
+        description="The planned step worked after restart.",
+    )
+    assert reopened.duck.expectation_state.get_action(prediction.expectation_id).status == "fulfilled"

@@ -16,6 +16,7 @@ from .environment_v010 import (
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
 from .expectations_v010 import (
     EXPECTATION_STATE_SCHEMA,
+    ExpectationCalibration,
     ExpectationLedgerState,
     ExpectationRecord,
     ExpectationResolution,
@@ -92,6 +93,7 @@ __all__ = [
     "EnvironmentDynamicsState",
     "ExecutiveCognitionProvider",
     "ExecutiveProposal",
+    "ExpectationCalibration",
     "ExpectationLedgerState",
     "ExpectationRecord",
     "ExpectationResolution",

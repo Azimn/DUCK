@@ -2,12 +2,13 @@
 
 The motivated substrate already evolves on every heartbeat. This module adds a
 small scheduler that turns meaningful internal threshold crossings into endogenous
-WorldEvents. Signals are hysteretic and persistent: a pressure fires once, remains
-latched while the condition stays active, and can fire again only after recovery or
-resolution re-arms it.
+WorldEvents. Signals are hysteretic and rate-limited: a pressure fires when it
+crosses a meaningful threshold, remains latched while active, and may reassert only
+after a bounded cooldown if it is still unresolved. Recovery or resolution clears
+the latch and allows a later genuine threshold crossing to fire immediately.
 
-The scheduler is mechanistic state. Its thresholds, keys, counts, and salience are
-never part of the subject's ExperientialFrame.
+The scheduler is mechanistic state. Its thresholds, keys, counts, cooldown timing,
+and salience are never part of the subject's ExperientialFrame.
 """
 from __future__ import annotations
 
@@ -18,6 +19,14 @@ from .living import SubjectState, WorldEvent, _clamp
 
 ENDOGENOUS_STATE_SCHEMA = "micropsi-duck.endogenous.v1"
 MAX_SIGNAL_RECORDS = 64
+_REPEAT_AFTER = {
+    "energy": 8,
+    "affiliation": 12,
+    "safety": 4,
+    "curiosity": 16,
+    "coherence": 10,
+    "commitment": 6,
+}
 _COHERENCE_TAGS = frozenset({
     "contradiction",
     "inconsistency",
@@ -160,6 +169,16 @@ class EndogenousEventGenerator:
                 return True
         return False
 
+    def _ready(self, key: str, next_tick: int, repeat_after: int) -> bool:
+        """Allow a new crossing immediately or a persistent pressure after cooldown."""
+
+        if key not in self.state.latched_signals:
+            return True
+        last = self.state.last_emitted_tick.get(key)
+        if last is None:
+            return True
+        return next_tick - last >= max(1, int(repeat_after))
+
     def refresh(self, subject: SubjectState) -> None:
         """Re-arm recovered pressures and retire resolved commitment alarms."""
 
@@ -209,7 +228,7 @@ class EndogenousEventGenerator:
         next_tick = subject.tick + 1
 
         energy = _clamp(subject.needs.get("energy", 0.85))
-        if energy <= 0.28 and "energy" not in self.state.latched_signals:
+        if energy <= 0.28 and self._ready("energy", next_tick, _REPEAT_AFTER["energy"]):
             salience = _clamp(0.58 + (0.28 - energy) * 1.35)
             rows.append(
                 EndogenousSignal(
@@ -228,7 +247,10 @@ class EndogenousEventGenerator:
         affiliation = _clamp(subject.needs.get("affiliation", 0.25))
         loneliness = _clamp(subject.affect.get("loneliness", 0.20))
         affiliation_pressure = max(affiliation, loneliness * 0.90)
-        if affiliation_pressure >= 0.76 and "affiliation" not in self.state.latched_signals:
+        if (
+            affiliation_pressure >= 0.76
+            and self._ready("affiliation", next_tick, _REPEAT_AFTER["affiliation"])
+        ):
             salience = _clamp(0.52 + (affiliation_pressure - 0.76) * 1.45)
             rows.append(
                 EndogenousSignal(
@@ -247,7 +269,10 @@ class EndogenousEventGenerator:
         fear = _clamp(subject.affect.get("fear", 0.05))
         safety = _clamp(subject.needs.get("safety", 0.85))
         safety_pressure = max(fear, 1.0 - safety)
-        if safety_pressure >= 0.72 and "safety" not in self.state.latched_signals:
+        if (
+            safety_pressure >= 0.72
+            and self._ready("safety", next_tick, _REPEAT_AFTER["safety"])
+        ):
             salience = _clamp(0.64 + (safety_pressure - 0.72) * 1.20)
             rows.append(
                 EndogenousSignal(
@@ -268,7 +293,7 @@ class EndogenousEventGenerator:
             curiosity >= 0.82
             and fear <= 0.35
             and safety >= 0.62
-            and "curiosity" not in self.state.latched_signals
+            and self._ready("curiosity", next_tick, _REPEAT_AFTER["curiosity"])
         ):
             salience = _clamp(0.50 + (curiosity - 0.82) * 1.35)
             rows.append(
@@ -279,7 +304,7 @@ class EndogenousEventGenerator:
                     self._signal_event(
                         "curiosity",
                         "I keep wanting to find something out.",
-                        ("curiosity_signal", "curiosity_pressure"),
+                        ("curiosity_signal", "curiosity_pressure", "unknown"),
                         salience,
                     ),
                 )
@@ -289,7 +314,10 @@ class EndogenousEventGenerator:
         unease = _clamp(subject.affect.get("unease", 0.05))
         disrupted = self._recent_coherence_disruption(subject)
         coherence_pressure = max(1.0 - coherence, 0.70 if disrupted else 0.0, unease * 0.65)
-        if coherence_pressure >= 0.62 and "coherence" not in self.state.latched_signals:
+        if (
+            coherence_pressure >= 0.62
+            and self._ready("coherence", next_tick, _REPEAT_AFTER["coherence"])
+        ):
             salience = _clamp(0.56 + (coherence_pressure - 0.62) * 1.20)
             rows.append(
                 EndogenousSignal(
@@ -299,7 +327,7 @@ class EndogenousEventGenerator:
                     self._signal_event(
                         "coherence",
                         "I keep turning over something that does not fit together yet.",
-                        ("coherence_signal", "coherence_pressure", "inconsistency"),
+                        ("coherence_signal", "coherence_pressure", "inconsistency", "question"),
                         salience,
                     ),
                 )
@@ -312,7 +340,7 @@ class EndogenousEventGenerator:
             if distance > 2:
                 continue
             key = f"commitment:{commitment.commitment_id}"
-            if key in self.state.latched_signals:
+            if not self._ready(key, next_tick, _REPEAT_AFTER["commitment"]):
                 continue
             urgency = 0.68 if distance > 0 else 0.78 if distance == 0 else 0.84
             salience = _clamp(urgency * max(0.55, commitment.importance))
@@ -333,7 +361,7 @@ class EndogenousEventGenerator:
         return rows
 
     def next_signal(self, subject: SubjectState) -> EndogenousSignal | None:
-        """Return and latch the strongest newly-crossed endogenous pressure."""
+        """Return and rate-limit the strongest currently eligible internal pressure."""
 
         self.refresh(subject)
         rows = self._candidates(subject)

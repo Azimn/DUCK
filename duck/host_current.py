@@ -12,11 +12,19 @@ from .expectations_v010 import ExpectationLedgerState
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .living import SubjectState, WorldEvent
 from .motivated_cognition import MotivatedCognitionState
+from .persistence_v010 import SNAPSHOT_SCHEMA, SnapshotStore
 from .predictive_organism_v010 import LivingDuck
+from .subjective import PrivateInteriorState
 
 
 class PersistentDuckHostCurrent(PersistentDuckHostV010):
-    """Persist subject cognition plus separate prediction, causal, endogenous, and world state."""
+    """Persist the composed organism as one transactionally coherent generation.
+
+    Root JSON files remain compatibility mirrors for existing tooling. Once a
+    transactional snapshot manifest exists, reopening this host treats the snapshot
+    generation as persistence authority and never reconstructs the organism from a
+    mixture of root-file generations.
+    """
 
     def __init__(
         self,
@@ -34,6 +42,14 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         self.environment_path = self.root / "environment_v010.json"
         self.environment = environment_state or EnvironmentDynamicsState()
         self.environment.normalize()
+        self.snapshot_store = SnapshotStore(self.root)
+        self.snapshot_generation = 0
+
+    @staticmethod
+    def _legacy_json(path: Path) -> object | None:
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
 
     @classmethod
     def open(
@@ -55,47 +71,72 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         causal_path = root_path / "causal_v010.json"
         environment_path = root_path / "environment_v010.json"
 
-        if state_path.exists():
-            state = SubjectState.from_dict(json.loads(state_path.read_text(encoding="utf-8")))
-        else:
-            state = SubjectState.create(name=name, subject_id=subject_id)
-
-        if cognitive_path.exists():
+        snapshot_store = SnapshotStore(root_path)
+        snapshot = snapshot_store.load()
+        if snapshot is not None:
+            payloads = snapshot.payloads
+            state = SubjectState.from_dict(payloads["subject.json"])
             cognitive_state = MotivatedCognitionState.from_dict(
-                json.loads(cognitive_path.read_text(encoding="utf-8"))
+                payloads.get("cognition_v010.json", {})
             )
-        else:
-            cognitive_state = MotivatedCognitionState()
-
-        if endogenous_path.exists():
             endogenous_state = EndogenousDynamicsState.from_dict(
-                json.loads(endogenous_path.read_text(encoding="utf-8"))
+                payloads.get("endogenous_v010.json", {})
             )
-        else:
-            endogenous_state = EndogenousDynamicsState()
-
-        if expectations_path.exists():
             expectation_state = ExpectationLedgerState.from_dict(
-                json.loads(expectations_path.read_text(encoding="utf-8"))
+                payloads.get("expectations_v010.json", {})
             )
-        else:
-            expectation_state = ExpectationLedgerState()
-
-        if causal_path.exists():
             causal_state = CausalSequenceState.from_dict(
-                json.loads(causal_path.read_text(encoding="utf-8"))
+                payloads.get("causal_v010.json", {})
             )
-        else:
-            causal_state = CausalSequenceState()
-
-        if environment_path.exists():
             environment_state = EnvironmentDynamicsState.from_dict(
-                json.loads(environment_path.read_text(encoding="utf-8"))
+                payloads.get("environment_v010.json", {})
             )
+            private_payload = payloads.get("private_interior.json")
         else:
-            environment_state = EnvironmentDynamicsState()
+            state_payload = cls._legacy_json(state_path)
+            state = (
+                SubjectState.from_dict(state_payload)
+                if state_payload is not None
+                else SubjectState.create(name=name, subject_id=subject_id)
+            )
 
-        return cls(
+            cognitive_payload = cls._legacy_json(cognitive_path)
+            cognitive_state = (
+                MotivatedCognitionState.from_dict(cognitive_payload)
+                if cognitive_payload is not None
+                else MotivatedCognitionState()
+            )
+
+            endogenous_payload = cls._legacy_json(endogenous_path)
+            endogenous_state = (
+                EndogenousDynamicsState.from_dict(endogenous_payload)
+                if endogenous_payload is not None
+                else EndogenousDynamicsState()
+            )
+
+            expectation_payload = cls._legacy_json(expectations_path)
+            expectation_state = (
+                ExpectationLedgerState.from_dict(expectation_payload)
+                if expectation_payload is not None
+                else ExpectationLedgerState()
+            )
+
+            causal_payload = cls._legacy_json(causal_path)
+            causal_state = (
+                CausalSequenceState.from_dict(causal_payload)
+                if causal_payload is not None
+                else CausalSequenceState()
+            )
+
+            environment_payload = cls._legacy_json(environment_path)
+            environment_state = (
+                EnvironmentDynamicsState.from_dict(environment_payload)
+                if environment_payload is not None
+                else EnvironmentDynamicsState()
+            )
+            private_payload = cls._legacy_json(root_path / "private_interior.json")
+
+        host = cls(
             root_path,
             LivingDuck(
                 state,
@@ -110,6 +151,17 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             expression=expression,
             interpreter=interpreter,
         )
+        host.snapshot_store = snapshot_store
+        host.snapshot_generation = snapshot.generation if snapshot is not None else 0
+        if snapshot is not None:
+            # Override any compatibility mirror that the base constructor may have
+            # loaded. The committed generation is authoritative, including absence.
+            host.private_interior = (
+                PrivateInteriorState.from_dict(private_payload)
+                if isinstance(private_payload, dict)
+                else None
+            )
+        return host
 
     def schedule_world_event(self, event: WorldEvent, *, due_in: int = 1) -> ScheduledWorldEvent:
         """Schedule an external change under host/world authority."""
@@ -124,44 +176,50 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             self.save()
         return cancelled
 
+    def _snapshot_payloads(self) -> dict[str, object]:
+        payloads: dict[str, object] = {
+            "subject.json": self.duck.state.to_dict(),
+            "cognition_v010.json": self.duck.cognitive_state.to_dict(),
+            "endogenous_v010.json": self.duck.endogenous_state.to_dict(),
+            "expectations_v010.json": self.duck.expectation_state.to_dict(),
+            "causal_v010.json": self.duck.causal_state.to_dict(),
+            "environment_v010.json": self.environment.to_dict(),
+        }
+        if self.private_interior is not None:
+            payloads["private_interior.json"] = self.private_interior.to_dict()
+        return payloads
+
+    def _write_compatibility_mirrors(self, payloads: dict[str, object]) -> None:
+        """Best-effort root mirrors for tools that still inspect historical paths.
+
+        These files are deliberately written *after* the transactional manifest commit.
+        A crash during mirror replacement cannot change what the current host reopens.
+        """
+
+        paths = {
+            "subject.json": self.state_path,
+            "cognition_v010.json": self.cognitive_path,
+            "endogenous_v010.json": self.endogenous_path,
+            "expectations_v010.json": self.expectations_path,
+            "causal_v010.json": self.causal_path,
+            "environment_v010.json": self.environment_path,
+            "private_interior.json": self.interior_path,
+        }
+        for name, path in paths.items():
+            if name not in payloads:
+                if name == "private_interior.json" and path.exists():
+                    path.unlink()
+                continue
+            self._atomic_write(
+                path,
+                json.dumps(payloads[name], ensure_ascii=False, indent=2, sort_keys=True),
+            )
+
     def save(self) -> None:
-        super().save()
-        self._atomic_write(
-            self.endogenous_path,
-            json.dumps(
-                self.duck.endogenous_state.to_dict(),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ),
-        )
-        self._atomic_write(
-            self.expectations_path,
-            json.dumps(
-                self.duck.expectation_state.to_dict(),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ),
-        )
-        self._atomic_write(
-            self.causal_path,
-            json.dumps(
-                self.duck.causal_state.to_dict(),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ),
-        )
-        self._atomic_write(
-            self.environment_path,
-            json.dumps(
-                self.environment.to_dict(),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ),
-        )
+        payloads = self._snapshot_payloads()
+        generation = self.snapshot_store.commit(payloads, tick=self.duck.state.tick)
+        self.snapshot_generation = generation
+        self._write_compatibility_mirrors(payloads)
 
     def _run_scheduled_world_event(
         self,
@@ -176,7 +234,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         else:
             # Unperceived world change belongs to host truth. It cannot be allowed
             # to alter appraisal, memory, belief, or expectation resolution as though
-            # the subject sensed it.
+            # the subject sensed it. IMP-002 will move authoritative world truth out
+            # of SubjectState entirely; until then this remains the known boundary debt.
             for key, text in event.world_facts:
                 self.duck.state.world_facts[str(key)] = str(text)
             step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
@@ -239,6 +298,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         status = dict(super().status())
         status.update(
             {
+                "snapshot_schema": SNAPSHOT_SCHEMA,
+                "snapshot_generation": self.snapshot_generation,
                 "endogenous_schema": self.duck.endogenous_state.schema_version,
                 "endogenous_latched_signals": sorted(self.duck.endogenous_state.latched_signals),
                 "endogenous_emission_counts": dict(sorted(self.duck.endogenous_state.emission_counts.items())),

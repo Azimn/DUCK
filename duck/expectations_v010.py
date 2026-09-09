@@ -1,30 +1,37 @@
 """Persistent subject-owned expectations for MicroPsiDUCK v0.10.
 
 Expectations are predictions held by the continuing subject, not facts owned by the
-world. They may contain mechanistic confidence, deadlines, identifiers, and status,
-but those values remain developer-side state. Only perceived evidence may fulfill
-or violate an expectation. Hidden host/world changes cannot resolve subject belief.
+world. World-fact expectations are resolved only by perceived world evidence.
+Action-outcome expectations are resolved only by the registered outcome of the exact
+canonical action they predict. Hidden host/world changes cannot resolve subject
+prediction state or train calibration.
 
 The ledger also maintains bounded domain calibration. Repeated fulfilled or violated
-predictions change the default confidence of later expectations about the same fact
-key without rewriting the truth status of any prior record.
+predictions change the default confidence of later expectations in the same domain
+without rewriting any historical prediction.
 """
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, replace
 from typing import Mapping
 
-from .living import WorldEvent, _clamp
+from .living import WorldEvent, _clamp, _clamp_signed
 
 EXPECTATION_STATE_SCHEMA = "micropsi-duck.expectations.v1"
 MAX_EXPECTATIONS = 128
+MAX_ACTION_EXPECTATIONS = 128
 MAX_CALIBRATION_KEYS = 128
 _ACTIVE_STATUSES = frozenset({"open", "overdue"})
 _FINAL_STATUSES = frozenset({"fulfilled", "violated", "superseded", "retired"})
+_ACTION_ACTIVE_STATUSES = frozenset({"open"})
 
 
 def _norm(value: str) -> str:
     return " ".join(str(value).strip().lower().split())
+
+
+def _action_domain(action_name: str) -> str:
+    return f"action:{_norm(action_name)}"
 
 
 @dataclass(frozen=True)
@@ -95,6 +102,86 @@ class ExpectationResolution:
     confidence: float
 
 
+@dataclass(frozen=True)
+class ActionOutcomeExpectation:
+    """Prediction about the outcome of one canonical action attempt."""
+
+    expectation_id: str
+    action_id: str
+    action_name: str
+    proposition: str
+    created_tick: int
+    updated_tick: int
+    confidence: float = 0.70
+    min_success: float | None = 0.55
+    min_valence: float | None = None
+    max_valence: float | None = None
+    status: str = "open"
+    evidence_tick: int | None = None
+    observed_success: float | None = None
+    observed_valence: float | None = None
+
+    def normalize(self) -> "ActionOutcomeExpectation":
+        status = str(self.status).lower()
+        if status not in _ACTION_ACTIVE_STATUSES | _FINAL_STATUSES:
+            status = "open"
+        minimum = _clamp(self.min_success) if self.min_success is not None else None
+        min_valence = _clamp_signed(self.min_valence) if self.min_valence is not None else None
+        max_valence = _clamp_signed(self.max_valence) if self.max_valence is not None else None
+        if min_valence is not None and max_valence is not None and min_valence > max_valence:
+            min_valence, max_valence = max_valence, min_valence
+        return replace(
+            self,
+            action_id=str(self.action_id).strip(),
+            action_name=str(self.action_name).strip().lower(),
+            proposition=str(self.proposition).strip(),
+            created_tick=max(0, int(self.created_tick)),
+            updated_tick=max(0, int(self.updated_tick)),
+            confidence=_clamp(self.confidence),
+            min_success=minimum,
+            min_valence=min_valence,
+            max_valence=max_valence,
+            status=status,
+            evidence_tick=(max(0, int(self.evidence_tick)) if self.evidence_tick is not None else None),
+            observed_success=(_clamp(self.observed_success) if self.observed_success is not None else None),
+            observed_valence=(_clamp_signed(self.observed_valence) if self.observed_valence is not None else None),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self.normalize())
+
+    @classmethod
+    def from_dict(cls, data: Mapping) -> "ActionOutcomeExpectation":
+        return cls(
+            expectation_id=str(data["expectation_id"]),
+            action_id=str(data.get("action_id", "")),
+            action_name=str(data.get("action_name", "")),
+            proposition=str(data.get("proposition", "")),
+            created_tick=int(data.get("created_tick", 0)),
+            updated_tick=int(data.get("updated_tick", data.get("created_tick", 0))),
+            confidence=float(data.get("confidence", 0.70)),
+            min_success=(float(data["min_success"]) if data.get("min_success") is not None else None),
+            min_valence=(float(data["min_valence"]) if data.get("min_valence") is not None else None),
+            max_valence=(float(data["max_valence"]) if data.get("max_valence") is not None else None),
+            status=str(data.get("status", "open")),
+            evidence_tick=(int(data["evidence_tick"]) if data.get("evidence_tick") is not None else None),
+            observed_success=(float(data["observed_success"]) if data.get("observed_success") is not None else None),
+            observed_valence=(float(data["observed_valence"]) if data.get("observed_valence") is not None else None),
+        ).normalize()
+
+
+@dataclass(frozen=True)
+class ActionExpectationResolution:
+    expectation_id: str
+    action_id: str
+    action_name: str
+    outcome: str
+    proposition: str
+    confidence: float
+    observed_success: float
+    observed_valence: float
+
+
 @dataclass
 class ExpectationCalibration:
     fact_key: str
@@ -150,12 +237,14 @@ class ExpectationLedgerState:
     schema_version: str = EXPECTATION_STATE_SCHEMA
     expectation_counter: int = 0
     records: list[ExpectationRecord] = field(default_factory=list)
+    action_records: list[ActionOutcomeExpectation] = field(default_factory=list)
     calibration: dict[str, ExpectationCalibration] = field(default_factory=dict)
 
     def normalize(self) -> None:
         if self.schema_version != EXPECTATION_STATE_SCHEMA:
             raise ValueError(f"unsupported expectation schema: {self.schema_version}")
         self.expectation_counter = max(0, int(self.expectation_counter))
+
         unique: dict[str, ExpectationRecord] = {}
         for raw in self.records:
             record = raw.normalize()
@@ -175,6 +264,28 @@ class ExpectationLedgerState:
             rows = rows[:MAX_EXPECTATIONS]
         self.records = sorted(rows, key=lambda row: (row.created_tick, row.expectation_id))
 
+        action_unique: dict[str, ActionOutcomeExpectation] = {}
+        for raw in self.action_records:
+            record = raw.normalize()
+            if record.expectation_id and record.action_id and record.action_name:
+                action_unique[record.expectation_id] = record
+        action_rows = list(action_unique.values())
+        if len(action_rows) > MAX_ACTION_EXPECTATIONS:
+            action_rows.sort(
+                key=lambda row: (
+                    row.status in _ACTION_ACTIVE_STATUSES,
+                    row.updated_tick,
+                    row.created_tick,
+                    row.expectation_id,
+                ),
+                reverse=True,
+            )
+            action_rows = action_rows[:MAX_ACTION_EXPECTATIONS]
+        self.action_records = sorted(
+            action_rows,
+            key=lambda row: (row.created_tick, row.expectation_id),
+        )
+
         normalized_calibration: dict[str, ExpectationCalibration] = {}
         for key, raw in self.calibration.items():
             row = raw if isinstance(raw, ExpectationCalibration) else ExpectationCalibration.from_dict(raw)
@@ -186,15 +297,23 @@ class ExpectationLedgerState:
         if len(normalized_calibration) > MAX_CALIBRATION_KEYS:
             ordered = sorted(
                 normalized_calibration.items(),
-                key=lambda item: (item[1].updated_tick, item[1].fulfilled + item[1].violated, item[0]),
+                key=lambda item: (
+                    item[1].updated_tick,
+                    item[1].fulfilled + item[1].violated,
+                    item[0],
+                ),
                 reverse=True,
             )[:MAX_CALIBRATION_KEYS]
             normalized_calibration = dict(ordered)
         self.calibration = normalized_calibration
 
-    def learned_confidence(self, fact_key: str) -> float:
-        row = self.calibration.get(str(fact_key).strip())
+    def learned_confidence(self, domain_key: str) -> float:
+        row = self.calibration.get(str(domain_key).strip())
         return row.reliability if row is not None else 0.70
+
+    def _next_id(self) -> str:
+        self.expectation_counter += 1
+        return f"exp-{self.expectation_counter:06d}"
 
     def register(
         self,
@@ -212,11 +331,10 @@ class ExpectationLedgerState:
         expected_value = str(expected_value).strip()
         if not proposition or not fact_key or not expected_value:
             raise ValueError("expectation proposition, fact_key, and expected_value are required")
-        self.expectation_counter += 1
         tick = max(0, int(current_tick))
         resolved_confidence = self.learned_confidence(fact_key) if confidence is None else _clamp(confidence)
         record = ExpectationRecord(
-            expectation_id=f"exp-{self.expectation_counter:06d}",
+            expectation_id=self._next_id(),
             proposition=proposition,
             fact_key=fact_key,
             expected_value=expected_value,
@@ -230,6 +348,49 @@ class ExpectationLedgerState:
         self.normalize()
         return record
 
+    def register_action(
+        self,
+        current_tick: int,
+        proposition: str,
+        *,
+        action_id: str,
+        action_name: str,
+        min_success: float | None = 0.55,
+        min_valence: float | None = None,
+        max_valence: float | None = None,
+        confidence: float | None = None,
+    ) -> ActionOutcomeExpectation:
+        proposition = str(proposition).strip()
+        action_id = str(action_id).strip()
+        action_name = str(action_name).strip().lower()
+        if not proposition or not action_id or not action_name:
+            raise ValueError("action expectation proposition, action_id, and action_name are required")
+        if min_success is None and min_valence is None and max_valence is None:
+            raise ValueError("action expectation requires at least one outcome criterion")
+        if any(
+            row.action_id == action_id and row.status == "open"
+            for row in self.action_records
+        ):
+            raise ValueError("an open action expectation already exists for this action")
+        tick = max(0, int(current_tick))
+        domain = _action_domain(action_name)
+        resolved_confidence = self.learned_confidence(domain) if confidence is None else _clamp(confidence)
+        record = ActionOutcomeExpectation(
+            expectation_id=self._next_id(),
+            action_id=action_id,
+            action_name=action_name,
+            proposition=proposition,
+            created_tick=tick,
+            updated_tick=tick,
+            confidence=resolved_confidence,
+            min_success=min_success,
+            min_valence=min_valence,
+            max_valence=max_valence,
+        ).normalize()
+        self.action_records.append(record)
+        self.normalize()
+        return record
+
     def get(self, expectation_id: str) -> ExpectationRecord:
         key = str(expectation_id)
         for record in self.records:
@@ -237,8 +398,18 @@ class ExpectationLedgerState:
                 return record
         raise KeyError(key)
 
+    def get_action(self, expectation_id: str) -> ActionOutcomeExpectation:
+        key = str(expectation_id)
+        for record in self.action_records:
+            if record.expectation_id == key:
+                return record
+        raise KeyError(key)
+
     def active(self) -> tuple[ExpectationRecord, ...]:
         return tuple(record for record in self.records if record.status in _ACTIVE_STATUSES)
+
+    def active_actions(self) -> tuple[ActionOutcomeExpectation, ...]:
+        return tuple(record for record in self.action_records if record.status == "open")
 
     def advance(self, current_tick: int) -> tuple[ExpectationRecord, ...]:
         tick = max(0, int(current_tick))
@@ -252,8 +423,8 @@ class ExpectationLedgerState:
         self.records = updated
         return tuple(changed)
 
-    def _learn_resolution(self, record: ExpectationRecord, outcome: str, tick: int) -> None:
-        key = record.fact_key
+    def _learn_domain(self, domain_key: str, outcome: str, tick: int) -> None:
+        key = str(domain_key).strip()
         calibration = self.calibration.get(key)
         if calibration is None:
             calibration = ExpectationCalibration(fact_key=key)
@@ -262,13 +433,15 @@ class ExpectationLedgerState:
         self.normalize()
 
     def evaluate_event(self, event: WorldEvent, current_tick: int) -> tuple[ExpectationResolution, ...]:
+        """Resolve world-fact expectations only from perceived world evidence."""
+
         if not event.perceived or not event.world_facts:
             return ()
         observed = {str(key): str(value) for key, value in event.world_facts}
         tick = max(0, int(current_tick))
         resolutions: list[ExpectationResolution] = []
         updated: list[ExpectationRecord] = []
-        learned: list[tuple[ExpectationRecord, str]] = []
+        learned: list[tuple[str, str]] = []
         for record in self.records:
             actual = observed.get(record.fact_key)
             if record.status not in _ACTIVE_STATUSES or actual is None:
@@ -284,7 +457,7 @@ class ExpectationLedgerState:
                 evidence_source=event.source,
             )
             updated.append(resolved)
-            learned.append((record, outcome))
+            learned.append((record.fact_key, outcome))
             resolutions.append(
                 ExpectationResolution(
                     expectation_id=record.expectation_id,
@@ -296,8 +469,64 @@ class ExpectationLedgerState:
                 )
             )
         self.records = updated
-        for record, outcome in learned:
-            self._learn_resolution(record, outcome, tick)
+        for domain, outcome in learned:
+            self._learn_domain(domain, outcome, tick)
+        return tuple(resolutions)
+
+    def evaluate_action_outcome(
+        self,
+        action_id: str,
+        *,
+        success: float,
+        valence: float,
+        current_tick: int,
+    ) -> tuple[ActionExpectationResolution, ...]:
+        """Resolve only predictions linked to the exact action whose outcome arrived."""
+
+        action_id = str(action_id).strip()
+        success = _clamp(success)
+        valence = _clamp_signed(valence)
+        tick = max(0, int(current_tick))
+        resolutions: list[ActionExpectationResolution] = []
+        updated: list[ActionOutcomeExpectation] = []
+        learned: list[tuple[str, str]] = []
+        for record in self.action_records:
+            if record.status != "open" or record.action_id != action_id:
+                updated.append(record)
+                continue
+            checks = []
+            if record.min_success is not None:
+                checks.append(success >= record.min_success)
+            if record.min_valence is not None:
+                checks.append(valence >= record.min_valence)
+            if record.max_valence is not None:
+                checks.append(valence <= record.max_valence)
+            outcome = "fulfilled" if checks and all(checks) else "violated"
+            resolved = replace(
+                record,
+                status=outcome,
+                updated_tick=tick,
+                evidence_tick=tick,
+                observed_success=success,
+                observed_valence=valence,
+            )
+            updated.append(resolved)
+            learned.append((_action_domain(record.action_name), outcome))
+            resolutions.append(
+                ActionExpectationResolution(
+                    expectation_id=record.expectation_id,
+                    action_id=record.action_id,
+                    action_name=record.action_name,
+                    outcome=outcome,
+                    proposition=record.proposition,
+                    confidence=record.confidence,
+                    observed_success=success,
+                    observed_valence=valence,
+                )
+            )
+        self.action_records = updated
+        for domain, outcome in learned:
+            self._learn_domain(domain, outcome, tick)
         return tuple(resolutions)
 
     def revise(
@@ -338,12 +567,28 @@ class ExpectationLedgerState:
         self.records = [retired if row.expectation_id == old.expectation_id else row for row in self.records]
         return retired
 
+    def retire_action_for(self, action_id: str, current_tick: int) -> tuple[ActionOutcomeExpectation, ...]:
+        """Retire unresolved predictions when their pending action is abandoned/overwritten."""
+
+        action_id = str(action_id).strip()
+        tick = max(0, int(current_tick))
+        retired: list[ActionOutcomeExpectation] = []
+        updated: list[ActionOutcomeExpectation] = []
+        for record in self.action_records:
+            if record.status == "open" and record.action_id == action_id:
+                record = replace(record, status="retired", updated_tick=tick)
+                retired.append(record)
+            updated.append(record)
+        self.action_records = updated
+        return tuple(retired)
+
     def to_dict(self) -> dict[str, object]:
         self.normalize()
         return {
             "schema_version": self.schema_version,
             "expectation_counter": self.expectation_counter,
             "records": [record.to_dict() for record in self.records],
+            "action_records": [record.to_dict() for record in self.action_records],
             "calibration": {
                 key: row.to_dict()
                 for key, row in sorted(self.calibration.items())
@@ -356,6 +601,10 @@ class ExpectationLedgerState:
             schema_version=str(data.get("schema_version", EXPECTATION_STATE_SCHEMA)),
             expectation_counter=int(data.get("expectation_counter", 0)),
             records=[ExpectationRecord.from_dict(row) for row in data.get("records", ())],
+            action_records=[
+                ActionOutcomeExpectation.from_dict(row)
+                for row in data.get("action_records", ())
+            ],
             calibration={
                 str(key): ExpectationCalibration.from_dict(value)
                 for key, value in data.get("calibration", {}).items()
@@ -367,6 +616,8 @@ class ExpectationLedgerState:
 
 __all__ = [
     "EXPECTATION_STATE_SCHEMA",
+    "ActionExpectationResolution",
+    "ActionOutcomeExpectation",
     "ExpectationCalibration",
     "ExpectationLedgerState",
     "ExpectationRecord",

@@ -14,6 +14,12 @@ from .environment_v010 import (
     ScheduledWorldEvent,
 )
 from .executive import CognitiveField, ExecutiveCognitionProvider, ExecutiveProposal
+from .expectations_v010 import (
+    EXPECTATION_STATE_SCHEMA,
+    ExpectationLedgerState,
+    ExpectationRecord,
+    ExpectationResolution,
+)
 from .host import InteractionResult, PersistentDuckHost, PersistentDuckHostCurrent
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .language import (
@@ -79,12 +85,16 @@ __all__ = [
     "DuckRuntime",
     "ENDOGENOUS_STATE_SCHEMA",
     "ENVIRONMENT_STATE_SCHEMA",
+    "EXPECTATION_STATE_SCHEMA",
     "EndogenousDynamicsState",
     "EndogenousEventGenerator",
     "EndogenousSignal",
     "EnvironmentDynamicsState",
     "ExecutiveCognitionProvider",
     "ExecutiveProposal",
+    "ExpectationLedgerState",
+    "ExpectationRecord",
+    "ExpectationResolution",
     "ExperientialFrame",
     "FirstPersonImpression",
     "GoalPlan",

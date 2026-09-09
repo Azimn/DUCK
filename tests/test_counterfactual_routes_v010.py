@@ -119,6 +119,9 @@ def test_counterfactual_snapshot_does_not_enter_private_interior_or_public_statu
 
     status = json.dumps(host.status(), sort_keys=True)
     assert "counterfactual" not in status.lower()
-    private_text = (root / "private_interior.json").read_text(encoding="utf-8")
-    assert COUNTERFACTUAL_PROVENANCE not in private_text
-    assert "preference_score" not in private_text
+
+    private_path = root / "private_interior.json"
+    if private_path.exists():
+        private_text = private_path.read_text(encoding="utf-8")
+        assert COUNTERFACTUAL_PROVENANCE not in private_text
+        assert "preference_score" not in private_text

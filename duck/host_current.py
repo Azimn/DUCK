@@ -5,6 +5,7 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
+from .authoritative_organism_v010 import LivingDuck
 from .causal_v010 import CausalSequenceState, PLAN_START
 from .endogenous import EndogenousDynamicsState
 from .environment_v010 import EnvironmentDynamicsState, ScheduledWorldEvent
@@ -13,7 +14,6 @@ from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .living import SubjectState, WorldEvent
 from .motivated_cognition import MotivatedCognitionState
 from .persistence_v010 import SNAPSHOT_SCHEMA, SnapshotStore
-from .predictive_organism_v010 import LivingDuck
 from .subjective import PrivateInteriorState
 
 
@@ -24,6 +24,10 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
     transactional snapshot manifest exists, reopening this host treats the snapshot
     generation as persistence authority and never reconstructs the organism from a
     mixture of root-file generations.
+
+    External world truth is owned by ``EnvironmentDynamicsState``. The historical
+    ``SubjectState.world_facts`` field is retained only for migration/compatibility and
+    is kept empty by the current public organism.
     """
 
     def __init__(
@@ -35,15 +39,29 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         expression=None,
         interpreter=None,
     ) -> None:
+        environment = environment_state or EnvironmentDynamicsState()
+        environment.normalize()
+        self._migrate_subject_world_facts(duck.state, environment)
         super().__init__(root, duck, expression=expression, interpreter=interpreter)
         self.endogenous_path = self.root / "endogenous_v010.json"
         self.expectations_path = self.root / "expectations_v010.json"
         self.causal_path = self.root / "causal_v010.json"
         self.environment_path = self.root / "environment_v010.json"
-        self.environment = environment_state or EnvironmentDynamicsState()
-        self.environment.normalize()
+        self.environment = environment
         self.snapshot_store = SnapshotStore(self.root)
         self.snapshot_generation = 0
+
+    @staticmethod
+    def _migrate_subject_world_facts(
+        state: SubjectState,
+        environment: EnvironmentDynamicsState,
+    ) -> None:
+        """Move legacy subject-embedded truth into host/world authority once."""
+
+        for key, value in list(state.world_facts.items()):
+            if str(key) not in environment.world_facts:
+                environment.set_fact(str(key), str(value))
+        state.world_facts.clear()
 
     @staticmethod
     def _legacy_json(path: Path) -> object | None:
@@ -136,6 +154,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             )
             private_payload = cls._legacy_json(root_path / "private_interior.json")
 
+        cls._migrate_subject_world_facts(state, environment_state)
         host = cls(
             root_path,
             LivingDuck(
@@ -162,6 +181,40 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 else None
             )
         return host
+
+    def set_world_fact(
+        self,
+        key: str,
+        value: str,
+        *,
+        perceived: bool = False,
+        source: str = "world",
+        description: str | None = None,
+        allow_inner_speech: bool = True,
+    ):
+        """Mutate external truth through host authority and optionally expose a percept."""
+
+        self.environment.set_fact(key, value)
+        if not perceived:
+            self.save()
+            return None
+        text = description or f"{key} is {value}."
+        return self.observe(
+            WorldEvent(
+                "observation",
+                source,
+                text,
+                ("world_fact",),
+                0.0,
+                0.30,
+                ((str(key), str(value)),),
+                True,
+            ),
+            allow_inner_speech=allow_inner_speech,
+        )
+
+    def world_fact(self, key: str) -> str | None:
+        return self.environment.fact(key)
 
     def schedule_world_event(self, event: WorldEvent, *, due_in: int = 1) -> ScheduledWorldEvent:
         """Schedule an external change under host/world authority."""
@@ -216,10 +269,33 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             )
 
     def save(self) -> None:
+        # Current v0.10 subject snapshots must never persist authoritative world truth.
+        self._migrate_subject_world_facts(self.duck.state, self.environment)
         payloads = self._snapshot_payloads()
         generation = self.snapshot_store.commit(payloads, tick=self.duck.state.tick)
         self.snapshot_generation = generation
         self._write_compatibility_mirrors(payloads)
+
+    def observe(self, event: WorldEvent, *, allow_inner_speech: bool = True):
+        """Apply external truth at the host, exposing only perceived evidence to subject cognition."""
+
+        self.environment.apply_event_facts(event)
+        if event.perceived:
+            return super().observe(event, allow_inner_speech=allow_inner_speech)
+
+        step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
+        self._capture_private_interior(step)
+        self._append_journal(
+            {
+                "type": "world_hidden_change",
+                "tick": step.tick,
+                "event": asdict(event),
+                "selected_action": step.selected_action,
+                "action_id": step.action_id,
+            }
+        )
+        self.save()
+        return step
 
     def _run_scheduled_world_event(
         self,
@@ -228,16 +304,11 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         allow_inner_speech: bool,
     ):
         event = record.event
+        self.environment.apply_event_facts(event)
         if event.perceived:
             step = self.duck.step(event, allow_inner_speech=allow_inner_speech)
             journal_type = "environment_event"
         else:
-            # Unperceived world change belongs to host truth. It cannot be allowed
-            # to alter appraisal, memory, belief, or expectation resolution as though
-            # the subject sensed it. IMP-002 will move authoritative world truth out
-            # of SubjectState entirely; until then this remains the known boundary debt.
-            for key, text in event.world_facts:
-                self.duck.state.world_facts[str(key)] = str(text)
             step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
             journal_type = "environment_hidden_change"
 
@@ -317,6 +388,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 "pending_causal_intervention_count": len(self.duck.causal_state.pending_interventions),
                 "active_plan_sequence_context_count": len(self.duck.causal_state.plan_contexts),
                 "environment_schema": self.environment.schema_version,
+                "environment_world_fact_count": len(self.environment.world_facts),
                 "scheduled_world_event_count": len(self.environment.scheduled),
             }
         )

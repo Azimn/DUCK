@@ -5,7 +5,7 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
-from .causal_v010 import CausalSequenceState
+from .causal_v010 import CausalSequenceState, PLAN_START
 from .endogenous import EndogenousDynamicsState
 from .environment_v010 import EnvironmentDynamicsState, ScheduledWorldEvent
 from .expectations_v010 import ExpectationLedgerState
@@ -222,6 +222,19 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         self.save()
         return steps
 
+    def _eligible_causal_contrast_count(self) -> int:
+        count = 0
+        for row in self.duck.causal_state.transitions.values():
+            if row.prior_action == PLAN_START or row.intervention_evidence <= 0:
+                continue
+            contrast = self.duck.causal_state.estimate_intervention_contrast(
+                row.prior_action,
+                row.next_action,
+            )
+            if contrast is not None and contrast.eligible:
+                count += 1
+        return count
+
     def status(self) -> dict[str, object]:
         status = dict(super().status())
         status.update(
@@ -234,6 +247,13 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 "active_action_expectation_count": len(self.duck.expectation_state.active_actions()),
                 "causal_schema": self.duck.causal_state.schema_version,
                 "learned_action_transition_count": len(self.duck.causal_state.transitions),
+                "intervention_supported_transition_count": sum(
+                    1
+                    for row in self.duck.causal_state.transitions.values()
+                    if row.intervention_evidence > 0
+                ),
+                "eligible_causal_contrast_count": self._eligible_causal_contrast_count(),
+                "pending_causal_intervention_count": len(self.duck.causal_state.pending_interventions),
                 "active_plan_sequence_context_count": len(self.duck.causal_state.plan_contexts),
                 "environment_schema": self.environment.schema_version,
                 "scheduled_world_event_count": len(self.environment.scheduled),

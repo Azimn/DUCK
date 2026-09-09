@@ -306,7 +306,7 @@ Audit every historical simulation and pin or parameterize runtime/host dependenc
 
 ## IMP-010 Counterfactual implementation/status documentation drift
 
-**Status:** OPEN  
+**Status:** FIXED  
 **Priority:** P3  
 **Affected subsystem:** documentation  
 **Discriminator gates:** none; documentation hygiene  
@@ -314,11 +314,17 @@ Audit every historical simulation and pin or parameterize runtime/host dependenc
 
 ### Problem
 
-The current `STATUS.md` still describes explicitly labeled counterfactual predictions as candidate future work even though transient counterfactual route comparison has now been implemented and verified.
+`STATUS.md` described explicitly labeled counterfactual predictions as candidate future work even though transient counterfactual route comparison had been implemented and verified.
 
-### Fixed when
+### Resolution
 
-`STATUS.md` describes counterfactual route prediction as implemented, records its provenance/non-persistence constraints, and removes it from the future-work list except for genuine extensions.
+`STATUS.md` now records transient counterfactual route comparison as implemented, documents `model_prediction` provenance and non-persistence, records the verified CI run, and limits future work to genuine extensions such as richer counterfactual models.
+
+### Verification evidence
+
+Documentation correction commit: `4327cda65a2acc493568aaff862bf0d7a248377e`.
+
+This was a documentation-only defect; the underlying counterfactual behavior was already verified in CI run #262 at commit `2959ce945fa59c7d9691b2e4206e5743afdf4cc8` on Python 3.11 and Python 3.12.
 
 ---
 

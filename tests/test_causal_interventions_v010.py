@@ -5,7 +5,7 @@ import json
 import pytest
 
 from duck import LivingDuck, PersistentDuckHost
-from duck.causal_v010 import CausalSequenceState
+from duck.causal_v010 import CausalSequenceState, PLAN_START
 from duck.living import SubjectState, WorldEvent
 
 
@@ -57,6 +57,88 @@ def test_transition_state_distinguishes_observation_from_intervention_evidence()
     assert mixed.intervention_fulfilled == 1
     assert mixed.intervention_evidence == 1
     assert mixed.observational_evidence == 1
+    assert mixed.observational_reliability > 0.70
+    assert mixed.intervention_reliability > 0.70
+
+
+def test_intervention_contrast_requires_treatment_and_direct_baseline_evidence():
+    state = CausalSequenceState()
+    state.observe_transition(
+        "ask",
+        "explore",
+        outcome="fulfilled",
+        tick=1,
+        intervention=True,
+    )
+    assert state.estimate_intervention_contrast("ask", "explore") is None
+
+    state.observe_transition(PLAN_START, "explore", outcome="violated", tick=2)
+    sparse = state.estimate_intervention_contrast("ask", "explore")
+    assert sparse is not None
+    assert sparse.eligible is False
+    assert sparse.intervention_evidence == 1
+    assert sparse.baseline_evidence == 1
+
+    state.observe_transition(
+        "ask",
+        "explore",
+        outcome="fulfilled",
+        tick=3,
+        intervention=True,
+    )
+    state.observe_transition(PLAN_START, "explore", outcome="violated", tick=4)
+    supported = state.estimate_intervention_contrast("ask", "explore")
+    assert supported is not None
+    assert supported.eligible is True
+    assert supported.intervention_evidence == 2
+    assert supported.baseline_evidence == 2
+    assert supported.delta > 0.0
+
+
+def test_intervention_label_grants_no_special_route_weight_without_matched_baseline():
+    duck = LivingDuck(_state("intervention-no-magic-weight"))
+    assert duck._intervention_contrast_route_adjustment("investigate", "cautious_inquiry") == pytest.approx(0.0)
+
+    for tick in range(1, 5):
+        duck.causal_state.observe_transition(
+            "ask",
+            "explore",
+            outcome="fulfilled",
+            tick=tick,
+            intervention=True,
+        )
+    assert duck._intervention_contrast_route_adjustment("investigate", "cautious_inquiry") == pytest.approx(0.0)
+
+    for tick in range(5, 9):
+        duck.causal_state.observe_transition(
+            PLAN_START,
+            "explore",
+            outcome="violated",
+            tick=tick,
+        )
+    assert duck._intervention_contrast_route_adjustment("investigate", "cautious_inquiry") > 0.0
+
+
+def test_negative_matched_contrast_can_reduce_multi_step_route_score():
+    duck = LivingDuck(_state("intervention-negative-contrast"))
+    for tick in range(1, 5):
+        duck.causal_state.observe_transition(
+            "ask",
+            "explore",
+            outcome="violated",
+            tick=tick,
+            intervention=True,
+        )
+    for tick in range(5, 9):
+        duck.causal_state.observe_transition(
+            PLAN_START,
+            "explore",
+            outcome="fulfilled",
+            tick=tick,
+        )
+    adjustment = duck._intervention_contrast_route_adjustment("investigate", "cautious_inquiry")
+    assert adjustment < 0.0
+    assert adjustment >= -0.10
 
 
 def test_intervention_requires_exact_pending_canonical_plan_action():
@@ -108,6 +190,9 @@ def test_marked_first_step_trains_intervention_transition_not_plain_observation(
     assert context is not None
     assert context.previous_was_intervention is True
     assert "asking first" in context.intervention_hypothesis
+    first_step = duck.causal_state.transition(PLAN_START, "ask")
+    assert first_step is not None
+    assert first_step.intervention_fulfilled == 1
 
     second = duck.heartbeat(allow_inner_speech=False)
     assert second.selected_action == "explore"

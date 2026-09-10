@@ -23,6 +23,7 @@ OBSERVABLE_FEATURES = frozenset({
     "object_present", "loud_voice", "approaching_person", "raised_hand", "smile", "offered_object",
     "unfamiliar_object", "blocked_path", "spoken_question", "person_present",
     "receding_person", "impact", "dim_light", "tired_sensation", "warm_sensation",
+    "sleepy_sensation", "pain_sensation", "exertion_sensation", "self_motion",
 })
 
 
@@ -50,6 +51,7 @@ class SensoryEvidence:
     reliability: float = 1.0
     features: tuple[str, ...] = ()
     observed_facts: tuple[FactObservation, ...] = ()
+    entity_id: str | None = None
 
     def __post_init__(self):
         if not isinstance(self.source, str) or not isinstance(self.content, str):
@@ -57,6 +59,8 @@ class SensoryEvidence:
         object.__setattr__(self, "modality", Modality(self.modality))
         object.__setattr__(self, "strength", unit(self.strength))
         object.__setattr__(self, "reliability", unit(self.reliability))
+        if self.entity_id is not None and (not isinstance(self.entity_id, str) or not self.entity_id or len(self.entity_id) > 160):
+            raise ValueError("entity identity must be a bounded nonempty string when supplied")
         features = tuple(dict.fromkeys(self.features))
         if not set(features) <= OBSERVABLE_FEATURES:
             raise ValueError("evidence features must be observable cues from the supported vocabulary")
@@ -77,6 +81,7 @@ class Percept:
     confidence: float
     features: tuple[str, ...] = ()
     observed_facts: tuple[FactObservation, ...] = ()
+    entity_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -99,7 +104,7 @@ def perceive(evidence: SensoryEvidence) -> Percept:
     facts = tuple(FactObservation(f.key, f.apparent_value, f.source,
                                  min(f.reliability, confidence)) for f in evidence.observed_facts)
     return Percept(evidence.source, evidence.modality, evidence.content, confidence,
-                   evidence.features, facts)
+                   evidence.features, facts, evidence.entity_id)
 
 
 class LegacyWorldEventAdapter:
@@ -108,10 +113,12 @@ class LegacyWorldEventAdapter:
             raise ValueError("hidden world events are not sensory evidence")
         modality = Modality.INTEROCEPTION if event.kind == "endogenous" else (
             Modality.LANGUAGE if event.kind in {"message", "conversation"} else Modality.VISION)
+        entity_id = None if event.source in {"self", "world", "system", ""} else event.source
         return SensoryEvidence(modality, event.source, event.text, event.intensity,
                               features=tuple(t for t in event.tags if t in OBSERVABLE_FEATURES),
                               observed_facts=tuple(FactObservation(str(k), str(v), event.source)
-                                                   for k, v in event.world_facts if event.perceived))
+                                                   for k, v in event.world_facts if event.perceived),
+                              entity_id=entity_id)
 
 
 class AppraisalEngine:

@@ -76,17 +76,19 @@ The v0.10 phase modernizes selected Psi and MicroPsi principles without recreati
 
 The new public runtime on this development branch may therefore diverge structurally from v0.9. `main` is the compatibility and historical preservation boundary.
 
-## Future modalities
+## Current embodiment and future modalities
 
-Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and richer embodiment remain future surfaces. Machine representations must cross the same experiential firewall before they become available to the simulated subject.
+Vision-like spatial access, audition, touch-like ambient sensation, explicit interoception, explicit proprioception, a bounded simulated body, and host-owned room dynamics now have current v0.10 interfaces. These are symbolic simulated modalities rather than raw camera, microphone, robotics, or XR integrations.
+
+`EMBODIED_PERCEPTION_v0.10.md` governs typed sensory evidence, subject-dependent appraisal, body/regulatory authority, grounded affordances, and contextual strategy learning.
+
+`SITUATED_SENSORIMOTOR_v0.10.md` governs the current perceptual workspace/object-continuity layer, body-sensor transduction, locomotion/proprioception, realized exertion, and bounded autonomous room-process extension. It explicitly records the remaining evidence-ledger, navigation, richer social-world, situational-workspace, procedural-memory, and impasse work.
+
+Future camera/audio adapters, avatars, robotics, XR, richer physics, navigation, and multi-agent worlds must preserve the same authority and experiential-firewall boundaries.
 
 ## Behavior-first evaluation
 
 `BEHAVIOR_FIRST_v0.10.md` defines goal alignment, the targeted executable discriminator, donor scope, and the limits of automated believability claims.
-
-## Evidence and embodiment contract
-
-`EMBODIED_PERCEPTION_v0.10.md` governs current native sensory evidence, subject-dependent appraisal, physical body and regulatory authority, grounded affordances, contextual strategy learning, and the deterministic expression boundary. It explicitly distinguishes the remaining WorldEvent compatibility path.
 
 ## Prior-work reuse integration
 

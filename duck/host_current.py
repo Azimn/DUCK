@@ -16,10 +16,12 @@ from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .living import SubjectState, WorldEvent
 from .language import DeterministicExpression, deterministic_stance
 from .motivated_cognition import MotivatedCognitionState
+from .perceptual_workspace_v010 import PerceptualWorkspaceState
 from .persistence_v010 import SNAPSHOT_SCHEMA, SnapshotStore
 from .subjective import PrivateInteriorState
 from .room_v010 import RoomState, RoomWorld
-from .spatial_v010 import AttentionSelector, PerceptionFilter
+from .sensation_v010 import body_sensory_evidence
+from .spatial_v010 import AttentionSelector, LocatedStimulus, ObservationPacket, PerceptionFilter
 from .perception_v010 import Modality, SensoryEvidence
 
 
@@ -55,6 +57,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         self.environment_path = self.root / "environment_v010.json"
         self.body_path = self.root / "body_v010.json"
         self.regulatory_path = self.root / "regulatory_v010.json"
+        self.perceptual_path = self.root / "perceptual_workspace_v010.json"
         self.environment = environment
         self.snapshot_store = SnapshotStore(self.root)
         self.snapshot_generation = 0
@@ -65,7 +68,6 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         environment: EnvironmentDynamicsState,
     ) -> None:
         """Move legacy subject-embedded truth into host/world authority once."""
-
         for key, value in list(state.world_facts.items()):
             if str(key) not in environment.world_facts:
                 environment.set_fact(str(key), str(value))
@@ -96,75 +98,39 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         expectations_path = root_path / "expectations_v010.json"
         causal_path = root_path / "causal_v010.json"
         environment_path = root_path / "environment_v010.json"
+        perceptual_path = root_path / "perceptual_workspace_v010.json"
 
         snapshot_store = SnapshotStore(root_path)
         snapshot = snapshot_store.load()
         if snapshot is not None:
             payloads = snapshot.payloads
             state = SubjectState.from_dict(payloads["subject.json"])
-            cognitive_state = MotivatedCognitionState.from_dict(
-                payloads.get("cognition_v010.json", {})
-            )
-            endogenous_state = EndogenousDynamicsState.from_dict(
-                payloads.get("endogenous_v010.json", {})
-            )
-            expectation_state = ExpectationLedgerState.from_dict(
-                payloads.get("expectations_v010.json", {})
-            )
-            causal_state = CausalSequenceState.from_dict(
-                payloads.get("causal_v010.json", {})
-            )
-            environment_state = EnvironmentDynamicsState.from_dict(
-                payloads.get("environment_v010.json", {})
-            )
+            cognitive_state = MotivatedCognitionState.from_dict(payloads.get("cognition_v010.json", {}))
+            endogenous_state = EndogenousDynamicsState.from_dict(payloads.get("endogenous_v010.json", {}))
+            expectation_state = ExpectationLedgerState.from_dict(payloads.get("expectations_v010.json", {}))
+            causal_state = CausalSequenceState.from_dict(payloads.get("causal_v010.json", {}))
+            environment_state = EnvironmentDynamicsState.from_dict(payloads.get("environment_v010.json", {}))
             private_payload = payloads.get("private_interior.json")
             body_payload = payloads.get("body_v010.json")
             regulatory_payload = payloads.get("regulatory_v010.json")
+            perceptual_payload = payloads.get("perceptual_workspace_v010.json")
         else:
             state_payload = cls._legacy_json(state_path)
-            state = (
-                SubjectState.from_dict(state_payload)
-                if state_payload is not None
-                else SubjectState.create(name=name, subject_id=subject_id)
-            )
-
+            state = SubjectState.from_dict(state_payload) if state_payload is not None else SubjectState.create(name=name, subject_id=subject_id)
             cognitive_payload = cls._legacy_json(cognitive_path)
-            cognitive_state = (
-                MotivatedCognitionState.from_dict(cognitive_payload)
-                if cognitive_payload is not None
-                else MotivatedCognitionState()
-            )
-
+            cognitive_state = MotivatedCognitionState.from_dict(cognitive_payload) if cognitive_payload is not None else MotivatedCognitionState()
             endogenous_payload = cls._legacy_json(endogenous_path)
-            endogenous_state = (
-                EndogenousDynamicsState.from_dict(endogenous_payload)
-                if endogenous_payload is not None
-                else EndogenousDynamicsState()
-            )
-
+            endogenous_state = EndogenousDynamicsState.from_dict(endogenous_payload) if endogenous_payload is not None else EndogenousDynamicsState()
             expectation_payload = cls._legacy_json(expectations_path)
-            expectation_state = (
-                ExpectationLedgerState.from_dict(expectation_payload)
-                if expectation_payload is not None
-                else ExpectationLedgerState()
-            )
-
+            expectation_state = ExpectationLedgerState.from_dict(expectation_payload) if expectation_payload is not None else ExpectationLedgerState()
             causal_payload = cls._legacy_json(causal_path)
-            causal_state = (
-                CausalSequenceState.from_dict(causal_payload)
-                if causal_payload is not None
-                else CausalSequenceState()
-            )
-
+            causal_state = CausalSequenceState.from_dict(causal_payload) if causal_payload is not None else CausalSequenceState()
             environment_payload = cls._legacy_json(environment_path)
-            environment_state = (
-                EnvironmentDynamicsState.from_dict(environment_payload)
-                if environment_payload is not None
-                else EnvironmentDynamicsState()
-            )
+            environment_state = EnvironmentDynamicsState.from_dict(environment_payload) if environment_payload is not None else EnvironmentDynamicsState()
             private_payload = cls._legacy_json(root_path / "private_interior.json")
             body_payload = cls._legacy_json(root_path / "body_v010.json")
             regulatory_payload = cls._legacy_json(root_path / "regulatory_v010.json")
+            perceptual_payload = cls._legacy_json(perceptual_path)
 
         cls._migrate_subject_world_facts(state, environment_state)
         host = cls(
@@ -179,6 +145,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 causal_state=causal_state,
                 body_state=BodyState.from_dict(body_payload) if body_payload is not None else None,
                 regulatory_state=RegulatoryState.from_dict(regulatory_payload) if regulatory_payload is not None else None,
+                perceptual_state=PerceptualWorkspaceState.from_dict(perceptual_payload) if perceptual_payload is not None else None,
             ),
             environment_state=environment_state,
             expression=expression,
@@ -187,13 +154,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         host.snapshot_store = snapshot_store
         host.snapshot_generation = snapshot.generation if snapshot is not None else 0
         if snapshot is not None:
-            # Override any compatibility mirror that the base constructor may have
-            # loaded. The committed generation is authoritative, including absence.
-            host.private_interior = (
-                PrivateInteriorState.from_dict(private_payload)
-                if isinstance(private_payload, dict)
-                else None
-            )
+            host.private_interior = PrivateInteriorState.from_dict(private_payload) if isinstance(private_payload, dict) else None
         return host
 
     def set_world_fact(
@@ -207,23 +168,14 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         allow_inner_speech: bool = True,
     ):
         """Mutate external truth through host authority and optionally expose a percept."""
-
         self.environment.set_fact(key, value)
         if not perceived:
             self.save()
             return None
         text = description or f"{key} is {value}."
         return self.observe(
-            WorldEvent(
-                "observation",
-                source,
-                text,
-                ("world_fact",),
-                0.0,
-                0.30,
-                ((str(key), str(value)),),
-                True,
-            ),
+            WorldEvent("observation", source, text, ("world_fact",), 0.0, 0.30,
+                       ((str(key), str(value)),), True),
             allow_inner_speech=allow_inner_speech,
         )
 
@@ -232,7 +184,6 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
 
     def schedule_world_event(self, event: WorldEvent, *, due_in: int = 1) -> ScheduledWorldEvent:
         """Schedule an external change under host/world authority."""
-
         record = self.environment.schedule(self.duck.state.tick, event, due_in=due_in)
         self.save()
         return record
@@ -248,6 +199,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             "subject.json": self.duck.state.to_dict(),
             "body_v010.json": self.duck.body.to_dict(),
             "regulatory_v010.json": self.duck.regulatory_state.to_dict(),
+            "perceptual_workspace_v010.json": self.duck.perceptual_workspace.to_dict(),
             "cognition_v010.json": self.duck.cognitive_state.to_dict(),
             "endogenous_v010.json": self.duck.endogenous_state.to_dict(),
             "expectations_v010.json": self.duck.expectation_state.to_dict(),
@@ -259,16 +211,12 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         return payloads
 
     def _write_compatibility_mirrors(self, payloads: dict[str, object]) -> None:
-        """Best-effort root mirrors for tools that still inspect historical paths.
-
-        These files are deliberately written *after* the transactional manifest commit.
-        A crash during mirror replacement cannot change what the current host reopens.
-        """
-
+        """Best-effort root mirrors; the transactional generation remains authority."""
         paths = {
             "subject.json": self.state_path,
             "body_v010.json": self.body_path,
             "regulatory_v010.json": self.regulatory_path,
+            "perceptual_workspace_v010.json": self.perceptual_path,
             "cognition_v010.json": self.cognitive_path,
             "endogenous_v010.json": self.endogenous_path,
             "expectations_v010.json": self.expectations_path,
@@ -281,13 +229,9 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 if name == "private_interior.json" and path.exists():
                     path.unlink()
                 continue
-            self._atomic_write(
-                path,
-                json.dumps(payloads[name], ensure_ascii=False, indent=2, sort_keys=True),
-            )
+            self._atomic_write(path, json.dumps(payloads[name], ensure_ascii=False, indent=2, sort_keys=True))
 
     def save(self) -> None:
-        # Current v0.10 subject snapshots must never persist authoritative world truth.
         self._migrate_subject_world_facts(self.duck.state, self.environment)
         payloads = self._snapshot_payloads()
         generation = self.snapshot_store.commit(payloads, tick=self.duck.state.tick)
@@ -296,22 +240,13 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
 
     def observe(self, event: WorldEvent, *, allow_inner_speech: bool = True):
         """Apply external truth at the host, exposing only perceived evidence to subject cognition."""
-
         self.environment.apply_event_facts(event)
         if event.perceived:
             return super().observe(event, allow_inner_speech=allow_inner_speech)
-
         step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
         self._capture_private_interior(step)
-        self._append_journal(
-            {
-                "type": "world_hidden_change",
-                "tick": step.tick,
-                "event": asdict(event),
-                "selected_action": step.selected_action,
-                "action_id": step.action_id,
-            }
-        )
+        self._append_journal({"type": "world_hidden_change", "tick": step.tick, "event": asdict(event),
+                              "selected_action": step.selected_action, "action_id": step.action_id})
         self.save()
         return step
 
@@ -331,13 +266,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         self.save()
         return step
 
-    def _run_scheduled_world_event(
-        self,
-        record: ScheduledWorldEvent,
-        *,
-        allow_inner_speech: bool,
-        execute_room_actions: bool = True,
-    ):
+    def _run_scheduled_world_event(self, record: ScheduledWorldEvent, *, allow_inner_speech: bool,
+                                   execute_room_actions: bool = True):
         event = record.event
         self.environment.apply_event_facts(event)
         if event.perceived:
@@ -350,45 +280,27 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                     if self.environment.room is not None
                     else self.duck.heartbeat(allow_inner_speech=allow_inner_speech))
             journal_type = "environment_hidden_change"
-
         self._capture_private_interior(step)
         self.environment.complete(record.event_id)
-        self._append_journal(
-            {
-                "type": journal_type,
-                "tick": step.tick,
-                "scheduled_event_id": record.event_id,
-                "event": asdict(event),
-                "selected_action": step.selected_action,
-                "action_id": step.action_id,
-            }
-        )
+        self._append_journal({"type": journal_type, "tick": step.tick,
+                              "scheduled_event_id": record.event_id, "event": asdict(event),
+                              "selected_action": step.selected_action, "action_id": step.action_id})
         return step
 
     def heartbeat(self, count: int = 1, *, allow_inner_speech: bool = True) -> list:
         """Advance time, delivering due host/world events before quiet organism beats."""
-
         steps = []
         for _ in range(max(0, int(count))):
             due = self.environment.next_due(self.duck.state.tick + 1)
             if due is not None:
-                step = self._run_scheduled_world_event(
-                    due,
-                    allow_inner_speech=allow_inner_speech,
-                )
+                step = self._run_scheduled_world_event(due, allow_inner_speech=allow_inner_speech)
             elif self.environment.room is not None:
                 step = self._room_tick(allow_inner_speech=allow_inner_speech)
             else:
                 step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
                 self._capture_private_interior(step)
-                self._append_journal(
-                    {
-                        "type": "heartbeat",
-                        "tick": step.tick,
-                        "selected_action": step.selected_action,
-                        "action_id": step.action_id,
-                    }
-                )
+                self._append_journal({"type": "heartbeat", "tick": step.tick,
+                                      "selected_action": step.selected_action, "action_id": step.action_id})
             steps.append(step)
         self.save()
         return steps
@@ -406,34 +318,43 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             raise RuntimeError("configure a room before running native room life")
         world = RoomWorld(self.environment.room)
         world.advance()
-        # Ambient temperature changes the body, which projects its own sensations.
         self.duck.body.thermal_stress = min(1.0, abs(world.state.temperature - .5) * 2.0)
         observer = world.observer(self.duck.state.subject_id)
-        accessible = PerceptionFilter().filter(world.packet(observer.character_id), observer)
-        # One focus produces one cognitive cycle and one action, not one per sense.
-        selected = AttentionSelector().select(accessible, capacity=1, relevant_features=self.duck.perceptual_priorities())
+        packet = world.packet(observer.character_id)
+        body_rows = tuple(
+            LocatedStimulus(f"interoception:{index}", observer.position, evidence)
+            for index, evidence in enumerate(body_sensory_evidence(self.duck.body))
+        )
+        if body_rows:
+            packet = ObservationPacket(packet.observer_id, (*packet.stimuli, *body_rows))
+        accessible = PerceptionFilter().filter(packet, observer)
+        selected = AttentionSelector().select(accessible, capacity=1,
+                                              relevant_features=self.duck.perceptual_priorities())
         if selected:
             focus = selected[0]
             evidence = focus.evidence
             affordances = world.affordances(focus.stimulus_id)
         else:
             focus = None
-            evidence = SensoryEvidence(Modality.INTEROCEPTION, "self", "", strength=.1)
+            evidence = SensoryEvidence(Modality.INTEROCEPTION, "self", "", strength=.1, entity_id="self")
             affordances = ()
         step = self.duck.perceive(evidence, affordances=affordances,
                                  infer_social=False, allow_inner_speech=allow_inner_speech)
         self._capture_private_interior(step)
+        if focus is not None and focus.stimulus_id == "proprioception:self":
+            world.state.pending_proprioception = ""
         pending = self.duck.state.pending_action
-        result = None
+        outcome = None
         if execute_actions and pending is not None:
             result = world.execute(pending.name, pending.target)
-            self.duck.resolve_outcome(pending.action_id, success=result[0], valence=result[1], description=result[2])
+            self.duck.resolve_outcome(pending.action_id, success=result.success,
+                                      valence=result.valence, description=result.description)
+            outcome = asdict(result)
         self._append_journal({"type": "room_tick", "tick": step.tick,
                               "focus": focus.stimulus_id if focus else None,
                               "accessible_count": len(accessible),
                               "selected_action": step.selected_action,
-                              "action_id": step.action_id,
-                              "outcome": result})
+                              "action_id": step.action_id, "outcome": outcome})
         return step
 
     def _scheduled_room_tick(self, *, allow_inner_speech=True, execute_actions=True):
@@ -464,7 +385,6 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             raise ValueError("elapsed time overflow")
         requested = int(total // room.tick_seconds)
         applied = min(requested, max_ticks)
-        # The single host save commits physical, cognitive, room and time state.
         for _ in range(applied):
             self._scheduled_room_tick(allow_inner_speech=allow_inner_speech)
         room.catchup_remainder = total - applied * room.tick_seconds
@@ -477,41 +397,34 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         for row in self.duck.causal_state.transitions.values():
             if row.prior_action == PLAN_START or row.intervention_evidence <= 0:
                 continue
-            contrast = self.duck.causal_state.estimate_intervention_contrast(
-                row.prior_action,
-                row.next_action,
-            )
+            contrast = self.duck.causal_state.estimate_intervention_contrast(row.prior_action, row.next_action)
             if contrast is not None and contrast.eligible:
                 count += 1
         return count
 
     def status(self) -> dict[str, object]:
         status = dict(super().status())
-        status.update(
-            {
-                "snapshot_schema": SNAPSHOT_SCHEMA,
-                "snapshot_generation": self.snapshot_generation,
-                "endogenous_schema": self.duck.endogenous_state.schema_version,
-                "endogenous_latched_signals": sorted(self.duck.endogenous_state.latched_signals),
-                "endogenous_emission_counts": dict(sorted(self.duck.endogenous_state.emission_counts.items())),
-                "expectation_schema": self.duck.expectation_state.schema_version,
-                "active_expectation_count": len(self.duck.expectation_state.active()),
-                "active_action_expectation_count": len(self.duck.expectation_state.active_actions()),
-                "causal_schema": self.duck.causal_state.schema_version,
-                "learned_action_transition_count": len(self.duck.causal_state.transitions),
-                "intervention_supported_transition_count": sum(
-                    1
-                    for row in self.duck.causal_state.transitions.values()
-                    if row.intervention_evidence > 0
-                ),
-                "eligible_causal_contrast_count": self._eligible_causal_contrast_count(),
-                "pending_causal_intervention_count": len(self.duck.causal_state.pending_interventions),
-                "active_plan_sequence_context_count": len(self.duck.causal_state.plan_contexts),
-                "environment_schema": self.environment.schema_version,
-                "environment_world_fact_count": len(self.environment.world_facts),
-                "scheduled_world_event_count": len(self.environment.scheduled),
-            }
-        )
+        status.update({
+            "snapshot_schema": SNAPSHOT_SCHEMA,
+            "snapshot_generation": self.snapshot_generation,
+            "endogenous_schema": self.duck.endogenous_state.schema_version,
+            "endogenous_latched_signals": sorted(self.duck.endogenous_state.latched_signals),
+            "endogenous_emission_counts": dict(sorted(self.duck.endogenous_state.emission_counts.items())),
+            "expectation_schema": self.duck.expectation_state.schema_version,
+            "active_expectation_count": len(self.duck.expectation_state.active()),
+            "active_action_expectation_count": len(self.duck.expectation_state.active_actions()),
+            "causal_schema": self.duck.causal_state.schema_version,
+            "learned_action_transition_count": len(self.duck.causal_state.transitions),
+            "intervention_supported_transition_count": sum(1 for row in self.duck.causal_state.transitions.values() if row.intervention_evidence > 0),
+            "eligible_causal_contrast_count": self._eligible_causal_contrast_count(),
+            "pending_causal_intervention_count": len(self.duck.causal_state.pending_interventions),
+            "active_plan_sequence_context_count": len(self.duck.causal_state.plan_contexts),
+            "environment_schema": self.environment.schema_version,
+            "environment_world_fact_count": len(self.environment.world_facts),
+            "scheduled_world_event_count": len(self.environment.scheduled),
+            "perceptual_workspace_schema": self.duck.perceptual_workspace.schema_version,
+            "perceived_entity_count": len(self.duck.perceptual_workspace.entities),
+        })
         return status
 
 

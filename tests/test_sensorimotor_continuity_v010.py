@@ -109,6 +109,21 @@ def test_autonomous_person_motion_changes_world_before_subject_perception():
     assert "approaching_person" in visual.evidence.features
 
 
+def test_autonomous_process_interval_is_anchored_to_execution_tick():
+    obj = RoomObject("morgan", "Morgan", Vec3(5, 0, 0), is_person=True)
+    process = RoomProcess("paced", "move", "morgan", interval_ticks=3,
+                          next_tick=0, delta=Vec3(-1, 0, 0))
+    room = RoomState(auto_day_cycle=False, objects={"morgan": obj},
+                     processes={process.process_id: process})
+    world = RoomWorld(room)
+    world.advance()
+    after_first = room.objects["morgan"].position.x
+    due = process.next_tick
+    world.advance()
+    assert room.objects["morgan"].position.x == after_first
+    assert process.next_tick == due
+
+
 def test_threat_appraisal_can_mobilize_body_without_becoming_body_truth_input():
     duck = LivingDuck()
     before = duck.body.autonomic_arousal

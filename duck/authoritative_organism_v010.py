@@ -14,12 +14,13 @@ from .perception_v010 import (
     Appraisal, AppraisalEngine, LegacyWorldEventAdapter, SensoryEvidence,
     appraisal_to_legacy_tags, perceive,
 )
+from .perceptual_workspace_v010 import PerceptualWorkspaceState
 from .predictive_organism_v010 import LivingDuck as PredictiveLivingDuck
 from .strategy_v010 import CognitiveRegime, cognitive_regime
 
 
 class LivingDuck(PredictiveLivingDuck):
-    def __init__(self, *args, body_state=None, regulatory_state=None, **kwargs):
+    def __init__(self, *args, body_state=None, regulatory_state=None, perceptual_state=None, **kwargs):
         super().__init__(*args, **kwargs)
         if self.state.pending_action is not None:
             self.state.pending_action.tags = tuple(self.state.pending_action.tags)
@@ -28,6 +29,7 @@ class LivingDuck(PredictiveLivingDuck):
         legacy = dict(self.state.needs)
         self.body = body_state if body_state is not None else BodyState()
         self.regulatory = regulatory_state if regulatory_state is not None else RegulatoryState()
+        self.perceptual_workspace = perceptual_state if perceptual_state is not None else PerceptualWorkspaceState()
         self.state.needs = LegacyNeedView(self.body, self.regulatory)
         if regulatory_state is None:
             for key, value in legacy.items():
@@ -40,8 +42,11 @@ class LivingDuck(PredictiveLivingDuck):
         self.appraisal_engine = AppraisalEngine()
         self.last_percept = None
         self.last_appraisal = Appraisal()
+        self.last_perceptual_update = None
         self._active_affordances = None
         self._chosen_targets = {}
+        self._chosen_efforts = {}
+        self._pending_action_effort = 0.0
         self._observation_resolutions = ()
         self._selected_regime = CognitiveRegime.BASELINE
 
@@ -53,17 +58,21 @@ class LivingDuck(PredictiveLivingDuck):
     def set_world_fact(self, key, text, *, perceived=False, source="world"):
         raise RuntimeError("MicroPsiDUCK v0.10 external truth belongs to the host environment")
 
-    def _integrate_fact_observation(self, observation):
-        memory = self.state.add_memory(
-            f"{observation.key} appeared to be {observation.apparent_value}.",
-            tags=("perceived_fact",), provenance=MemoryProvenance.FIRST_PERSON,
-            source=observation.source, confidence=observation.reliability,
-        )
-        # Weak evidence is retained as uncertain, not upgraded to known truth.
+    def _integrate_fact_observation(self, observation, *, encode_memory=True):
+        previous = self.state.beliefs.get(observation.key)
+        refs = previous.evidence_refs if previous is not None else ()
+        if encode_memory:
+            memory = self.state.add_memory(
+                f"{observation.key} appeared to be {observation.apparent_value}.",
+                tags=("perceived_fact",), provenance=MemoryProvenance.FIRST_PERSON,
+                source=observation.source, confidence=observation.reliability,
+            )
+            refs = tuple(dict.fromkeys((*refs, memory.memory_id)))[-16:]
+        confidence = max(observation.reliability, previous.confidence if previous is not None and previous.text == observation.apparent_value else 0.0)
         self.revise_belief(
             observation.key, observation.apparent_value,
-            BeliefStance.TRUE if observation.reliability >= 0.5 else BeliefStance.UNCERTAIN,
-            observation.reliability, evidence_refs=(memory.memory_id,), source="perception",
+            BeliefStance.TRUE if confidence >= 0.5 else BeliefStance.UNCERTAIN,
+            confidence, evidence_refs=refs, source="perception",
         )
 
     def _expectation_aware_event(self, event):
@@ -86,29 +95,34 @@ class LivingDuck(PredictiveLivingDuck):
 
     def _run_percept(self, evidence, *, legacy_event=None, affordances=(), allow_inner_speech=True, infer_social=True):
         percept = perceive(evidence)
+        prior_entity = self.perceptual_workspace.currently_known(percept.entity_id) if percept.entity_id else None
+        perceptual_update = self.perceptual_workspace.observe(percept, tick=self.state.tick + 1)
+        self.last_perceptual_update = perceptual_update
         available = None if legacy_event is not None else grounded_affordances(percept, affordances, infer_social=infer_social)
-        self.last_percept = percept
         relation = self.state.relationship(percept.source)
         memories = self.state.retrieve_memories(percept.content, tags=percept.features,
                                                people=(percept.source,), top_k=5)
-        # Familiarity is interpreted from the subject's memory, not host novelty.
-        if "object_present" in percept.features and not any(m.text == percept.content for m in self.state.memories):
+        # Familiarity is interpreted from the subject's own continuity, not host novelty.
+        if "object_present" in percept.features and prior_entity is None and not any(m.text == percept.content for m in self.state.memories):
             percept = replace(percept, features=(*percept.features, "unfamiliar_object"))
         self.last_percept = percept
         resolutions = self.expectation_ledger.observe_facts(percept.observed_facts, tick=self.state.tick + 1)
-        # Conflicting apparent facts stay uncertain, including in belief revision.
         values = {}
         for observation in percept.observed_facts:
             values.setdefault(observation.key, set()).add(observation.apparent_value.strip().casefold())
+        changed_keys = set(perceptual_update.changed_fact_keys)
         for observation in percept.observed_facts:
             if len(values[observation.key]) > 1:
                 observation = replace(observation, reliability=min(observation.reliability, 0.49))
-            self._integrate_fact_observation(observation)
+            encode = perceptual_update.status != "stable" or observation.key in changed_keys or percept.entity_id is None
+            self._integrate_fact_observation(observation, encode_memory=encode)
         appraisal = self.appraisal_engine.appraise(
             percept, relationship=relation, recalled_memories=memories,
             regulatory=self.regulatory_state,
             expectation_violation=any(r.outcome == "violated" for r in resolutions), strength=evidence.strength,
         )
+        # Appraisal can mobilize the body, but physiology remains a separate authority.
+        self.body_dynamics.mobilize(self.body, threat_relevance=appraisal.threat_relevance, arousal=appraisal.arousal)
         tags = list(appraisal_to_legacy_tags(appraisal, percept.features))
         if legacy_event is not None:
             # Explicit compatibility hints retain authored historical scenarios.
@@ -121,25 +135,33 @@ class LivingDuck(PredictiveLivingDuck):
         if any(r.outcome == "fulfilled" for r in resolutions):
             tags.extend(("expectation_fulfilled", "prediction_confirmed"))
         self.last_appraisal = appraisal
+        # Stable tracked re-observations remain cognitively available but do not become
+        # another identical autobiographical event in the historical substrate.
+        encode_event_memory = percept.entity_id is None or perceptual_update.status != "stable"
         event = WorldEvent(
             legacy_event.kind if legacy_event is not None else "percept",
             percept.source, percept.content, tuple(dict.fromkeys(tags)), appraisal.valence,
-            appraisal.arousal, (), legacy_event.perceived if legacy_event is not None else True,
+            appraisal.arousal, (), legacy_event.perceived if legacy_event is not None else encode_event_memory,
         )
         self._observation_resolutions = resolutions
         self._active_affordances = available
         self._chosen_targets = {}
+        self._chosen_efforts = {}
         try:
             result = super().step(event, allow_inner_speech=allow_inner_speech)
             pending = self.state.pending_action
             if pending is not None:
                 pending.target = self._chosen_targets.get(pending.name)
+                self._pending_action_effort = self._chosen_efforts.get(pending.name, 0.0)
                 self.cognitive_state.pending_strategy_context = {
                     "action_id": pending.action_id, "regime": self._selected_regime.value}
             trace = dict(result.developer_trace)
             trace["perception"] = {"modality": percept.modality.value, "confidence": percept.confidence,
                                    "legacy_hints": legacy_event is not None,
-                                   "observed_fact_count": len(percept.observed_facts)}
+                                   "observed_fact_count": len(percept.observed_facts),
+                                   "entity_id": percept.entity_id,
+                                   "continuity": perceptual_update.status,
+                                   "autobiographical_encoding": bool(event.perceived)}
             trace["appraisal"] = asdict(appraisal)
             trace["body"] = self.body.to_dict()
             trace["regulatory"] = self.regulatory_state.to_dict()
@@ -162,6 +184,8 @@ class LivingDuck(PredictiveLivingDuck):
             sensations.append("Something hurts.")
         if self.body.thermal_stress >= 0.6:
             sensations.append("The temperature is making me uncomfortable.")
+        if self.body.exertion_load >= 0.55:
+            sensations.append("I can still feel the effort in my body.")
         return replace(moment, concerns=tuple(dict.fromkeys((*moment.concerns, *sensations)))), recalled_ids
 
     def perceptual_priorities(self):
@@ -169,7 +193,9 @@ class LivingDuck(PredictiveLivingDuck):
         reg = self.regulatory_state
         theme = self._dominant_theme()
         if theme == "safety" or reg.safety_deficit >= 0.6:
-            return frozenset({"loud_voice", "approaching_person", "impact"})
+            return frozenset({"loud_voice", "approaching_person", "impact", "pain_sensation"})
+        if theme == "energy" or reg.energy_deficit >= 0.6:
+            return frozenset({"tired_sensation", "sleepy_sensation", "exertion_sensation"})
         if theme == "affiliation" or reg.affiliation_need >= 0.65:
             return frozenset({"person_present"})
         if theme == "curiosity" or reg.curiosity_drive >= 0.6:
@@ -204,12 +230,16 @@ class LivingDuck(PredictiveLivingDuck):
         return CognitiveRegime(pending["regime"]) if pending.get("action_id") == action_id else None
 
     def resolve_outcome(self, action_id, **kwargs):
+        pending = self.state.pending_action
+        effort = self._pending_action_effort if pending is not None and pending.action_id == action_id else 0.0
+        success = float(kwargs.get("success", 0.0))
+        if effort > 0:
+            self.body_dynamics.exert(self.body, effort=effort, success=success)
         super().resolve_outcome(action_id, **kwargs)
+        self._pending_action_effort = 0.0
         self.cognitive_state.pending_strategy_context = {}
 
     def _motive_action_weight(self, action, event):
-        # An available rest affordance is relevant to an energy motive even when
-        # external sensory evidence contains no authored "rest" tag.
         if self._active_affordances is not None and action == "rest":
             event = replace(event, tags=(*event.tags, "rest"))
         return super()._motive_action_weight(action, event)
@@ -221,7 +251,7 @@ class LivingDuck(PredictiveLivingDuck):
                 -affordance.risk * (0.2 + 0.8 * reg.safety_deficit)
                 -affordance.complexity * (1.0 - modulation.resolution) * 0.3
                 -affordance.social_exposure * reg.safety_deficit * 0.15
-                +affordance.novelty * modulation.exploration * 0.3)
+                + affordance.novelty * modulation.exploration * 0.3)
 
     def _apply_executive_selection(self, event, relation, memories, rows):
         if self._active_affordances is not None:
@@ -236,6 +266,7 @@ class LivingDuck(PredictiveLivingDuck):
                 if previous is None or adjusted.utility > previous.utility:
                     grounded[affordance.action] = adjusted
                     self._chosen_targets[affordance.action] = affordance.target
+                    self._chosen_efforts[affordance.action] = affordance.effort
             rows = list(grounded.values())
         return super()._apply_executive_selection(event, relation, memories, rows)
 

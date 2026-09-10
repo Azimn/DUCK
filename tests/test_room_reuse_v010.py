@@ -150,3 +150,44 @@ def test_room_longer_life_stays_bounded_and_recovers_energy(tmp_path):
     assert not host.duck.state.world_facts
     assert len(host.environment.room.objects) == 1
     json.dumps(host._snapshot_payloads())
+
+
+def test_default_heartbeat_uses_configured_room_and_keeps_scheduled_changes(tmp_path):
+    from duck import WorldEvent
+    host = PersistentDuckHost.open(tmp_path)
+    room = room_with_door()
+    room.objects["door"].position = Vec3(-1, 0, 0)
+    host.configure_room(room)
+    host.schedule_world_event(WorldEvent("change", "world", "Secret opening.",
+        world_facts=(("object:door:state", "open"),), perceived=False), due_in=2)
+    before_time = host.environment.room.simulation_seconds
+    steps = host.heartbeat(3, allow_inner_speech=False)
+    assert all(not s.developer_trace["affordances"]["compatibility_catalog"] for s in steps)
+    assert host.world_fact("object:door:state") == "open"
+    assert host.environment.room.objects["door"].opened
+    assert "object:door:state" not in host.environment.world_facts
+    assert "object:door:state" not in host.duck.state.beliefs
+    assert host.environment.room.simulation_seconds == before_time + 180
+    assert not host.environment.scheduled
+
+
+def test_catchup_delivers_scheduled_room_changes(tmp_path):
+    from duck import WorldEvent
+    host = PersistentDuckHost.open(tmp_path)
+    host.configure_room(room_with_door())
+    host.schedule_world_event(WorldEvent("change", "world", "The door opens.",
+        world_facts=(("object:door:state", "open"),), perceived=False), due_in=2)
+    host.catch_up_room(180)
+    assert host.world_fact("object:door:state") == "open"
+    assert host.duck.state.beliefs["object:door:state"].text == "open"
+    assert host.duck.state.tick == 3
+
+
+def test_comparison_contracts_require_selected_components_to_pass():
+    from duck.component_comparison import compare
+    report = compare()
+    assert report["passed"]
+    spatial = report["results"]["spatial_access"]
+    assert spatial["selected_passes"] == spatial["case_count"]
+    assert spatial["baseline_passes"] < spatial["selected_passes"]
+    assert report["results"]["social_affordances"]["selected_passes"] == 4

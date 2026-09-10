@@ -336,14 +336,19 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         record: ScheduledWorldEvent,
         *,
         allow_inner_speech: bool,
+        execute_room_actions: bool = True,
     ):
         event = record.event
         self.environment.apply_event_facts(event)
         if event.perceived:
+            if self.environment.room is not None:
+                RoomWorld(self.environment.room).advance()
             step = self.duck.step(event, allow_inner_speech=allow_inner_speech)
             journal_type = "environment_event"
         else:
-            step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
+            step = (self._room_tick(allow_inner_speech=allow_inner_speech, execute_actions=execute_room_actions)
+                    if self.environment.room is not None
+                    else self.duck.heartbeat(allow_inner_speech=allow_inner_speech))
             journal_type = "environment_hidden_change"
 
         self._capture_private_interior(step)
@@ -371,6 +376,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                     due,
                     allow_inner_speech=allow_inner_speech,
                 )
+            elif self.environment.room is not None:
+                step = self._room_tick(allow_inner_speech=allow_inner_speech)
             else:
                 step = self.duck.heartbeat(allow_inner_speech=allow_inner_speech)
                 self._capture_private_interior(step)
@@ -389,6 +396,9 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
     def configure_room(self, room: RoomState) -> None:
         """Attach a bounded host world without writing any subject beliefs."""
         self.environment.room = RoomState.from_dict(room.to_dict())
+        for key in list(self.environment.world_facts):
+            if self.environment._room_object_for_fact(key) is not None:
+                del self.environment.world_facts[key]
         self.save()
 
     def _room_tick(self, *, allow_inner_speech=True, execute_actions=True):
@@ -401,7 +411,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         observer = world.observer(self.duck.state.subject_id)
         accessible = PerceptionFilter().filter(world.packet(observer.character_id), observer)
         # One focus produces one cognitive cycle and one action, not one per sense.
-        selected = AttentionSelector().select(accessible, capacity=1)
+        selected = AttentionSelector().select(accessible, capacity=1, relevant_features=self.duck.perceptual_priorities())
         if selected:
             focus = selected[0]
             evidence = focus.evidence
@@ -426,11 +436,18 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                               "outcome": result})
         return step
 
+    def _scheduled_room_tick(self, *, allow_inner_speech=True, execute_actions=True):
+        due = self.environment.next_due(self.duck.state.tick + 1)
+        if due is not None:
+            return self._run_scheduled_world_event(due, allow_inner_speech=allow_inner_speech,
+                                                   execute_room_actions=execute_actions)
+        return self._room_tick(allow_inner_speech=allow_inner_speech, execute_actions=execute_actions)
+
     def room_heartbeat(self, count=1, *, allow_inner_speech=True, execute_actions=True):
         """Refresh sensory access and affordances before every native decision."""
         if not isinstance(count, int) or not 0 <= count <= 1000:
             raise ValueError("room heartbeat count must be between zero and 1000")
-        steps = [self._room_tick(allow_inner_speech=allow_inner_speech, execute_actions=execute_actions)
+        steps = [self._scheduled_room_tick(allow_inner_speech=allow_inner_speech, execute_actions=execute_actions)
                  for _ in range(count)]
         self.save()
         return steps
@@ -449,7 +466,7 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         applied = min(requested, max_ticks)
         # The single host save commits physical, cognitive, room and time state.
         for _ in range(applied):
-            self._room_tick(allow_inner_speech=allow_inner_speech)
+            self._scheduled_room_tick(allow_inner_speech=allow_inner_speech)
         room.catchup_remainder = total - applied * room.tick_seconds
         self.save()
         return {"requested_ticks": requested, "applied_ticks": applied,

@@ -36,10 +36,14 @@ report = host.catch_up_room(600, max_ticks=5)
 host.catch_up_room(0, max_ticks=5)
 ```
 
-`room_heartbeat` is the native refreshed-world interface. `catch_up_room` accepts elapsed simulation time explicitly; it does not install a background service or infer wall time. Neither method reconstructs events that were never simulated. Existing unconfigured hosts retain their behavior.
+`room_heartbeat` is the native refreshed-world interface. `catch_up_room` accepts elapsed simulation time explicitly; it does not install a background service or infer wall time. Neither method reconstructs events that were never simulated. After configuration, the standard host heartbeat also uses native room decisions when no scheduled occurrence takes priority. Room ticks and catch-up honor the existing scheduled-event queue. Existing unconfigured hosts retain their behavior.
 
 ## Verification scope
 
 `tests/test_room_reuse_v010.py` checks out-of-view, occluded, out-of-range and nonproximal rejection; observer mismatch; auditory access; bounded attention; hidden-object isolation; refreshed targets; actual opening consequences; equivalent continuation after restart; retained catch-up debt; transactional room/body/time crash recovery; and a 120-tick native life run with energy recovery. The existing tests continue covering independent subjective appraisal and the prose-only firewall.
 
 The toy world is intentionally small: at most 48 objects and 128 stimuli per packet. Geometry and occlusion are supplied by a host adapter, not inferred from prose or a physics engine. Navigation, rich conversation execution, arbitrary action plans, and simultaneous multimodal appraisal remain outside this small-world integration. The donor tests and structural checks do not establish human believability.
+
+## Comparison follow-through
+
+`docs/COMPONENT_SELECTION_v0.10.md` records the executed comparison, selected replacements, retained components, timing limits, and alternatives not yet evaluated. `duck.component_comparison` publishes reproducible machine-readable evidence through CI.

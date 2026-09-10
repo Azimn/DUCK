@@ -109,11 +109,26 @@ class EnvironmentDynamicsState:
             key=lambda row: (row.due_tick, row.created_tick, row.event_id),
         )[:MAX_SCHEDULED_WORLD_EVENTS]
 
+    def _room_object_for_fact(self, key):
+        if self.room is not None and key.startswith("object:") and key.endswith(":state"):
+            object_id = key[len("object:"):-len(":state")]
+            obj = self.room.objects.get(object_id)
+            if obj is not None and obj.openable:
+                return obj
+        return None
+
     def set_fact(self, key: str, value: str) -> None:
         key = str(key).strip()
         if not key:
             raise ValueError("world fact key is required")
-        self.world_facts[key] = str(value)
+        obj = self._room_object_for_fact(key)
+        if obj is not None:
+            if value not in {"open", "closed"}:
+                raise ValueError("openable room object state must be open or closed")
+            obj.opened = value == "open"
+            self.world_facts.pop(key, None)
+        else:
+            self.world_facts[key] = str(value)
         self.normalize()
 
     def apply_event_facts(self, event: WorldEvent) -> None:
@@ -121,6 +136,9 @@ class EnvironmentDynamicsState:
             self.set_fact(key, value)
 
     def fact(self, key: str) -> str | None:
+        obj = self._room_object_for_fact(str(key))
+        if obj is not None:
+            return "open" if obj.opened else "closed"
         return self.world_facts.get(str(key))
 
     def schedule(self, current_tick: int, event: WorldEvent, *, due_in: int = 1) -> ScheduledWorldEvent:

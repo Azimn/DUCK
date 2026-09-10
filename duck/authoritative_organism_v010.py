@@ -164,6 +164,18 @@ class LivingDuck(PredictiveLivingDuck):
             sensations.append("The temperature is making me uncomfortable.")
         return replace(moment, concerns=tuple(dict.fromkeys((*moment.concerns, *sensations)))), recalled_ids
 
+    def perceptual_priorities(self):
+        """Subject-owned relevance for the donor's bounded attention selector."""
+        reg = self.regulatory_state
+        theme = self._dominant_theme()
+        if theme == "safety" or reg.safety_deficit >= 0.6:
+            return frozenset({"loud_voice", "approaching_person", "impact"})
+        if theme == "affiliation" or reg.affiliation_need >= 0.65:
+            return frozenset({"person_present"})
+        if theme == "curiosity" or reg.curiosity_drive >= 0.6:
+            return frozenset({"object_present"})
+        return frozenset()
+
     def _advance_energy(self):
         self.body_dynamics.advance(self.body)
 

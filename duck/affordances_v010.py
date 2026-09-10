@@ -34,10 +34,15 @@ class Affordance:
 
 def grounded_affordances(percept, supplied=(), *, infer_social=True):
     rows = [Affordance("wait", AffordanceSource.INTERNAL), Affordance("rest", AffordanceSource.BODY)]
-    if infer_social and percept.confidence >= 0.5 and ("person_present" in percept.features or
-                                     percept.source not in {"self", "world", "system", ""}):
+    if infer_social and percept.confidence >= 0.5 and (
+        "person_present" in percept.features or percept.source not in {"self", "world", "system", ""}
+    ):
+        actions = ["respond", "ask"]
+        # Named remote speech does not establish a nearby physical actor.
+        if percept.modality.value != "language" and set(percept.features) & {"person_present", "approaching_person"}:
+            actions.extend(("approach", "step_back"))
         rows.extend(Affordance(action, AffordanceSource.SOCIAL, target=percept.source,
-                               social_exposure=0.4) for action in ("respond", "ask", "approach", "step_back"))
+                               social_exposure=0.4) for action in actions)
     rows.extend(supplied)
     if len(rows) > 64 or not all(isinstance(row, Affordance) for row in rows):
         raise ValueError("affordances must be at most 64 typed possibilities")

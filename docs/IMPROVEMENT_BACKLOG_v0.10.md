@@ -538,3 +538,20 @@ A development 10,000-tick discriminator attempt was interrupted before producing
 ## IMP-019 native room continuation evidence
 
 A scoped native room path now refreshes geometry-filtered evidence and affordances on every `room_heartbeat`, with executed consequences and transactional room/body/time state. The donor and regression contracts are in `docs/DONOR_REUSE_v0.10.md` and `tests/test_room_reuse_v010.py`. General navigation, arbitrary grounded planning, and wider environment adapters remain open; this evidence does not close the broad item.
+
+
+## IMP-021 Native room attention lacks current-subject relevance
+
+Status: FIXED in the scoped room implementation, with exact-head CI evidence in the component-comparison artifact. Priority: P2. TinyPersona's bounded selector is retained; the subject now supplies safety, affiliation, or curiosity relevance. The paired neutral/safety-pressure comparison changes focus without changing stimulus content. This does not close broader attention or perception research questions.
+
+## IMP-022 Bounded catch-up discards unprocessed elapsed time
+
+Status: FIXED in the donor adaptation. Priority: P1. The inspected Jelly remainder formula drops capped whole ticks. Persistent time debt replaces that arithmetic. The 650-second comparison, restart between bounded calls, and room/body/time crash recovery verify the scoped replacement. Unsimulated time never becomes remembered history.
+
+## IMP-023 Named speech creates ungrounded physical social actions
+
+Status: FIXED in the native availability helper. Priority: P2. A named source formerly offered approach even for remote language. Physical approach now requires suitable presence cues. The four-case comparison covers communication with and without physical access, and reports regressions against this item.
+
+## Comparison verification
+
+The first donor integration at `fe8968e7f29f45f73e902e93d3ac883912316507` passed Actions run 34448886046. Subsequent comparison-driven changes have 220 passing local tests before publication. Exact-head CI additionally publishes `component-comparison.json`; acceptance scenarios are synthetic and do not close IMP-015 independent believability assessment. IMP-019 remains open for general navigation, arbitrary grounded planning, and richer world adapters.

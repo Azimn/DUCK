@@ -91,3 +91,7 @@ Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and 
 ## Prior-work reuse integration
 
 `docs/DONOR_REUSE_v0.10.md` records pinned TinyPersonaEngine sensory-access and Jelly room/host donors. The public host supports native room ticks and bounded elapsed-time catch-up with preserved time debt, spatial access, actual object consequences, and transactional room state. This is a bounded simulated room, not a full embodiment or human-believability result.
+
+## Component comparison
+
+`docs/COMPONENT_SELECTION_v0.10.md` and `duck.component_comparison` record scoped comparisons of spatial access, attention relevance, catch-up arithmetic, and social action availability. The selected implementation refreshes configured-room decisions through the standard heartbeat, integrates scheduled world changes, and retains DUCK transactional persistence. The comparison reports correctness and diagnostic timing, not overall human-likeness or global optimality.

@@ -20,10 +20,15 @@ class BodyState:
     sleep_pressure: float = 0.10
     pain_load: float = 0.0
     thermal_stress: float = 0.0
+    autonomic_arousal: float = 0.05
+    exertion_load: float = 0.0
     last_rest_tick: int = -1
 
     def __post_init__(self):
-        for name in ("energy_reserve", "fatigue_load", "sleep_pressure", "pain_load", "thermal_stress"):
+        for name in (
+            "energy_reserve", "fatigue_load", "sleep_pressure", "pain_load",
+            "thermal_stress", "autonomic_arousal", "exertion_load",
+        ):
             setattr(self, name, unit(getattr(self, name)))
 
     def to_dict(self):
@@ -47,6 +52,10 @@ class BodyDynamics:
         body.energy_reserve = unit(body.energy_reserve - 0.006 * elapsed)
         body.fatigue_load = unit(body.fatigue_load + 0.004 * elapsed)
         body.sleep_pressure = unit(body.sleep_pressure + 0.003 * elapsed)
+        # Acute mobilization and exertion decay toward baseline instead of becoming
+        # permanent motivational variables.
+        body.autonomic_arousal = unit(0.05 + (body.autonomic_arousal - 0.05) * (0.90 ** elapsed))
+        body.exertion_load = unit(body.exertion_load * (0.82 ** elapsed))
 
     def rest(self, body: BodyState, *, tick: int, effectiveness: float = 1.0) -> None:
         if body.last_rest_tick == tick:
@@ -55,7 +64,23 @@ class BodyDynamics:
         body.energy_reserve = unit(body.energy_reserve + 0.035 * scale)
         body.fatigue_load = unit(body.fatigue_load - 0.045 * scale)
         body.sleep_pressure = unit(body.sleep_pressure - 0.035 * scale)
+        body.autonomic_arousal = unit(body.autonomic_arousal - 0.08 * scale)
+        body.exertion_load = unit(body.exertion_load - 0.12 * scale)
         body.last_rest_tick = tick
+
+    def exert(self, body: BodyState, *, effort: float, success: float = 1.0) -> None:
+        """Apply realized physical work; failed attempts can still be costly."""
+        effort = unit(effort)
+        success = unit(success)
+        attempted = effort * (0.75 + 0.25 * success)
+        body.energy_reserve = unit(body.energy_reserve - 0.030 * attempted)
+        body.fatigue_load = unit(body.fatigue_load + 0.024 * attempted)
+        body.exertion_load = unit(body.exertion_load + 0.20 * attempted)
+
+    def mobilize(self, body: BodyState, *, threat_relevance: float, arousal: float) -> None:
+        """Let appraisal alter physiology without making affect and body identical."""
+        pressure = unit(0.7 * unit(threat_relevance) + 0.3 * unit(arousal))
+        body.autonomic_arousal = unit(body.autonomic_arousal + 0.10 * pressure)
 
 
 @dataclass

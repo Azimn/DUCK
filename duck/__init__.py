@@ -5,6 +5,8 @@ from .affordances_v010 import Affordance, AffordanceSource
 from .body_v010 import BodyState, RegulatoryState
 from .perception_v010 import Appraisal, FactObservation, Modality, Percept, SensoryEvidence
 from .strategy_v010 import CognitiveRegime
+from .room_v010 import RoomObject, RoomState
+from .spatial_v010 import ObserverState, Vec3
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
 from .endogenous import (
     ENDOGENOUS_STATE_SCHEMA,
@@ -76,6 +78,7 @@ from .subjective import (
 LivingDuckV010 = LivingDuck
 
 __all__ = [
+    "RoomObject", "RoomState", "ObserverState", "Vec3",
     "Affordance", "AffordanceSource", "Appraisal", "BodyState", "CognitiveRegime",
     "FactObservation", "Modality", "Percept", "RegulatoryState", "SensoryEvidence",
     "AccessibleTendency",

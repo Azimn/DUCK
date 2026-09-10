@@ -32,9 +32,9 @@ class Affordance:
             object.__setattr__(self, name, unit(getattr(self, name)))
 
 
-def grounded_affordances(percept, supplied=()):
+def grounded_affordances(percept, supplied=(), *, infer_social=True):
     rows = [Affordance("wait", AffordanceSource.INTERNAL), Affordance("rest", AffordanceSource.BODY)]
-    if percept.confidence >= 0.5 and ("person_present" in percept.features or
+    if infer_social and percept.confidence >= 0.5 and ("person_present" in percept.features or
                                      percept.source not in {"self", "world", "system", ""}):
         rows.extend(Affordance(action, AffordanceSource.SOCIAL, target=percept.source,
                                social_exposure=0.4) for action in ("respond", "ask", "approach", "step_back"))

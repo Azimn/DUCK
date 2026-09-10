@@ -78,19 +78,23 @@ class LivingDuck(PredictiveLivingDuck):
         evidence = self.perception_adapter.evidence(event)
         return self._run_percept(evidence, legacy_event=event, allow_inner_speech=allow_inner_speech)
 
-    def perceive(self, evidence: SensoryEvidence, *, affordances=(), allow_inner_speech=True):
+    def perceive(self, evidence: SensoryEvidence, *, affordances=(), allow_inner_speech=True, infer_social=True):
         if not isinstance(evidence, SensoryEvidence):
             raise TypeError("perceive requires SensoryEvidence")
-        return self._run_percept(evidence, affordances=affordances,
+        return self._run_percept(evidence, affordances=affordances, infer_social=infer_social,
                                  allow_inner_speech=allow_inner_speech)
 
-    def _run_percept(self, evidence, *, legacy_event=None, affordances=(), allow_inner_speech=True):
+    def _run_percept(self, evidence, *, legacy_event=None, affordances=(), allow_inner_speech=True, infer_social=True):
         percept = perceive(evidence)
-        available = None if legacy_event is not None else grounded_affordances(percept, affordances)
+        available = None if legacy_event is not None else grounded_affordances(percept, affordances, infer_social=infer_social)
         self.last_percept = percept
         relation = self.state.relationship(percept.source)
         memories = self.state.retrieve_memories(percept.content, tags=percept.features,
                                                people=(percept.source,), top_k=5)
+        # Familiarity is interpreted from the subject's memory, not host novelty.
+        if "object_present" in percept.features and not any(m.text == percept.content for m in self.state.memories):
+            percept = replace(percept, features=(*percept.features, "unfamiliar_object"))
+        self.last_percept = percept
         resolutions = self.expectation_ledger.observe_facts(percept.observed_facts, tick=self.state.tick + 1)
         # Conflicting apparent facts stay uncertain, including in belief revision.
         values = {}

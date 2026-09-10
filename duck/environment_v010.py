@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Mapping
 
 from .living import WorldEvent
+from .room_v010 import RoomState
 
 ENVIRONMENT_STATE_SCHEMA = "micropsi-duck.environment.v1"
 MAX_SCHEDULED_WORLD_EVENTS = 128
@@ -81,6 +82,7 @@ class EnvironmentDynamicsState:
     event_counter: int = 0
     world_facts: dict[str, str] = field(default_factory=dict)
     scheduled: list[ScheduledWorldEvent] = field(default_factory=list)
+    room: RoomState | None = None
 
     def normalize(self) -> None:
         if self.schema_version != ENVIRONMENT_STATE_SCHEMA:
@@ -159,6 +161,7 @@ class EnvironmentDynamicsState:
             "event_counter": self.event_counter,
             "world_facts": dict(self.world_facts),
             "scheduled": [record.to_dict() for record in self.scheduled],
+            "room": self.room.to_dict() if self.room is not None else None,
         }
 
     @classmethod
@@ -171,6 +174,7 @@ class EnvironmentDynamicsState:
                 for key, value in data.get("world_facts", {}).items()
             },
             scheduled=[ScheduledWorldEvent.from_dict(row) for row in data.get("scheduled", ())],
+            room=RoomState.from_dict(data["room"]) if data.get("room") is not None else None,
         )
         state.normalize()
         return state

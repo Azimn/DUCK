@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import json
+import math
 from pathlib import Path
 
 from .authoritative_organism_v010 import LivingDuck
@@ -17,6 +18,9 @@ from .language import DeterministicExpression, deterministic_stance
 from .motivated_cognition import MotivatedCognitionState
 from .persistence_v010 import SNAPSHOT_SCHEMA, SnapshotStore
 from .subjective import PrivateInteriorState
+from .room_v010 import RoomState, RoomWorld
+from .spatial_v010 import AttentionSelector, PerceptionFilter
+from .perception_v010 import Modality, SensoryEvidence
 
 
 class PersistentDuckHostCurrent(PersistentDuckHostV010):
@@ -381,6 +385,75 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
             steps.append(step)
         self.save()
         return steps
+
+    def configure_room(self, room: RoomState) -> None:
+        """Attach a bounded host world without writing any subject beliefs."""
+        self.environment.room = RoomState.from_dict(room.to_dict())
+        self.save()
+
+    def _room_tick(self, *, allow_inner_speech=True, execute_actions=True):
+        if self.environment.room is None:
+            raise RuntimeError("configure a room before running native room life")
+        world = RoomWorld(self.environment.room)
+        world.advance()
+        # Ambient temperature changes the body, which projects its own sensations.
+        self.duck.body.thermal_stress = min(1.0, abs(world.state.temperature - .5) * 2.0)
+        observer = world.observer(self.duck.state.subject_id)
+        accessible = PerceptionFilter().filter(world.packet(observer.character_id), observer)
+        # One focus produces one cognitive cycle and one action, not one per sense.
+        selected = AttentionSelector().select(accessible, capacity=1)
+        if selected:
+            focus = selected[0]
+            evidence = focus.evidence
+            affordances = world.affordances(focus.stimulus_id)
+        else:
+            focus = None
+            evidence = SensoryEvidence(Modality.INTEROCEPTION, "self", "", strength=.1)
+            affordances = ()
+        step = self.duck.perceive(evidence, affordances=affordances,
+                                 infer_social=False, allow_inner_speech=allow_inner_speech)
+        self._capture_private_interior(step)
+        pending = self.duck.state.pending_action
+        result = None
+        if execute_actions and pending is not None:
+            result = world.execute(pending.name, pending.target)
+            self.duck.resolve_outcome(pending.action_id, success=result[0], valence=result[1], description=result[2])
+        self._append_journal({"type": "room_tick", "tick": step.tick,
+                              "focus": focus.stimulus_id if focus else None,
+                              "accessible_count": len(accessible),
+                              "selected_action": step.selected_action,
+                              "action_id": step.action_id,
+                              "outcome": result})
+        return step
+
+    def room_heartbeat(self, count=1, *, allow_inner_speech=True, execute_actions=True):
+        """Refresh sensory access and affordances before every native decision."""
+        if not isinstance(count, int) or not 0 <= count <= 1000:
+            raise ValueError("room heartbeat count must be between zero and 1000")
+        steps = [self._room_tick(allow_inner_speech=allow_inner_speech, execute_actions=execute_actions)
+                 for _ in range(count)]
+        self.save()
+        return steps
+
+    def catch_up_room(self, elapsed_seconds, *, max_ticks=288, allow_inner_speech=False):
+        """Adapt Jelly's bounded catch-up while preserving unapplied elapsed time."""
+        room = self.environment.room
+        if room is None:
+            raise RuntimeError("configure a room first")
+        if not math.isfinite(elapsed_seconds) or elapsed_seconds < 0 or not isinstance(max_ticks, int) or not 1 <= max_ticks <= 1000:
+            raise ValueError("catch-up requires finite nonnegative time and a bounded tick limit")
+        total = room.catchup_remainder + elapsed_seconds
+        if not math.isfinite(total):
+            raise ValueError("elapsed time overflow")
+        requested = int(total // room.tick_seconds)
+        applied = min(requested, max_ticks)
+        # The single host save commits physical, cognitive, room and time state.
+        for _ in range(applied):
+            self._room_tick(allow_inner_speech=allow_inner_speech)
+        room.catchup_remainder = total - applied * room.tick_seconds
+        self.save()
+        return {"requested_ticks": requested, "applied_ticks": applied,
+                "remaining_seconds": room.catchup_remainder}
 
     def _eligible_causal_contrast_count(self) -> int:
         count = 0

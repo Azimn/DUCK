@@ -87,3 +87,7 @@ Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and 
 ## Evidence and embodiment contract
 
 `EMBODIED_PERCEPTION_v0.10.md` governs current native sensory evidence, subject-dependent appraisal, physical body and regulatory authority, grounded affordances, contextual strategy learning, and the deterministic expression boundary. It explicitly distinguishes the remaining WorldEvent compatibility path.
+
+## Prior-work reuse integration
+
+`docs/DONOR_REUSE_v0.10.md` records pinned TinyPersonaEngine sensory-access and Jelly room/host donors. The public host supports native room ticks and bounded elapsed-time catch-up with preserved time debt, spatial access, actual object consequences, and transactional room state. This is a bounded simulated room, not a full embodiment or human-believability result.

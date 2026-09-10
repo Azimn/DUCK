@@ -20,7 +20,7 @@ class Modality(str, Enum):
 
 
 OBSERVABLE_FEATURES = frozenset({
-    "loud_voice", "approaching_person", "raised_hand", "smile", "offered_object",
+    "object_present", "loud_voice", "approaching_person", "raised_hand", "smile", "offered_object",
     "unfamiliar_object", "blocked_path", "spoken_question", "person_present",
     "receding_person", "impact", "dim_light", "tired_sensation", "warm_sensation",
 })

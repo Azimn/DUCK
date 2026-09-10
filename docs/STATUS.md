@@ -147,3 +147,7 @@ The current public organism now supports native `SensoryEvidence`, personally co
 `docs/EMBODIED_PERCEPTION_v0.10.md` defines these contracts and their limits. Legacy WorldEvent semantic hints and action catalogs remain explicit compatibility adapters. Contextual causal transition tables, fully grounded native heartbeat scheduling, and independent human believability assessment are not claimed complete.
 
 Implementation verification: commit `43421e53c682ac9571f0e2fa9a6580a06eb77391` passed [Actions run 34445348762](https://github.com/Azimn/DUCK/actions/runs/34445348762). Both Python versions passed the configured evaluations, simulations, and 203-test suite; the 200-tick targeted discriminator also passed. A development 10,000-tick attempt produced no completed report and is not counted as evidence.
+
+## Prior-work reuse integration
+
+`docs/DONOR_REUSE_v0.10.md` records pinned TinyPersonaEngine sensory-access and Jelly room/host donors. The public host supports native room ticks and bounded elapsed-time catch-up with preserved time debt, spatial access, actual object consequences, and transactional room state. This is a bounded simulated room, not a full embodiment or human-believability result.

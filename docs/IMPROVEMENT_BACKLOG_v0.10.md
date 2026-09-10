@@ -511,15 +511,15 @@ The targeted social-history scenario now enacts twenty supportive or adverse enc
 
 ## IMP-016 Duplicate adaptive action-learning authority
 
-Status: VERIFYING. Priority: P1. Current v0.10 inherited AdaptiveSelfCore observation, action bias, and outcome learning alongside motivated strategy learning. Historical override seams now disable all three in current v0.10 while preserving the serialized substrate and historical behavior. Closure requires the paired adaptive-state intervention and historical-learning checks in `tests/test_learning_authority_v010.py`, plus the configured CI gates.
+Status: FIXED. Priority: P1. Current v0.10 inherited AdaptiveSelfCore observation, action bias, and outcome learning alongside motivated strategy learning. Historical override seams now disable all three in current v0.10 while preserving the serialized substrate and historical behavior. Closure requires the paired adaptive-state intervention and historical-learning checks in `tests/test_learning_authority_v010.py`, plus the configured CI gates.
 
 ## IMP-017 Perception conflates evidence, truth, and appraisal
 
-Status: VERIFYING for the native path. Priority: P1. Native typed evidence now drives subject-conditioned appraisal and direct observation-based belief and expectation integration. Historical cognition receives no world facts, removing temporary write/clear authority. Host environment truth remains independent. Legacy semantic hints remain a declared compatibility boundary, not a claim of raw sensory understanding. Closure of this bounded migration requires uncertainty, contradiction, hidden-input, same-cycle, and paired-history tests in `tests/test_embodied_perception_v010.py`.
+Status: FIXED for the scoped native path. Priority: P1. Native typed evidence now drives subject-conditioned appraisal and direct observation-based belief and expectation integration. Historical cognition receives no world facts, removing temporary write/clear authority. Host environment truth remains independent. Legacy semantic hints remain a declared compatibility boundary, not a claim of raw sensory understanding. Closure of this bounded migration requires uncertainty, contradiction, hidden-input, same-cycle, and paired-history tests in `tests/test_embodied_perception_v010.py`.
 
 ## IMP-018 Body and need semantics are mixed
 
-Status: VERIFYING. Priority: P1. Physical body and uniformly directed regulatory pressure now have versioned transactional components. The historical needs API writes through a compatibility view. Rest changes body state and cannot receive duplicate same-tick credit. Closure requires migration, body authority after restart, new-component crash recovery, and rest pressure reduction checks. Detailed injury and thermal dynamics remain outside this milestone.
+Status: FIXED. Priority: P1. Physical body and uniformly directed regulatory pressure now have versioned transactional components. The historical needs API writes through a compatibility view. Rest changes body state and cannot receive duplicate same-tick credit. Closure requires migration, body authority after restart, new-component crash recovery, and rest pressure reduction checks. Detailed injury and thermal dynamics remain outside this milestone.
 
 ## IMP-019 Candidate availability is ungrounded
 
@@ -527,8 +527,10 @@ Status: IN PROGRESS. Priority: P1. Native decisions now accept bounded affordanc
 
 ## IMP-020 Deterministic expression depends on exact private wording
 
-Status: VERIFYING. Priority: P2. A simulator-local qualitative stance now controls the built-in deterministic renderer. Model packets remain prose only. Closure requires the private-rewording invariance test and the existing social-history discriminator with its original behavioral acceptance condition.
+Status: FIXED. Priority: P2. A simulator-local qualitative stance now controls the built-in deterministic renderer. Model packets remain prose only. Closure requires the private-rewording invariance test and the existing social-history discriminator with its original behavioral acceptance condition.
 
 ## Evidence for the embodiment increment
 
-The implementation contract is `docs/EMBODIED_PERCEPTION_v0.10.md`. New causal tests and the configured CI gates are being run against this increment. The tests for public action learning now require motivated strategy updates and frozen adaptive state, and current fact-memory tests require first-person perceptual provenance. These are intentional contract migrations, not removal of behavioral requirements. IMP-015 remains OPEN regardless of implementation test results.
+The implementation contract is `docs/EMBODIED_PERCEPTION_v0.10.md`. The implementation commit `43421e53c682ac9571f0e2fa9a6580a06eb77391` passed GitHub Actions run [34445348762](https://github.com/Azimn/DUCK/actions/runs/34445348762), including all 203 tests on Python 3.11 and 3.12 and the targeted discriminator. IMP-016, IMP-017 (scoped native path), IMP-018, and IMP-020 meet their stated bounded acceptance criteria. IMP-019 remains IN PROGRESS because continuing native affordance refresh and planner grounding are separate work. The tests for public action learning now require motivated strategy updates and frozen adaptive state, and current fact-memory tests require first-person perceptual provenance. These are intentional contract migrations, not removal of behavioral requirements. IMP-015 remains OPEN regardless of implementation test results.
+
+A development 10,000-tick discriminator attempt was interrupted before producing a report. No completed 10,000-tick result is claimed for this increment. The verified CI discriminator uses seed 91 and 200 ticks.

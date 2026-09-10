@@ -115,6 +115,7 @@ def test_body_regulation_and_action_context_survive_restart(tmp_path):
     host.duck.body.pain_load = .4
     host.duck.regulatory.affiliation_need = .7
     step = host.observe_evidence(evidence())
+    assert step.selected_action == "rest"
     before = deepcopy(host.duck.body.to_dict())
     pending = dict(host.duck.cognitive_state.pending_strategy_context)
     reopened = PersistentDuckHost.open(tmp_path)

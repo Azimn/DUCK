@@ -191,6 +191,13 @@ class LivingDuck(PredictiveLivingDuck):
         super().resolve_outcome(action_id, **kwargs)
         self.cognitive_state.pending_strategy_context = {}
 
+    def _motive_action_weight(self, action, event):
+        # An available rest affordance is relevant to an energy motive even when
+        # external sensory evidence contains no authored "rest" tag.
+        if self._active_affordances is not None and action == "rest":
+            event = replace(event, tags=(*event.tags, "rest"))
+        return super()._motive_action_weight(action, event)
+
     def _affordance_cost(self, affordance):
         reg = self.regulatory_state
         modulation = self.current_cycle.modulation if self.current_cycle else self._idle_modulation()

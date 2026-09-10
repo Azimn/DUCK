@@ -478,7 +478,7 @@ The strategy learner stored negative experience, but the v0.10 candidate and rou
 **Status:** FIXED
 **Priority:** P1
 
-Private cognition exceptions or invalid return contracts previously escaped the step after canonical processing. The current runtime now uses its deterministic private voice and records only the exception type in diagnostics. The current world-authority wrapper clears compatibility truth in a finally block. The targeted degradation scenario and regression tests verify continued action without successful language services.
+Private cognition exceptions or invalid return contracts previously escaped the step after canonical processing. The current runtime now uses its deterministic private voice and records only the exception type in diagnostics. The current evidence boundary prevents facts from entering historical world-truth writes; no per-step clear wrapper remains. The targeted degradation scenario and regression tests verify continued action without successful language services.
 
 ## IMP-014 Pending-action tag type changes after restart
 
@@ -493,9 +493,9 @@ IMP-004 now has internal provenance projection, quoted external perception, know
 
 IMP-006 now supports bounded distinct-cue convergence, duplicate/cycle resistance, deterministic ordering, and a small parameter-neighborhood check. It remains IN PROGRESS pending broader retrieval quality and hub-bias evidence.
 
-IMP-011 now has a runnable targeted profile and JSON failure intake. It remains IN PROGRESS until the full documented release profile and broader failure mapping exist. IMP-008 also remains open to stronger independent evaluation. IMP-007 is deferred under the goal-alignment policy; its risk is retained, not erased.
+IMP-011 now has a runnable targeted profile and JSON failure intake. It remains IN PROGRESS until the full documented release profile and broader failure mapping exist. IMP-008 also remains open to stronger independent evaluation. IMP-007 now has bounded strategy-level context as a prerequisite. Causal-transition context remains deferred; its risk is retained, not erased.
 
-The deterministic public renderer now uses approved relationship impressions without automatically publishing a private memory. Actual language-model output leakage and model-swap voice fidelity still require direct evaluation.
+The deterministic public renderer now uses a local qualitative relationship stance without automatically publishing a private memory. Actual language-model output leakage and model-swap voice fidelity still require direct evaluation.
 
 ## Historical provenance remediation
 
@@ -507,3 +507,28 @@ The baseline evaluation and simulation still imported the moving public host, an
 **Priority:** P1
 
 The targeted social-history scenario now enacts twenty supportive or adverse encounters, allows thirty quiet ticks, and presents the same greeting. It checks whether public expression differs and whether one contrary event leaves the established relationship distinction intact. This demonstrates a narrow history-to-expression path through the deterministic renderer. It does not establish recognizable canonical characters, natural dialogue, model-swap voice fidelity, or lifelong development. Close only after representative blinded interaction evaluation against the declared goal rubric; automated local scores cannot close this item.
+
+
+## IMP-016 Duplicate adaptive action-learning authority
+
+Status: VERIFYING. Priority: P1. Current v0.10 inherited AdaptiveSelfCore observation, action bias, and outcome learning alongside motivated strategy learning. Historical override seams now disable all three in current v0.10 while preserving the serialized substrate and historical behavior. Closure requires the paired adaptive-state intervention and historical-learning checks in `tests/test_learning_authority_v010.py`, plus the configured CI gates.
+
+## IMP-017 Perception conflates evidence, truth, and appraisal
+
+Status: VERIFYING for the native path. Priority: P1. Native typed evidence now drives subject-conditioned appraisal and direct observation-based belief and expectation integration. Historical cognition receives no world facts, removing temporary write/clear authority. Host environment truth remains independent. Legacy semantic hints remain a declared compatibility boundary, not a claim of raw sensory understanding. Closure of this bounded migration requires uncertainty, contradiction, hidden-input, same-cycle, and paired-history tests in `tests/test_embodied_perception_v010.py`.
+
+## IMP-018 Body and need semantics are mixed
+
+Status: VERIFYING. Priority: P1. Physical body and uniformly directed regulatory pressure now have versioned transactional components. The historical needs API writes through a compatibility view. Rest changes body state and cannot receive duplicate same-tick credit. Closure requires migration, body authority after restart, new-component crash recovery, and rest pressure reduction checks. Detailed injury and thermal dynamics remain outside this milestone.
+
+## IMP-019 Candidate availability is ungrounded
+
+Status: IN PROGRESS. Priority: P1. Native decisions now accept bounded affordances with costs and targets, restrict the executive to available actions, and persist the selected target. The legacy action catalog remains for WorldEvent and quiet scheduler compatibility. The native scoped path is covered by unavailable-proposal, target-persistence, and effort-sensitivity checks. Broad closure additionally requires host-derived refreshed affordances during continuing native life, including plan and body constraints.
+
+## IMP-020 Deterministic expression depends on exact private wording
+
+Status: VERIFYING. Priority: P2. A simulator-local qualitative stance now controls the built-in deterministic renderer. Model packets remain prose only. Closure requires the private-rewording invariance test and the existing social-history discriminator with its original behavioral acceptance condition.
+
+## Evidence for the embodiment increment
+
+The implementation contract is `docs/EMBODIED_PERCEPTION_v0.10.md`. New causal tests and the configured CI gates are being run against this increment. The tests for public action learning now require motivated strategy updates and frozen adaptive state, and current fact-memory tests require first-person perceptual provenance. These are intentional contract migrations, not removal of behavioral requirements. IMP-015 remains OPEN regardless of implementation test results.

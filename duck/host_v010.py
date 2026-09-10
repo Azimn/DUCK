@@ -166,7 +166,7 @@ class PersistentDuckHostV010:
             selected_action=step.selected_action,
             character_name=self.duck.state.name,
         )
-        response = self.expression.render(packet)
+        response = self._render_expression(packet, speaker)
         self._append_journal(
             {
                 "type": "interaction",
@@ -181,6 +181,9 @@ class PersistentDuckHostV010:
         )
         self.save()
         return InteractionResultV010(response, step.selected_action, step.action_id, step.tick)
+
+    def _render_expression(self, packet, speaker):
+        return self.expression.render(packet)
 
     def observe(self, event: WorldEvent, *, allow_inner_speech: bool = True) -> LivingStep:
         step = self.duck.step(event, allow_inner_speech=allow_inner_speech)

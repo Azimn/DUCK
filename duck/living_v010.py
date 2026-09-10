@@ -88,6 +88,16 @@ class LivingDuck(PlanningLivingDuck):
             cognition=DeterministicInnerVoice(),
         )
 
+    def _adaptive_observe(self, text: str, tags: Iterable[str]) -> None:
+        """Preserve historical serialization without updating its latent learner."""
+        return None
+
+    def _adaptive_bias(self, action: str, tags: Iterable[str]) -> float:
+        return 0.0
+
+    def _adaptive_learn(self, action: str, tags: Iterable[str], reward: float) -> None:
+        return None
+
     @property
     def cognitive_state(self) -> MotivatedCognitionState:
         return self.control.state
@@ -452,9 +462,9 @@ class LivingDuck(PlanningLivingDuck):
         rows: list[ActionCandidate] = []
         for action, utility in base.items():
             motive_term = self._motive_action_weight(action, event)
-            learned = self.cognitive_state.strategy_success.get(action, 0.0)
+            learned = self._learned_strategy_value(action)
             learned_term = learned * 0.20 * modulation.familiar_strategy_bias
-            adaptive = self.state.adaptive.bias(action, event.tags) * 0.18
+            adaptive = self._adaptive_bias(action, event.tags) * 0.18
             rows.append(
                 ActionCandidate(
                     action,
@@ -544,6 +554,12 @@ class LivingDuck(PlanningLivingDuck):
         score -= min(0.12, concern.attempts * 0.03)
         return score
 
+    def _learned_strategy_value(self, action: str) -> float:
+        return self.cognitive_state.strategy_success.get(action, 0.0)
+
+    def _outcome_regime(self, action_id: str):
+        return None
+
     def _route_score(self, kind: str, route: str) -> float:
         features = self._ROUTE_FEATURES.get(route, {})
         if not features:
@@ -577,7 +593,7 @@ class LivingDuck(PlanningLivingDuck):
         score -= (1.0 - modulation.resolution) * 0.34 * complexity
         score += modulation.interruption_sensitivity * 0.65 * safety
         score -= modulation.interruption_sensitivity * 0.35 * novelty
-        learned = self.cognitive_state.strategy_success.get(action, 0.0)
+        learned = self._learned_strategy_value(action)
         score += learned * 0.24 * modulation.familiar_strategy_bias
         return score
 
@@ -791,4 +807,5 @@ class LivingDuck(PlanningLivingDuck):
                 valence,
                 semantic_tags,
                 self.state.tick,
+                regime=self._outcome_regime(action_id),
             )

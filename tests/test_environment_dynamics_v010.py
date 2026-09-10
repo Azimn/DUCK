@@ -93,7 +93,7 @@ def test_perceived_world_fact_updates_environment_truth_and_subject_belief_separ
     assert host.duck.state.world_facts == {}
     assert host.duck.state.beliefs["north_lamp"].text == "on"
     assert any(
-        memory.text == "on" and "world_fact" in memory.tags
+        memory.text == "north_lamp appeared to be on." and "perceived_fact" in memory.tags
         for memory in host.duck.state.memories
     )
 

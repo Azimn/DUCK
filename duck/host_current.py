@@ -6,12 +6,14 @@ import json
 from pathlib import Path
 
 from .authoritative_organism_v010 import LivingDuck
+from .body_v010 import BodyState, RegulatoryState
 from .causal_v010 import CausalSequenceState, PLAN_START
 from .endogenous import EndogenousDynamicsState
 from .environment_v010 import EnvironmentDynamicsState, ScheduledWorldEvent
 from .expectations_v010 import ExpectationLedgerState
 from .host_v010 import InteractionResultV010, PersistentDuckHostV010
 from .living import SubjectState, WorldEvent
+from .language import DeterministicExpression, deterministic_stance
 from .motivated_cognition import MotivatedCognitionState
 from .persistence_v010 import SNAPSHOT_SCHEMA, SnapshotStore
 from .subjective import PrivateInteriorState
@@ -47,6 +49,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
         self.expectations_path = self.root / "expectations_v010.json"
         self.causal_path = self.root / "causal_v010.json"
         self.environment_path = self.root / "environment_v010.json"
+        self.body_path = self.root / "body_v010.json"
+        self.regulatory_path = self.root / "regulatory_v010.json"
         self.environment = environment
         self.snapshot_store = SnapshotStore(self.root)
         self.snapshot_generation = 0
@@ -110,6 +114,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 payloads.get("environment_v010.json", {})
             )
             private_payload = payloads.get("private_interior.json")
+            body_payload = payloads.get("body_v010.json")
+            regulatory_payload = payloads.get("regulatory_v010.json")
         else:
             state_payload = cls._legacy_json(state_path)
             state = (
@@ -153,6 +159,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 else EnvironmentDynamicsState()
             )
             private_payload = cls._legacy_json(root_path / "private_interior.json")
+            body_payload = cls._legacy_json(root_path / "body_v010.json")
+            regulatory_payload = cls._legacy_json(root_path / "regulatory_v010.json")
 
         cls._migrate_subject_world_facts(state, environment_state)
         host = cls(
@@ -165,6 +173,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 endogenous_state=endogenous_state,
                 expectation_state=expectation_state,
                 causal_state=causal_state,
+                body_state=BodyState.from_dict(body_payload) if body_payload is not None else None,
+                regulatory_state=RegulatoryState.from_dict(regulatory_payload) if regulatory_payload is not None else None,
             ),
             environment_state=environment_state,
             expression=expression,
@@ -232,6 +242,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
     def _snapshot_payloads(self) -> dict[str, object]:
         payloads: dict[str, object] = {
             "subject.json": self.duck.state.to_dict(),
+            "body_v010.json": self.duck.body.to_dict(),
+            "regulatory_v010.json": self.duck.regulatory_state.to_dict(),
             "cognition_v010.json": self.duck.cognitive_state.to_dict(),
             "endogenous_v010.json": self.duck.endogenous_state.to_dict(),
             "expectations_v010.json": self.duck.expectation_state.to_dict(),
@@ -251,6 +263,8 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
 
         paths = {
             "subject.json": self.state_path,
+            "body_v010.json": self.body_path,
+            "regulatory_v010.json": self.regulatory_path,
             "cognition_v010.json": self.cognitive_path,
             "endogenous_v010.json": self.endogenous_path,
             "expectations_v010.json": self.expectations_path,
@@ -294,6 +308,22 @@ class PersistentDuckHostCurrent(PersistentDuckHostV010):
                 "action_id": step.action_id,
             }
         )
+        self.save()
+        return step
+
+    def _render_expression(self, packet, speaker):
+        if type(self.expression) is DeterministicExpression:
+            stance = deterministic_stance(self.duck.state.relationship(speaker))
+            return self.expression.render_with_stance(packet, stance)
+        return self.expression.render(packet)
+
+    def observe_evidence(self, evidence, *, affordances=(), allow_inner_speech=True):
+        """Deliver apparent evidence without mutating authoritative environment facts."""
+        step = self.duck.perceive(evidence, affordances=affordances, allow_inner_speech=allow_inner_speech)
+        self._capture_private_interior(step)
+        self._append_journal({"type": "sensory_evidence", "tick": step.tick,
+                              "evidence": asdict(evidence), "selected_action": step.selected_action,
+                              "action_id": step.action_id})
         self.save()
         return step
 

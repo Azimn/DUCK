@@ -85,7 +85,7 @@ def test_world_truth_is_not_automatically_subject_belief(tmp_path):
     assert host.world_fact("door") == "the blue door is unlocked"
     assert host.duck.state.world_facts == {}
     assert host.duck.state.beliefs["door"].stance is BeliefStance.TRUE
-    assert any(memory.provenance.value == "world_fact" for memory in host.duck.state.memories)
+    assert any(memory.provenance.value == "first_person" and "perceived_fact" in memory.tags for memory in host.duck.state.memories)
 
 
 def test_broken_commitment_changes_later_first_person_state():
@@ -102,9 +102,8 @@ def test_positive_outcome_changes_learned_action_association():
     duck = LivingDuck(SubjectState.create("Duck", "learning"))
     step = duck.step(WorldEvent("object", "world", "A strange glorp appears.", ("novel", "glorp"), 0.0, 0.5), allow_inner_speech=False)
     duck.resolve_outcome(step.action_id, success=1.0, valence=0.8, description="That choice worked well.", tags=("glorp",))
-    learned = duck.state.adaptive.action_associations
-    assert "glorp" in learned
-    assert learned["glorp"][step.selected_action] > 0.0
+    assert duck.cognitive_state.strategy_success[step.selected_action] > 0.0
+    assert duck.state.adaptive.action_associations == {}
 
 
 def test_language_lesion_preserves_behavior_and_learning():
@@ -113,7 +112,8 @@ def test_language_lesion_preserves_behavior_and_learning():
     assert step.inner_cognition.thought is None
     assert step.selected_action
     duck.resolve_outcome(step.action_id, success=0.9, valence=0.6, description="The action kept me safe.", tags=("threat",))
-    assert duck.state.adaptive.action_associations["threat"][step.selected_action] > 0
+    assert duck.cognitive_state.strategy_success[step.selected_action] > 0
+    assert duck.state.adaptive.action_associations == {}
 
 
 def test_endogenous_heartbeat_can_generate_unprompted_action():

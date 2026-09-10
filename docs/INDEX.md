@@ -83,3 +83,7 @@ Vision, audio, touch, proprioception, interoception, avatars, robotics, XR, and 
 ## Behavior-first evaluation
 
 `BEHAVIOR_FIRST_v0.10.md` defines goal alignment, the targeted executable discriminator, donor scope, and the limits of automated believability claims.
+
+## Evidence and embodiment contract
+
+`EMBODIED_PERCEPTION_v0.10.md` governs current native sensory evidence, subject-dependent appraisal, physical body and regulatory authority, grounded affordances, contextual strategy learning, and the deterministic expression boundary. It explicitly distinguishes the remaining WorldEvent compatibility path.

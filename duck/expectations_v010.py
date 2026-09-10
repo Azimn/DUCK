@@ -437,13 +437,34 @@ class ExpectationLedgerState:
 
         if not event.perceived or not event.world_facts:
             return ()
-        observed = {str(key): str(value) for key, value in event.world_facts}
+        return self._evaluate_observed(
+            {str(key): (str(value), event.source) for key, value in event.world_facts}, current_tick)
+
+    def observe_facts(self, observations, *, tick: int) -> tuple[ExpectationResolution, ...]:
+        """Only sufficiently reliable, unambiguous apparent facts resolve a prediction.
+
+        Reliability below 0.5 remains uncertain evidence. Conflicting simultaneous
+        observations do not get arbitrary last-writer authority.
+        """
+        grouped = {}
+        for observation in observations:
+            if observation.reliability >= 0.5:
+                grouped.setdefault(observation.key, []).append(observation)
+        observed = {}
+        for key, rows in grouped.items():
+            if len({_norm(row.apparent_value) for row in rows}) == 1:
+                row = max(rows, key=lambda row: (row.reliability, row.source))
+                observed[key] = (row.apparent_value, row.source)
+        return self._evaluate_observed(observed, tick)
+
+    def _evaluate_observed(self, observed, current_tick):
         tick = max(0, int(current_tick))
         resolutions: list[ExpectationResolution] = []
         updated: list[ExpectationRecord] = []
         learned: list[tuple[str, str]] = []
         for record in self.records:
-            actual = observed.get(record.fact_key)
+            evidence = observed.get(record.fact_key)
+            actual = evidence[0] if evidence is not None else None
             if record.status not in _ACTIVE_STATUSES or actual is None:
                 updated.append(record)
                 continue
@@ -454,7 +475,7 @@ class ExpectationLedgerState:
                 updated_tick=tick,
                 evidence_tick=tick,
                 observed_value=actual,
-                evidence_source=event.source,
+                evidence_source=evidence[1],
             )
             updated.append(resolved)
             learned.append((record.fact_key, outcome))

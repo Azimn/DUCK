@@ -1,6 +1,10 @@
 """MicroPsiDUCK v0.10: motivated cognition with bounded first-person access."""
 
 from .access import SubjectAccessFirewall
+from .affordances_v010 import Affordance, AffordanceSource
+from .body_v010 import BodyState, RegulatoryState
+from .perception_v010 import Appraisal, FactObservation, Modality, Percept, SensoryEvidence
+from .strategy_v010 import CognitiveRegime
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
 from .endogenous import (
     ENDOGENOUS_STATE_SCHEMA,
@@ -72,6 +76,8 @@ from .subjective import (
 LivingDuckV010 = LivingDuck
 
 __all__ = [
+    "Affordance", "AffordanceSource", "Appraisal", "BodyState", "CognitiveRegime",
+    "FactObservation", "Modality", "Percept", "RegulatoryState", "SensoryEvidence",
     "AccessibleTendency",
     "ActionExpectationResolution",
     "ActionOutcomeExpectation",

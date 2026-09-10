@@ -10,6 +10,8 @@ from typing import Iterable, Mapping
 
 from .living import MemoryProvenance, MemoryRecord, SubjectState, WorldEvent, _clamp
 
+from .strategy_v010 import CognitiveRegime, contextual_reliability
+
 COGNITIVE_STATE_SCHEMA = "micropsi-duck.cognition.v1"
 MAX_MOTIVES = 24
 MAX_EDGES = 2048
@@ -279,6 +281,8 @@ class MotivatedCognitionState:
     indexed_memory_ids: set[str] = field(default_factory=set)
     last_dominant_motive_id: str | None = None
     strategy_success: dict[str, float] = field(default_factory=dict)
+    strategy_contexts: dict[str, dict] = field(default_factory=dict)
+    pending_strategy_context: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -289,6 +293,8 @@ class MotivatedCognitionState:
             "indexed_memory_ids": sorted(self.indexed_memory_ids),
             "last_dominant_motive_id": self.last_dominant_motive_id,
             "strategy_success": {str(k): float(v) for k, v in self.strategy_success.items()},
+            "strategy_contexts": {k: dict(v) for k, v in self.strategy_contexts.items()},
+            "pending_strategy_context": dict(self.pending_strategy_context),
         }
 
     @classmethod
@@ -311,9 +317,22 @@ class MotivatedCognitionState:
             ),
             strategy_success={
                 str(key): max(-1.0, min(1.0, float(value)))
-                for key, value in data.get("strategy_success", {}).items()
+                for key, value in list(data.get("strategy_success", {}).items())[-64:]
             },
         )
+        for key, value in list(data.get("strategy_contexts", {}).items())[-320:]:
+            action, regime = key.rsplit("|", 1)
+            CognitiveRegime(regime)
+            state.strategy_contexts[key] = {
+                "value": max(-1.0, min(1.0, float(value["value"]))),
+                "evidence": max(0, min(10000, int(value["evidence"]))),
+            }
+        pending = data.get("pending_strategy_context", {})
+        if pending:
+            state.pending_strategy_context = {
+                "action_id": str(pending["action_id"]),
+                "regime": CognitiveRegime(pending["regime"]).value,
+            }
         _compact_motive_state(
             state,
             tick=max((m.updated_tick for m in state.motives.values()), default=0),
@@ -871,7 +890,7 @@ class MotivatedCognitionEngine:
 
     def record_outcome(
         self, action: str, success: float, valence: float,
-        tags: Iterable[str], tick: int,
+        tags: Iterable[str], tick: int, *, regime: CognitiveRegime | None = None,
     ) -> None:
         success = _clamp(success)
         reward = max(-1.0, min(1.0, (success - 0.5) * 1.4 + float(valence) * 0.45))
@@ -879,6 +898,15 @@ class MotivatedCognitionEngine:
         self.state.strategy_success[action] = max(
             -1.0, min(1.0, old * 0.82 + reward * 0.18)
         )
+        if regime is not None:
+            key = f"{action}|{CognitiveRegime(regime).value}"
+            row = self.state.strategy_contexts.setdefault(key, {"value": 0.0, "evidence": 0})
+            row["value"] = max(-1.0, min(1.0, row["value"] * 0.82 + reward * 0.18))
+            row["evidence"] = min(10000, row["evidence"] + 1)
+            while len(self.state.strategy_contexts) > 320:
+                del self.state.strategy_contexts[next(iter(self.state.strategy_contexts))]
+        while len(self.state.strategy_success) > 64:
+            del self.state.strategy_success[next(iter(self.state.strategy_success))]
         action_ref = _ref("action", action)
         for tag in tags:
             if _semantic_tag(tag):
@@ -886,6 +914,13 @@ class MotivatedCognitionEngine:
                     action_ref, _ref("concept", tag), "outcome_context",
                     0.34 + 0.20 * max(0.0, reward), tick, learn=True,
                 )
+
+    def strategy_value(self, action: str, regime: CognitiveRegime) -> float:
+        global_value = self.state.strategy_success.get(action, 0.0)
+        row = self.state.strategy_contexts.get(f"{action}|{regime.value}")
+        if row is None:
+            return global_value
+        return contextual_reliability(global_value, row["value"], row["evidence"])
 
     def compact(self, tick: int, *, retire_stale: bool = True) -> None:
         _compact_motive_state(self.state, tick=tick, retire_stale=retire_stale)

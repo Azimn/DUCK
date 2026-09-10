@@ -105,13 +105,13 @@ def test_world_authority_clears_even_when_private_provider_fails():
 
 
 def test_default_expression_uses_relationship_without_dumping_private_memory():
-    from duck.language import ApprovedLanguagePacket, DeterministicExpression
+    from duck.language import ApprovedLanguagePacket, DeterministicExpression, SocialExpressionStance
     renderer = DeterministicExpression()
     secret = "I remember something I have never told anyone."
     def packet(feeling):
         return ApprovedLanguagePacket("Hello.", (feeling, secret), None, "I have decided to respond.")
-    trusted = renderer.render(packet("I trust them."))
-    guarded = renderer.render(packet("I feel guarded around them."))
+    trusted = renderer.render_with_stance(packet("I trust them."), SocialExpressionStance.WARM)
+    guarded = renderer.render_with_stance(packet("I feel guarded around them."), SocialExpressionStance.CAUTIOUS)
     assert trusted != guarded
     assert secret not in trusted + guarded
 

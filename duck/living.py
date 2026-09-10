@@ -146,6 +146,7 @@ class PendingAction:
     tags: tuple[str, ...]
     tick: int
     predicted_valence: float = 0.0
+    target: str | None = None
 
 
 @dataclass
@@ -316,7 +317,7 @@ class SubjectState:
             "name": self.name,
             "tick": self.tick,
             "affect": self.affect,
-            "needs": self.needs,
+            "needs": dict(self.needs),
             "relationships": {key: asdict(value) for key, value in self.relationships.items()},
             "memories": [memory.to_dict() for memory in self.memories],
             "beliefs": {key: value.to_dict() for key, value in self.beliefs.items()},
@@ -519,7 +520,7 @@ class LivingDuck:
         valence = _clamp_signed(valence)
         reward = _clamp_signed((success - 0.5) * 1.4 + valence * 0.55)
         learning_tags = tuple(dict.fromkeys((*pending.tags, *(str(t).lower() for t in tags))))
-        self.state.adaptive.learn(pending.name, learning_tags, reward)
+        self._adaptive_learn(pending.name, learning_tags, reward)
         self.state.needs["competence"] = _clamp(self.state.needs.get("competence", 0.5) + 0.08 * reward)
         prediction_error = abs(valence - pending.predicted_valence)
         if prediction_error > 0.45:
@@ -538,6 +539,15 @@ class LivingDuck:
             source="world",
         )
         self.state.pending_action = None
+
+    def _adaptive_observe(self, text: str, tags: Iterable[str]) -> None:
+        self.state.adaptive.observe(text, tags)
+
+    def _adaptive_bias(self, action: str, tags: Iterable[str]) -> float:
+        return self.state.adaptive.bias(action, tags)
+
+    def _adaptive_learn(self, action: str, tags: Iterable[str], reward: float) -> None:
+        self.state.adaptive.learn(action, tags, reward)
 
     def _select_candidate(
         self,
@@ -561,7 +571,7 @@ class LivingDuck:
         relation = self.state.relationship(event.source)
         memories = self.state.retrieve_memories(event.text, tags=event.tags, people=(event.source,), top_k=5)
         prediction_error = self._appraise(event, relation, memories)
-        self.state.adaptive.observe(event.text, event.tags)
+        self._adaptive_observe(event.text, event.tags)
         candidates = self._candidates(event, relation, memories)
         selected = self._select_candidate(event, relation, memories, candidates)
 
@@ -669,11 +679,14 @@ class LivingDuck:
         for channel in list(self.state.affect):
             baseline = 0.04 if channel in {"fear", "unease", "anger"} else 0.10 if channel == "joy" else 0.18
             self.state.affect[channel] = _clamp(baseline + (self.state.affect[channel] - baseline) * 0.88)
-        self.state.needs["energy"] = _clamp(self.state.needs.get("energy", 0.85) - 0.008)
+        self._advance_energy()
         self.state.needs["affiliation"] = _clamp(self.state.needs.get("affiliation", 0.25) + 0.009)
         self.state.needs["curiosity"] = _clamp(self.state.needs.get("curiosity", 0.35) + 0.004)
         for relation in self.state.relationships.values():
             relation.uncertainty = _clamp(relation.uncertainty + 0.002)
+
+    def _advance_energy(self) -> None:
+        self.state.needs["energy"] = _clamp(self.state.needs.get("energy", 0.85) - 0.008)
 
     def _apply_residues(self) -> None:
         retained: list[Residue] = []
@@ -736,20 +749,20 @@ class LivingDuck:
         curiosity = self.state.needs.get("curiosity", 0.3)
         tags = event.tags
         candidates = [
-            ActionCandidate("wait", 0.16 + self.state.adaptive.bias("wait", tags), ("baseline",)),
-            ActionCandidate("respond", 0.28 + relation.familiarity * 0.12 + affiliation * 0.16 - fear * 0.08 + self.state.adaptive.bias("respond", tags), ("social",)),
-            ActionCandidate("step_back", 0.08 + fear * 0.78 + unease * 0.24 + relation.guardedness * 0.18 + self.state.adaptive.bias("step_back", tags), ("safety",)),
-            ActionCandidate("approach", 0.06 + relation.trust * 0.34 + affiliation * 0.26 - fear * 0.45 + self.state.adaptive.bias("approach", tags), ("affiliation",)),
-            ActionCandidate("ask", 0.10 + curiosity * 0.38 + relation.uncertainty * 0.22 + self.state.adaptive.bias("ask", tags), ("uncertainty",)),
-            ActionCandidate("explore", 0.08 + curiosity * 0.45 - fear * 0.28 + self.state.adaptive.bias("explore", tags), ("curiosity",)),
-            ActionCandidate("rest", 0.06 + (1.0 - energy) * 0.68 + self.state.adaptive.bias("rest", tags), ("energy",)),
+            ActionCandidate("wait", 0.16 + self._adaptive_bias("wait", tags), ("baseline",)),
+            ActionCandidate("respond", 0.28 + relation.familiarity * 0.12 + affiliation * 0.16 - fear * 0.08 + self._adaptive_bias("respond", tags), ("social",)),
+            ActionCandidate("step_back", 0.08 + fear * 0.78 + unease * 0.24 + relation.guardedness * 0.18 + self._adaptive_bias("step_back", tags), ("safety",)),
+            ActionCandidate("approach", 0.06 + relation.trust * 0.34 + affiliation * 0.26 - fear * 0.45 + self._adaptive_bias("approach", tags), ("affiliation",)),
+            ActionCandidate("ask", 0.10 + curiosity * 0.38 + relation.uncertainty * 0.22 + self._adaptive_bias("ask", tags), ("uncertainty",)),
+            ActionCandidate("explore", 0.08 + curiosity * 0.45 - fear * 0.28 + self._adaptive_bias("explore", tags), ("curiosity",)),
+            ActionCandidate("rest", 0.06 + (1.0 - energy) * 0.68 + self._adaptive_bias("rest", tags), ("energy",)),
         ]
         if "repair" in event.tags or self.state.affect.get("anger", 0.0) > 0.45:
-            candidates.append(ActionCandidate("repair", 0.18 + relation.attachment * 0.30 + relation.trust * 0.18 + self.state.adaptive.bias("repair", tags), ("relationship",)))
+            candidates.append(ActionCandidate("repair", 0.18 + relation.attachment * 0.30 + relation.trust * 0.18 + self._adaptive_bias("repair", tags), ("relationship",)))
         if event.kind == "endogenous":
             candidates = [candidate for candidate in candidates if candidate.name not in {"respond", "approach"}]
             if affiliation > 0.62:
-                candidates.append(ActionCandidate("seek_connection", 0.22 + affiliation * 0.58 + self.state.adaptive.bias("seek_connection", tags), ("affiliation_pressure",)))
+                candidates.append(ActionCandidate("seek_connection", 0.22 + affiliation * 0.58 + self._adaptive_bias("seek_connection", tags), ("affiliation_pressure",)))
         return candidates
 
     @staticmethod

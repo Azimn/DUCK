@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 import json
 import os
 from typing import Protocol
+from enum import Enum
 from urllib import request
 
 from .cognition import InnerCognition
@@ -220,10 +221,27 @@ class ExpressionProvider(Protocol):
         ...
 
 
+class SocialExpressionStance(str, Enum):
+    WARM = "warm"
+    NEUTRAL = "neutral"
+    CAUTIOUS = "cautious"
+
+
+def deterministic_stance(relation) -> SocialExpressionStance:
+    if relation.guardedness > 0.65 or relation.trust < 0.30:
+        return SocialExpressionStance.CAUTIOUS
+    if relation.trust > 0.70 and relation.guardedness < 0.30:
+        return SocialExpressionStance.WARM
+    return SocialExpressionStance.NEUTRAL
+
+
 class DeterministicExpression:
-    """Small fallback that renders public behavior from experiential prose."""
+    """Local fallback with qualitative stance kept outside model packets."""
 
     def render(self, packet: ApprovedLanguagePacket) -> str:
+        return self.render_with_stance(packet, SocialExpressionStance.NEUTRAL)
+
+    def render_with_stance(self, packet: ApprovedLanguagePacket, stance: SocialExpressionStance) -> str:
         intent = packet.action_intent.lower()
         if "give myself some space" in intent:
             return "I need a little space right now."
@@ -241,12 +259,9 @@ class DeterministicExpression:
             return "I'd like a moment before deciding."
         if "get a little closer" in intent:
             return "I'd like to stay and talk for a bit."
-        # Use the felt relationship to shape expression. Do not automatically
-        # publish a private recollection just because it is available to render.
-        feelings = set(packet.first_person_state)
-        if "I feel guarded around them." in feelings or "I don't completely trust them." in feelings:
+        if stance == SocialExpressionStance.CAUTIOUS:
             return "I'm listening, but I'd like to take this slowly."
-        if "I trust them." in feelings:
+        if stance == SocialExpressionStance.WARM:
             return "It's good to hear from you."
         if packet.user_text:
             return "I'm here. I'm thinking about what you said."

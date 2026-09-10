@@ -82,7 +82,8 @@ def social_history(seed, ticks):
                          allow_inner_speech=False)
         packet = ApprovedLanguagePacket.from_experience(duck.last_experience, user_text='Hello.',
                   private_thought=None, selected_action=step.selected_action, character_name='Aster')
-        response = DeterministicExpression().render(packet)
+        from .language import deterministic_stance
+        response = DeterministicExpression().render_with_stance(packet, deterministic_stance(duck.state.relationship("Morgan")))
         before = duck.state.relationship('Morgan').trust
         duck.step(WorldEvent('encounter', 'Morgan', 'Morgan offers help.' if not supportive else 'Morgan argues.',
                             ('social', 'supportive') if not supportive else ('social', 'conflict'),
@@ -98,7 +99,7 @@ def social_history(seed, ticks):
 
 
 def _signature(duck, step):
-    return {'action': step.selected_action, 'needs': duck.state.needs,
+    return {'action': step.selected_action, 'needs': dict(duck.state.needs),
             'affect': duck.state.affect, 'strategies': duck.cognitive_state.strategy_success,
             'experience': duck.last_experience.prose}
 

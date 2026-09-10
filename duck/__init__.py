@@ -4,8 +4,9 @@ from .access import SubjectAccessFirewall
 from .affordances_v010 import Affordance, AffordanceSource
 from .body_v010 import BodyState, RegulatoryState
 from .perception_v010 import Appraisal, FactObservation, Modality, Percept, SensoryEvidence
+from .perceptual_workspace_v010 import PerceivedEntity, PerceptualWorkspaceState
 from .strategy_v010 import CognitiveRegime
-from .room_v010 import RoomObject, RoomState
+from .room_v010 import ExecutionOutcome, RoomObject, RoomProcess, RoomState
 from .spatial_v010 import ObserverState, Vec3
 from .cognition import DeterministicInnerVoice, InnerCognition, InnerCognitionProvider
 from .endogenous import (
@@ -78,9 +79,10 @@ from .subjective import (
 LivingDuckV010 = LivingDuck
 
 __all__ = [
-    "RoomObject", "RoomState", "ObserverState", "Vec3",
+    "ExecutionOutcome", "RoomObject", "RoomProcess", "RoomState", "ObserverState", "Vec3",
     "Affordance", "AffordanceSource", "Appraisal", "BodyState", "CognitiveRegime",
-    "FactObservation", "Modality", "Percept", "RegulatoryState", "SensoryEvidence",
+    "FactObservation", "Modality", "Percept", "PerceivedEntity", "PerceptualWorkspaceState",
+    "RegulatoryState", "SensoryEvidence",
     "AccessibleTendency",
     "ActionExpectationResolution",
     "ActionOutcomeExpectation",

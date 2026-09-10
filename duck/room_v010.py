@@ -172,7 +172,7 @@ class RoomWorld:
                 continue
             obj = room.objects.get(process.target_id)
             if obj is None:
-                process.next_tick += process.interval_ticks
+                process.next_tick = tick + process.interval_ticks
                 continue
             if process.kind == "move":
                 before = room.position.distance_to(obj.position)
@@ -191,7 +191,7 @@ class RoomWorld:
                 obj.opened = not obj.opened
             elif process.kind == "set_sound":
                 obj.sound = process.text
-            process.next_tick += process.interval_ticks
+            process.next_tick = tick + process.interval_ticks
 
     def advance(self):
         room = self.state
@@ -240,7 +240,6 @@ class RoomWorld:
             rows.append(LocatedStimulus("proprioception:self", room.position,
                 SensoryEvidence(Modality.PROPRIOCEPTION, "self", room.pending_proprioception,
                                 strength=.75, reliability=.98, features=("self_motion",), entity_id="self")))
-        # Ambient evidence contains no object inventory or hidden object facts.
         if room.noise > .2:
             rows.append(LocatedStimulus("ambient:noise", room.position,
                 SensoryEvidence(Modality.AUDITION, "world", "There is noise around me.", strength=room.noise)))

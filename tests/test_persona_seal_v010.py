@@ -58,7 +58,7 @@ def test_pretorius_origin_is_frozen_and_excludes_competing_relationship_authorit
     assert PRETORIUS_ORIGIN.edge_count == 279
     assert PRETORIUS_ORIGIN.protected_node_count == 42
     assert PRETORIUS_ORIGIN.protected_edge_count == 48
-    assert PRETORIUS_ORIGIN.relationship_authority == "duck_subject_state"
+    assert PRETORIUS_ORIGIN.relationship_authority == "external_duck_subject_state"
     assert PRETORIUS_ORIGIN.excluded_node_types == ("relationship",)
     assert not any(node.node_type == "relationship" for node in PRETORIUS_ORIGIN.nodes)
     assert not any(node.node_id.startswith("rel.") for node in PRETORIUS_ORIGIN.nodes)

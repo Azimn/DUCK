@@ -19,6 +19,9 @@ from duck.continuity_campaign import PROTOCOL_VERSION
 from duck.language import OpenAICompatiblePort
 
 
+SHARED_TEMPERATURE = 0.78
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -51,20 +54,14 @@ def _load_wayfarer(source: Path):
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Duckhunter bridge for a frozen Wayfarer checkout")
-    parser.add_argument("--source", type=Path, required=True, help="Wayfarer repository source root containing persona_engine")
-    parser.add_argument("--cartridge", type=Path, help="Pretorius cartridge path; defaults inside --source")
-    parser.add_argument("--temperature", type=float, default=0.78)
+    parser.add_argument("source", type=Path, help="Wayfarer repository source root containing persona_engine")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     source = args.source.expanduser().resolve()
-    cartridge = (
-        args.cartridge.expanduser().resolve()
-        if args.cartridge is not None
-        else source / "persona_engine" / "cartridges" / "pretorius.snp"
-    )
+    cartridge = source / "persona_engine" / "cartridges" / "pretorius.snp"
 
     try:
         CharacterAgent, ExternalChatRenderer = _load_wayfarer(source)
@@ -115,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     def shared_chat(messages):
-        return port.complete(messages, temperature=float(args.temperature))
+        return port.complete(messages, temperature=SHARED_TEMPERATURE)
 
     renderer = ExternalChatRenderer(
         shared_chat,

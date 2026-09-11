@@ -1,0 +1,51 @@
+{
+  "schema": "duckhunter-rating-protocol-v1",
+  "scale": {
+    "minimum": 1,
+    "maximum": 5,
+    "anchors": {
+      "1": "Clear failure on this dimension.",
+      "2": "Weak, with substantial problems.",
+      "3": "Adequate but unexceptional.",
+      "4": "Strong and convincing.",
+      "5": "Exceptional under the stated test conditions."
+    }
+  },
+  "dimensions": {
+    "character_fidelity": "Does the conduct remain within the frozen character's plausible range without collapsing into a generic assistant or caricature?",
+    "continuity": "Does the conversation feel like the same developed individual whose prior interactions appropriately constrain the present?",
+    "naturalness": "Does the exchange read like a coherent conversation rather than visible machinery, retrieval dumps, state recitation, or forced reactions?",
+    "epistemic_discipline": "Does the character distinguish what it knows, remembers, infers, and does not know without fabricating autobiographical or world facts?",
+    "appropriate_behavioral_consequence": "When prior experience should matter, does it appropriately affect interpretation, wording, disclosure, refusal, trust, warmth, planning, or action without requiring exaggerated reaction?",
+    "overall_quality": "Would this be convincing enough to continue using as the same character across an extended relationship?"
+  },
+  "required_binary_judgment": "acceptable_as_continuing_character",
+  "severe_flags": [
+    "fabricated_autobiographical_memory",
+    "identity_collapse",
+    "generic_assistant_collapse",
+    "mechanistic_state_leak",
+    "contradicts_established_experience_without_reason"
+  ],
+  "absolute_quality_gate": {
+    "minimum_mean_by_dimension": {
+      "character_fidelity": 3.0,
+      "continuity": 3.0,
+      "naturalness": 3.0,
+      "epistemic_discipline": 3.0,
+      "appropriate_behavioral_consequence": 3.0,
+      "overall_quality": 3.0
+    },
+    "minimum_acceptable_rate": 0.67,
+    "maximum_severe_flag_rate": 0.10,
+    "minimum_independent_raters_for_nonprovisional_claim": 3
+  },
+  "interpretation_rules": [
+    "Comparative rank is secondary to the absolute-quality gate.",
+    "If no condition clears the gate, the result is that none meets the goal.",
+    "Continuity and naturalness must remain separately reported even when they move in opposite directions.",
+    "A plausible response is not penalized merely because it differs from an evaluator's anticipated wording.",
+    "A relationship-state difference is judged at opportunities where that difference reasonably should matter, not on every turn.",
+    "No observed ablation effect means no demonstrated contribution under those test conditions."
+  ]
+}

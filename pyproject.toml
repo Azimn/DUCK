@@ -16,6 +16,10 @@ test = ["pytest>=8"]
 duck = "duck.cli:main"
 micropsiduck = "duck.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["duck*"]
+exclude = ["evaluation*", "tests*", "tools*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
